@@ -25,7 +25,7 @@ services:
 
   # Local S3-compatible Object Storage for photo assets & avatars
   minio:
-    image: minio/minio:RELEASE.2024-01-28T22-40-50Z
+    image: minio/minio:latest
     container_name: filmory-minio
     ports:
       - "9000:9000"     # MinIO API Port (S3 compatible endpoint)
