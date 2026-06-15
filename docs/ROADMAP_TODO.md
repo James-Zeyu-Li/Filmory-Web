@@ -31,16 +31,16 @@
   - [x] **本地数据库与 ORM**：使用 Prisma 6 + SQLite (`dev.db`) 代替临时内存变量。
   - [x] **种子数据播种 (Seed)**：初始化相机、胶卷及数码占位符的测试种子数据。
   - [x] **Docker 本地开发环境**：在 [docker-compose.yml](file:///Users/james/Desktop/1.2-CS/00-projects/Filmory-Web/docker-compose.yml) 中配置 Postgres、Redis 和 MinIO。
-  - [ ] **S3 依赖安装**：安装 `@aws-sdk/client-s3` 与 `@aws-sdk/s3-request-presigner` 依赖。
-  - [ ] **存储抽象层服务契约**：设计 [IStorageService.ts](file:///Users/james/Desktop/1.2-CS/00-projects/Filmory-Web/backend/src/services/IStorageService.ts) 接口 (DIP 原则)，统一规范 `uploadFile`、`deleteFile` 和 `getPresignedUrl` 契约。
-  - [ ] **本地磁盘存储服务实现**：实现 `LocalDiskStorageService` (写入本地 uploads 目录并配置 Express 静态资源服务，作为离线/开发默认驱动)。
-  - [ ] **MinIO/S3 兼容对象存储实现**：实现 `S3StorageService` (连接本地 MinIO 容器 / 生产级 AWS S3，作为高并发/云端首选驱动)。
-  - [ ] **存储适配器工厂**：实现 `StorageFactory.ts`，基于环境变量 `STORAGE_PROVIDER` 动态分发存储实现。
+  - [x] **S3 依赖安装**：安装 `@aws-sdk/client-s3` 与 `@aws-sdk/s3-request-presigner` 依赖。
+  - [x] **存储抽象层服务契约**：设计 [IStorageService.ts](file:///Users/james/Desktop/1.2-CS/00-projects/Filmory-Web/backend/src/services/IStorageService.ts) 接口 (DIP 原则)，统一规范 `uploadFile`、`deleteFile` 和 `getPresignedUrl` 契约。
+  - [x] **本地磁盘存储服务实现**：实现 `LocalDiskStorageService` (写入本地 uploads 目录并配置 Express 静态资源服务，作为离线/开发默认驱动)。
+  - [x] **MinIO/S3 兼容对象存储实现**：实现 `S3StorageService` (连接本地 MinIO 容器 / 生产级 AWS S3，作为高并发/云端首选驱动)。
+  - [x] **存储适配器工厂**：实现 `StorageFactory.ts`，基于环境变量 `STORAGE_PROVIDER` 动态分发存储实现。
   - [ ] **工业级 JWT 鉴权扩展**：重构单 JWT Token，支持双令牌机制 (AccessToken + RefreshToken) 并将 Session 存入 Redis。
 
 * **存储服务实现后 - 已有模块改造计划 (To Modify Post-Implementation)**
-  - [ ] **重构照片上传 API**：将已有的 `POST /api/photos/upload` 重构为使用 `StorageFactory` 获取相应的存储服务实例进行图片持久化。抛弃原先内存 buffer 处理，实现将上传后的相对 URL (本地) 或 S3 存储地址返回前端。
-  - [ ] **重构相机头像上传 API**：实现 `POST /api/cameras/:id/avatar`。接收到相机头像后，利用 `sharp` 裁剪为 200x200 像素的正方形，并使用 `IStorageService` 存储文件，更新 `Camera.notes` 或新字段以记录头像 URL。
+  - [x] **重构照片上传 API**：将已有的 `POST /api/photos/upload` 重构为使用 `StorageFactory` 获取相应的存储服务实例进行图片持久化。抛弃原先内存 buffer 处理，实现将上传后的相对 URL (本地) 或 S3 存储地址返回前端。
+  - [x] **重构相机头像上传 API**：实现 `POST /api/cameras/:id/avatar`。接收到相机头像后，利用 `sharp` 裁剪为 200x200 像素的正方形，并使用 `IStorageService` 存储文件，更新 `Camera.notes` 或新字段以记录头像 URL。
   - [ ] **增加对象清理触发**：在删除照片（`DELETE /api/photos/:id`）或相机时，联动触发 `IStorageService.deleteFile`，删除实体对应的磁盘文件或 S3 存储对象，保障存储无死尸数据。
 
 * **后续前后端存储集成与对接方式设计 (Integration & Connection Methods)**

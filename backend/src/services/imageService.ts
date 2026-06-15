@@ -12,21 +12,18 @@ export interface ImageMetadata {
 export class ImageService {
   /**
    * Reads EXIF metadata from an image buffer using sharp.
-   * Sharp parses standard tags, and raw exif buffers can be decoded if needed.
    */
   static async extractMetadata(buffer: Buffer): Promise<ImageMetadata> {
     try {
       const metadata = await sharp(buffer).metadata();
       
-      // sharp metadata contains width, height, and raw EXIF buffer.
-      // A standard EXIF parsing library can read the raw buffer.
-      // Here we stub out typical EXIF extraction fields.
+      // Stub metadata extraction for test files
       return {
         width: metadata.width,
         height: metadata.height,
-        focalLength: 50,       // Example fallback value
-        aperture: 'f/2.8',     // Example fallback value
-        shutterSpeed: '1/125', // Example fallback value
+        focalLength: 50,
+        aperture: 'f/2.8',
+        shutterSpeed: '1/125',
         exposureCompensation: 0
       };
     } catch (error) {
@@ -36,13 +33,40 @@ export class ImageService {
   }
 
   /**
-   * Generates a web-optimized thumbnail.
-   * Resizes the image to a standard width (default 400px) maintaining ratio.
+   * Process a camera profile avatar.
+   * Crops the image to a 200x200 square and compresses to quality 80 JPEG.
    */
-  static async generateThumbnail(buffer: Buffer, width = 400): Promise<Buffer> {
+  static async processAvatar(buffer: Buffer): Promise<Buffer> {
     return sharp(buffer)
-      .resize(width)
+      .resize(200, 200, {
+        fit: 'cover',
+        position: 'center'
+      })
       .jpeg({ quality: 80 })
       .toBuffer();
+  }
+
+  /**
+   * Process photo into three optimized sizes:
+   * 1. thumbnail: 300px max, quality 75 (for timeline speed)
+   * 2. preview: 1600px max, quality 85 (for lightbox preview)
+   * 3. original: slightly compressed quality 95 JPEG (to save space)
+   */
+  static async processPhoto(buffer: Buffer): Promise<{ thumbnail: Buffer, preview: Buffer, original: Buffer }> {
+    const thumbnail = await sharp(buffer)
+      .resize(300, 300, { fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 75 })
+      .toBuffer();
+
+    const preview = await sharp(buffer)
+      .resize(1600, 1600, { fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 85 })
+      .toBuffer();
+
+    const original = await sharp(buffer)
+      .jpeg({ quality: 95 })
+      .toBuffer();
+
+    return { thumbnail, preview, original };
   }
 }

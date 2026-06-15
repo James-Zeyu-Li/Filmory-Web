@@ -4,12 +4,13 @@ import multer from 'multer';
 import dotenv from 'dotenv';
 import { authenticateJWT } from './middleware/auth';
 import { login } from './controllers/authController';
-import { getCameras, createCamera } from './controllers/cameraController';
+import { getCameras, createCamera, uploadCameraAvatar } from './controllers/cameraController';
 import { getLenses, createLens } from './controllers/lensController';
 import { getRolls, createRoll, updateRoll } from './controllers/rollController';
 import { getFilms, updateFilmStock } from './controllers/filmController';
 import { getEquipments, createEquipment, updateEquipment, deleteEquipment } from './controllers/otherEquipmentController';
 import { ImageService } from './services/imageService';
+import { StorageFactory } from './services/StorageFactory';
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ const upload = multer({ storage, limits: { fileSize: 20 * 1024 * 1024 } }); // L
 // Middlewares
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static('uploads'));
 
 // Public health check route
 app.get('/health', (req, res) => {
@@ -38,6 +40,7 @@ app.post('/api/auth/login', login);
 // Protected API routes
 app.get('/api/cameras', authenticateJWT, getCameras);
 app.post('/api/cameras', authenticateJWT, createCamera);
+app.post('/api/cameras/:id/avatar', authenticateJWT, upload.single('avatar'), uploadCameraAvatar);
 
 app.get('/api/lenses', authenticateJWT, getLenses);
 app.post('/api/lenses', authenticateJWT, createLens);
@@ -54,20 +57,32 @@ app.post('/api/equipments', authenticateJWT, createEquipment);
 app.put('/api/equipments/:id', authenticateJWT, updateEquipment);
 app.delete('/api/equipments/:id', authenticateJWT, deleteEquipment);
 
-// Multipart file upload with EXIF metadata parsing & thumbnail generation
+// Multipart file upload with EXIF metadata parsing, resizing & object storage write
 app.post('/api/photos/upload', authenticateJWT, upload.single('photo'), async (req: any, res: any) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No photo file provided' });
     }
 
-    const { buffer, originalname, size } = req.file;
+    const { buffer, originalname, size, mimetype } = req.file;
 
     // 1. Extract EXIF metadata
     const exifData = await ImageService.extractMetadata(buffer);
 
-    // 2. Generate web-optimized thumbnail
-    const thumbnailBuffer = await ImageService.generateThumbnail(buffer);
+    // 2. Generate optimized sub-spec buffers (thumbnail, preview, original)
+    const processed = await ImageService.processPhoto(buffer);
+
+    // 3. Upload to storage (local or cloud)
+    const storageService = StorageFactory.getStorageService();
+    const baseName = `${Date.now()}_${originalname}`;
+    
+    const thumbnailKey = `photos/thumbnails/${baseName}`;
+    const previewKey = `photos/previews/${baseName}`;
+    const originalKey = `photos/originals/${baseName}`;
+
+    const thumbnailUrl = await storageService.uploadFile(thumbnailKey, processed.thumbnail, 'image/jpeg');
+    const previewUrl = await storageService.uploadFile(previewKey, processed.preview, 'image/jpeg');
+    const originalUrl = await storageService.uploadFile(originalKey, processed.original, 'image/jpeg');
 
     res.status(201).json({
       message: 'Photo uploaded and parsed successfully',
@@ -75,7 +90,10 @@ app.post('/api/photos/upload', authenticateJWT, upload.single('photo'), async (r
         originalFileName: originalname,
         fileSize: size,
         metadata: exifData,
-        thumbnailSize: thumbnailBuffer.length
+        thumbnailUrl,
+        previewUrl,
+        originalUrl,
+        storageKey: baseName
       }
     });
   } catch (error: any) {

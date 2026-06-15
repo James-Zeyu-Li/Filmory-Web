@@ -6,6 +6,7 @@ export interface Camera {
   type: 'film' | 'digital';
   format: string; // '135', '120', etc.
   notes?: string;
+  avatarUrl?: string; // Camera profile image URL/relative path
   addedAt: number;
 }
 
@@ -62,7 +63,10 @@ export interface PhotoAsset {
   rollId: number;
   originalFileName: string;
   fileSize: number;
-  blob: Blob; // Stored binary image file
+  blob?: Blob; // Stored binary image file (optional, deprecated in backend mode)
+  thumbnailUrl?: string; // 300px thumbnail preview
+  previewUrl?: string; // 1600px preview
+  storageKey?: string; // S3 storage key
   addedAt: number;
   note?: string;
   focalLength?: number;
@@ -97,6 +101,15 @@ export class FilmoryDatabase extends Dexie {
       filmStocks: '++id, brand, name, iso, colorType, format, isSystem, systemKey, addedAt',
       rolls: '++id, name, cameraId, filmStockId, status, startDate, endDate, rating, location, developNotes',
       photoAssets: '++id, rollId, originalFileName, fileSize, addedAt, isPinned, rating',
+      otherEquipments: '++id, name, type, notes, purchaseDate, expiryDate, addedAt'
+    });
+
+    this.version(3).stores({
+      cameras: '++id, name, type, format, avatarUrl, addedAt',
+      lenses: '++id, name, focalLength, maxAperture, type, addedAt',
+      filmStocks: '++id, brand, name, iso, colorType, format, isSystem, systemKey, addedAt',
+      rolls: '++id, name, cameraId, filmStockId, status, startDate, endDate, rating, location, developNotes',
+      photoAssets: '++id, rollId, originalFileName, fileSize, thumbnailUrl, previewUrl, storageKey, addedAt, isPinned, rating',
       otherEquipments: '++id, name, type, notes, purchaseDate, expiryDate, addedAt'
     });
   }

@@ -8,13 +8,14 @@ generator client {
 }
 
 model Camera {
-  id      Int      @id @default(autoincrement())
-  name    String
-  type    String   // "film" or "digital"
-  format  String   // "135", "120", etc.
-  notes   String?
-  addedAt DateTime @default(now())
-  rolls   Roll[]
+  id        Int      @id @default(autoincrement())
+  name      String
+  type      String   // "film" or "digital"
+  format    String   // "135", "120", etc.
+  notes     String?
+  avatarUrl String?  // Camera profile/cover image URL
+  addedAt   DateTime @default(now())
+  rolls     Roll[]
 }
 
 model Lens {
@@ -73,6 +74,9 @@ model PhotoAsset {
   exposureCompensation Float?
   isPinned             Int      @default(0) // 0 = false, 1 = true
   rating               Int?
+  thumbnailUrl         String?  // 300px width preview image
+  previewUrl           String?  // 1600px width review image
+  storageKey           String?  // Object storage key for tracking/deleting
 }
 
 model OtherEquipment {
