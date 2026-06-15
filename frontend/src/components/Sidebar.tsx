@@ -5,11 +5,12 @@ import {
   Columns, 
   BarChart3, 
   Settings, 
-  Film 
+  Film,
+  LayoutDashboard
 } from 'lucide-react';
 import './Sidebar.css';
 
-export type ActiveTab = 'photos' | 'rolls' | 'gear' | 'compare' | 'stats' | 'settings';
+export type ActiveTab = 'dashboard' | 'photos' | 'rolls' | 'gear' | 'compare' | 'stats' | 'settings';
 
 interface SidebarProps {
   activeTab: ActiveTab;
@@ -28,6 +29,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
       </div>
 
       <nav className="sidebar-nav">
+        <button 
+          className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+          onClick={() => setActiveTab('dashboard')}
+        >
+          <LayoutDashboard size={20} />
+          <span>控制中心</span>
+        </button>
+
         <button 
           className={`nav-item ${activeTab === 'photos' ? 'active' : ''}`}
           onClick={() => setActiveTab('photos')}

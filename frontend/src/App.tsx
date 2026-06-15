@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Sidebar, type ActiveTab } from './components/Sidebar';
+import { DashboardView } from './views/Dashboard/DashboardView';
 import { PhotosView } from './views/Photos/PhotosView';
 import { RollsView } from './views/Rolls/RollsView';
 import { GearView } from './views/Gear/GearView';
@@ -11,7 +12,7 @@ import { Film } from 'lucide-react';
 import './App.css';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>('photos');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [enableFilmMode, setEnableFilmMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('filmory_enable_film_mode');
     return saved === null ? true : saved === 'true';
@@ -54,6 +55,7 @@ function App() {
         setActiveTab={setActiveTab} 
       />
       
+      {activeTab === 'dashboard' && <DashboardView enableFilmMode={enableFilmMode} onNavigate={(tab) => setActiveTab(tab as ActiveTab)} />}
       {activeTab === 'photos' && <PhotosView enableFilmMode={enableFilmMode} />}
       {activeTab === 'rolls' && <RollsView enableFilmMode={enableFilmMode} />}
       {activeTab === 'gear' && <GearView enableFilmMode={enableFilmMode} />}
