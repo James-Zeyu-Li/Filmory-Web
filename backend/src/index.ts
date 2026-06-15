@@ -24,7 +24,10 @@ const upload = multer({ storage, limits: { fileSize: 20 * 1024 * 1024 } }); // L
 // Middlewares
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static('uploads', {
+  maxAge: '1y',
+  immutable: true
+}));
 
 // Public health check route
 app.get('/health', (req, res) => {

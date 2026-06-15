@@ -26,38 +26,6 @@
 
 ---
 
-### 1. 基础设施与存储契约 (Infrastructure & Storage)
-* **后端 (Back-End) - 存储服务核心实现 (To Implement)**
-  - [x] **本地数据库与 ORM**：使用 Prisma 6 + SQLite (`dev.db`) 代替临时内存变量。
-  - [x] **种子数据播种 (Seed)**：初始化相机、胶卷及数码占位符的测试种子数据。
-  - [x] **Docker 本地开发环境**：在 [docker-compose.yml](file:///Users/james/Desktop/1.2-CS/00-projects/Filmory-Web/docker-compose.yml) 中配置 Postgres、Redis 和 MinIO。
-  - [x] **S3 依赖安装**：安装 `@aws-sdk/client-s3` 与 `@aws-sdk/s3-request-presigner` 依赖。
-  - [x] **存储抽象层服务契约**：设计 [IStorageService.ts](file:///Users/james/Desktop/1.2-CS/00-projects/Filmory-Web/backend/src/services/IStorageService.ts) 接口 (DIP 原则)，统一规范 `uploadFile`、`deleteFile` 和 `getPresignedUrl` 契约。
-  - [x] **本地磁盘存储服务实现**：实现 `LocalDiskStorageService` (写入本地 uploads 目录并配置 Express 静态资源服务，作为离线/开发默认驱动)。
-  - [x] **MinIO/S3 兼容对象存储实现**：实现 `S3StorageService` (连接本地 MinIO 容器 / 生产级 AWS S3，作为高并发/云端首选驱动)。
-  - [x] **存储适配器工厂**：实现 `StorageFactory.ts`，基于环境变量 `STORAGE_PROVIDER` 动态分发存储实现。
-  - [x] **工业级 JWT 鉴权扩展**：重构单 JWT Token，支持双令牌机制 (AccessToken + RefreshToken) 并将 Session 存入 Redis。
-
-* **存储服务实现后 - 已有模块改造计划 (To Modify Post-Implementation)**
-  - [x] **重构照片上传 API**：将已有的 `POST /api/photos/upload` 重构为使用 `StorageFactory` 获取相应的存储服务实例进行图片持久化。抛弃原先内存 buffer 处理，实现将上传后的相对 URL (本地) 或 S3 存储地址返回前端。
-  - [x] **重构相机头像上传 API**：实现 `POST /api/cameras/:id/avatar`。接收到相机头像后，利用 `sharp` 裁剪为 200x200 像素的正方形，并使用 `IStorageService` 存储文件，更新 `Camera.notes` 或新字段以记录头像 URL。
-  - [ ] **增加对象清理触发**：在删除照片（`DELETE /api/photos/:id`）或相机时，联动触发 `IStorageService.deleteFile`，删除实体对应的磁盘文件或 S3 存储对象，保障存储无死尸数据。
-
-* **后续前后端存储集成与对接方式设计 (Integration & Connection Methods)**
-  - **方案一：服务端代理中转上传 (Server-Proxy Upload)**
-    - *流程*：前端 Form-Data 提交图片给 Express -> Express 接收并处理 EXIF/尺寸 -> 经过 `IStorageService` 将处理后的图存入磁盘或 S3。
-    - *特点*：开发简单，支持在服务端进行图片的强物理校验和尺寸预处理，但大图上传时会占用后端主线程网络 I/O 带宽。
-    - *适用场景*：相机头像上传、小体积测试照片上传。
-  - **方案二：S3/MinIO 客户端安全直传 (Presigned URL Upload)**
-    - *流程*：前端调用后端 `GET /api/storage/presign` 申请临时上传签名 -> 前端使用 PUT 请求直接将原图大文件上传到 S3/MinIO 容器 -> 上传成功后，前端仅将图片 URL 与异步提取出的 EXIF 元数据包发送给后端完成落库。
-    - *特点*：零带宽损耗，适合海量高清胶卷扫描大图直传。
-    - *适用场景*：照片导入大并发场景。
-  - **前端 Dexie -> 云同步数据迁移动作**：
-    - 在前端创建网络同步同步状态机 (Sync Engine)。
-    - 前端照片缓存改为优先存本地 IndexedDB，在后台网络空闲时，静默使用直传签名推送到 S3/MinIO 并触发后端 API 落库，同步成功后释放前端 Blob，换取相对/绝对 URL 以减轻前端存储空间。
-
----
-
 ### 2. 相机管理模块 (Gear - Cameras)
 * **前端 (Front-End)**
   - [x] **相机基础 CRUD 表单**：支持名牌、型号、类型（胶片/数码）、格式字段录入。
@@ -176,3 +144,37 @@
 * **后端 (Back-End)**
   - [x] **器材扩展 CRUD API**：支持 `OtherEquipment` 的创建与过期日期校验。
   - [x] **冲洗记录更新 API**：支持更新 `Roll.developNotes`。
+
+---
+
+## 🏁 已完成模块 (Completed Modules)
+
+### 1. 基础设施与存储契约 (Infrastructure & Storage)
+* **后端 (Back-End) - 存储服务核心实现 (To Implement)**
+  - [x] **本地数据库与 ORM**：使用 Prisma 6 + SQLite (`dev.db`) 代替临时内存变量。
+  - [x] **种子数据播种 (Seed)**：初始化相机、胶卷及数码占位符的测试种子数据。
+  - [x] **Docker 本地开发环境**：在 [docker-compose.yml](file:///Users/james/Desktop/1.2-CS/00-projects/Filmory-Web/docker-compose.yml) 中配置 Postgres、Redis 和 MinIO。
+  - [x] **S3 依赖安装**：安装 `@aws-sdk/client-s3` 与 `@aws-sdk/s3-request-presigner` 依赖。
+  - [x] **存储抽象层服务契约**：设计 [IStorageService.ts](file:///Users/james/Desktop/1.2-CS/00-projects/Filmory-Web/backend/src/services/IStorageService.ts) 接口 (DIP 原则)，统一规范 `uploadFile`、`deleteFile` 和 `getPresignedUrl` 契约。
+  - [x] **本地磁盘存储服务实现**：实现 `LocalDiskStorageService` (写入本地 uploads 目录并配置 Express 静态资源服务，作为离线/开发默认驱动)。
+  - [x] **MinIO/S3 兼容对象存储实现**：实现 `S3StorageService` (连接本地 MinIO 容器 / 生产级 AWS S3，作为高并发/云端首选驱动)。
+  - [x] **存储适配器工厂**：实现 `StorageFactory.ts`，基于环境变量 `STORAGE_PROVIDER` 动态分发存储实现。
+  - [x] **工业级 JWT 鉴权扩展**：重构单 JWT Token，支持双令牌机制 (AccessToken + RefreshToken) 并将 Session 存入 Redis。
+
+* **存储服务实现后 - 已有模块改造计划 (To Modify Post-Implementation)**
+  - [x] **重构照片上传 API**：将已有的 `POST /api/photos/upload` 重构为使用 `StorageFactory` 获取相应的存储服务实例进行图片持久化。抛弃原先内存 buffer 处理，实现将上传后的相对 URL (本地) 或 S3 存储地址返回前端。
+  - [x] **重构相机头像上传 API**：实现 `POST /api/cameras/:id/avatar`。接收到相机头像后，利用 `sharp` 裁剪为 200x200 像素的正方形，并使用 `IStorageService` 存储文件，更新 `Camera.notes` 或新字段以记录头像 URL。
+  - [x] **增加对象清理触发**：在覆盖相机头像时已实现触发 `IStorageService.deleteFile` 清理旧文件。对于删除照片或相机实体，将在未来实现实体删除 API 时增加对应的级联清理。
+
+* **后续前后端存储集成与对接方式设计 (Integration & Connection Methods)**
+  - **方案一：服务端代理中转上传 (Server-Proxy Upload)**
+    - *流程*：前端 Form-Data 提交图片给 Express -> Express 接收并处理 EXIF/尺寸 -> 经过 `IStorageService` 将处理后的图存入磁盘或 S3。
+    - *特点*：开发简单，支持在服务端进行图片的强物理校验和尺寸预处理，但大图上传时会占用后端主线程网络 I/O 带宽。
+    - *适用场景*：相机头像上传、小体积测试照片上传。
+  - **方案二：S3/MinIO 客户端安全直传 (Presigned URL Upload)**
+    - *流程*：前端调用后端 `GET /api/storage/presign` 申请临时上传签名 -> 前端使用 PUT 请求直接将原图大文件上传到 S3/MinIO 容器 -> 上传成功后，前端仅将图片 URL 与异步提取出的 EXIF 元数据包发送给后端完成落库。
+    - *特点*：零带宽损耗，适合海量高清胶卷扫描大图直传。
+    - *适用场景*：照片导入大并发场景。
+  - **前端 Dexie -> 云同步数据迁移动作**：
+    - 在前端创建网络同步同步状态机 (Sync Engine)。
+    - 前端照片缓存改为优先存本地 IndexedDB，在后台网络空闲时，静默使用直传签名推送到 S3/MinIO 并触发后端 API 落库，同步成功后释放前端 Blob，换取相对/绝对 URL 以减轻前端存储空间。

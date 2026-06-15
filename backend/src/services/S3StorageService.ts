@@ -30,6 +30,7 @@ export class S3StorageService implements IStorageService {
         Key: key,
         Body: fileBuffer,
         ContentType: mimeType,
+        CacheControl: 'public, max-age=31536000, immutable',
       })
     );
 
