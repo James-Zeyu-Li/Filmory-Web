@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  # Relational Database for persistent backend storage
+  postgres:
+    image: postgres:15-alpine
+    container_name: filmory-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: filmory_user
+      POSTGRES_PASSWORD: filmory_password
+      POSTGRES_DB: filmory_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # In-memory store for rate limiting or session cache
+  redis:
+    image: redis:7-alpine
+    container_name: filmory-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
+  # Local S3-compatible Object Storage for photo assets & avatars
+  minio:
+    image: minio/minio:RELEASE.2024-01-28T22-40-50Z
+    container_name: filmory-minio
+    ports:
+      - "9000:9000"     # MinIO API Port (S3 compatible endpoint)
+      - "9001:9001"     # MinIO Web Console Port
+    environment:
+      MINIO_ROOT_USER: filmory_admin
+      MINIO_ROOT_PASSWORD: filmory_password
+    volumes:
+      - miniodata:/data
+    command: server /data --console-address ":9001"
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:

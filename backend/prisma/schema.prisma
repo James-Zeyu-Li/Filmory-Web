@@ -1,0 +1,86 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Camera {
+  id      Int      @id @default(autoincrement())
+  name    String
+  type    String   // "film" or "digital"
+  format  String   // "135", "120", etc.
+  notes   String?
+  addedAt DateTime @default(now())
+  rolls   Roll[]
+}
+
+model Lens {
+  id          Int      @id @default(autoincrement())
+  name        String
+  focalLength Int
+  maxAperture String
+  type        String   // "prime" or "zoom"
+  addedAt     DateTime @default(now())
+}
+
+model FilmStock {
+  id         Int      @id @default(autoincrement())
+  brand      String
+  name       String
+  iso        Int
+  colorType  String   // "color" or "bw"
+  format     String   // "135", "120"
+  isSystem   Int      @default(0) // 0 = standard, 1 = digital placeholder
+  systemKey  String?
+  stockCount Int      @default(0) // Inventory count
+  addedAt    DateTime @default(now())
+  rolls      Roll[]
+}
+
+model Roll {
+  id           Int          @id @default(autoincrement())
+  name         String
+  cameraId     Int
+  camera       Camera       @relation(fields: [cameraId], references: [id])
+  filmStockId  Int
+  filmStock    FilmStock    @relation(fields: [filmStockId], references: [id])
+  status       String       // "active" or "archived"
+  startDate    DateTime?
+  endDate      DateTime?
+  rating       Int?
+  location     String?
+  notes        String?
+  developNotes String?      // Developer notepad text
+  coverPhotoId Int?
+  filmPrice    Float?
+  developPrice Float?
+  photos       PhotoAsset[]
+}
+
+model PhotoAsset {
+  id                   Int      @id @default(autoincrement())
+  rollId               Int
+  roll                 Roll     @relation(fields: [rollId], references: [id])
+  originalFileName     String
+  fileSize             Int
+  addedAt              DateTime @default(now())
+  focalLength          Int?
+  aperture             String?
+  shutterSpeed         String?
+  exposureCompensation Float?
+  isPinned             Int      @default(0) // 0 = false, 1 = true
+  rating               Int?
+}
+
+model OtherEquipment {
+  id           Int       @id @default(autoincrement())
+  name         String
+  type         String    // "chemical" | "tripod" | "cleaner" | "other"
+  notes        String?
+  purchaseDate DateTime?
+  expiryDate   DateTime? // Only applicable for chemicals/solutions
+  addedAt      DateTime  @default(now())
+}

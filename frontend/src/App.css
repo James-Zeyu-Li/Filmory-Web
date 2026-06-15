@@ -1,0 +1,43 @@
+/* App loading screen */
+.app-loading-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  width: 100vw;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  gap: 16px;
+  text-align: center;
+}
+
+.loading-logo {
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.app-loading-screen h2 {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+
+.app-loading-screen span {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* Pulse animation utility */
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .4;
+  }
+}
