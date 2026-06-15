@@ -3,7 +3,7 @@ import cors from 'cors';
 import multer from 'multer';
 import dotenv from 'dotenv';
 import { authenticateJWT } from './middleware/auth';
-import { login } from './controllers/authController';
+import { login, refresh, logout } from './controllers/authController';
 import { getCameras, createCamera, uploadCameraAvatar } from './controllers/cameraController';
 import { getLenses, createLens } from './controllers/lensController';
 import { getRolls, createRoll, updateRoll } from './controllers/rollController';
@@ -34,8 +34,10 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Authentication endpoint
+// Authentication endpoints
 app.post('/api/auth/login', login);
+app.post('/api/auth/refresh', refresh);
+app.post('/api/auth/logout', logout);
 
 // Protected API routes
 app.get('/api/cameras', authenticateJWT, getCameras);

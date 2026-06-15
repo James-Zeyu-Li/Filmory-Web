@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'filmory-super-secret-key';
+export const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || 'filmory-super-access-secret-key';
+export const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'filmory-super-refresh-secret-key';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -20,7 +21,7 @@ export const authenticateJWT = (req: AuthenticatedRequest, res: Response, next: 
   if (authHeader) {
     const token = authHeader.split(' ')[1];
 
-    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    jwt.verify(token, JWT_ACCESS_SECRET, (err, decoded) => {
       if (err) {
         return res.status(403).json({ error: 'Forbidden: Invalid or expired token' });
       }

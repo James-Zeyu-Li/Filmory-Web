@@ -36,7 +36,7 @@
   - [x] **本地磁盘存储服务实现**：实现 `LocalDiskStorageService` (写入本地 uploads 目录并配置 Express 静态资源服务，作为离线/开发默认驱动)。
   - [x] **MinIO/S3 兼容对象存储实现**：实现 `S3StorageService` (连接本地 MinIO 容器 / 生产级 AWS S3，作为高并发/云端首选驱动)。
   - [x] **存储适配器工厂**：实现 `StorageFactory.ts`，基于环境变量 `STORAGE_PROVIDER` 动态分发存储实现。
-  - [ ] **工业级 JWT 鉴权扩展**：重构单 JWT Token，支持双令牌机制 (AccessToken + RefreshToken) 并将 Session 存入 Redis。
+  - [x] **工业级 JWT 鉴权扩展**：重构单 JWT Token，支持双令牌机制 (AccessToken + RefreshToken) 并将 Session 存入 Redis。
 
 * **存储服务实现后 - 已有模块改造计划 (To Modify Post-Implementation)**
   - [x] **重构照片上传 API**：将已有的 `POST /api/photos/upload` 重构为使用 `StorageFactory` 获取相应的存储服务实例进行图片持久化。抛弃原先内存 buffer 处理，实现将上传后的相对 URL (本地) 或 S3 存储地址返回前端。
