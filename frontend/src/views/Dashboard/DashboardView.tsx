@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type PhotoAsset } from '../../db/schema';
 import { motion } from 'framer-motion';
@@ -86,11 +86,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
 
   useEffect(() => {
     const newUrls: { [key: number]: string } = {};
+    const objectUrls: string[] = [];
     [...photosA, ...photosB].forEach(p => {
-      if (p.id && p.blob) newUrls[p.id] = URL.createObjectURL(p.blob);
+      if (!p.id) return;
+      // Prefer thumbnailUrl (S3 mode), fallback to local blob
+      if (p.thumbnailUrl) {
+        newUrls[p.id] = p.thumbnailUrl;
+      } else if (p.blob) {
+        const url = URL.createObjectURL(p.blob);
+        objectUrls.push(url);
+        newUrls[p.id] = url;
+      }
     });
     setUrls(newUrls);
-    return () => { Object.values(newUrls).forEach(url => URL.revokeObjectURL(url)); };
+    return () => { objectUrls.forEach(url => URL.revokeObjectURL(url)); };
   }, [photosA, photosB]);
 
   const getRollLabel = (id: number) => {
@@ -156,7 +165,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
             <h3>相机出勤排行</h3>
           </div>
           {cameraChartData.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '40px 0' }}>暂无出勤记录</p>
+            <p className="dash-chart-empty">暂无出勤记录</p>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={cameraChartData} layout="vertical" margin={{ left: 0, right: 20 }}>
@@ -183,9 +192,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
               <h3>彩色 vs 黑白胶片</h3>
             </div>
             {filmRolls.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '40px 0' }}>暂无胶片数据</p>
+              <p className="dash-chart-empty">暂无胶片数据</p>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="donut-layout">
                 <ResponsiveContainer width={180} height={180}>
                   <PieChart>
                     <Pie
@@ -204,14 +213,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
                     <text x="50%" y="60%" textAnchor="middle" className="donut-center-sub">胶卷总数</text>
                   </PieChart>
                 </ResponsiveContainer>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginLeft: 20 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 12, height: 12, borderRadius: 3, background: '#e2b028' }} />
-                    <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>彩色 {colorCount} 卷 ({filmRolls.length > 0 ? Math.round((colorCount / filmRolls.length) * 100) : 0}%)</span>
+                <div className="donut-legend">
+                  <div className="donut-legend-item">
+                    <div className="donut-swatch donut-swatch-color" />
+                    <span>彩色 {colorCount} 卷 ({filmRolls.length > 0 ? Math.round((colorCount / filmRolls.length) * 100) : 0}%)</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 12, height: 12, borderRadius: 3, background: '#6b7280' }} />
-                    <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>黑白 {bwCount} 卷 ({filmRolls.length > 0 ? Math.round((bwCount / filmRolls.length) * 100) : 0}%)</span>
+                  <div className="donut-legend-item">
+                    <div className="donut-swatch donut-swatch-bw" />
+                    <span>黑白 {bwCount} 卷 ({filmRolls.length > 0 ? Math.round((bwCount / filmRolls.length) * 100) : 0}%)</span>
                   </div>
                 </div>
               </div>

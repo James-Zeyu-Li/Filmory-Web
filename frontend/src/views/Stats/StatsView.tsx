@@ -23,7 +23,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode }) => {
 
   // 2. Cost calculations
   const totalFilmCost = rolls.reduce((acc, r) => acc + (r.filmPrice || 0), 0);
-  const totalDevelopCost = rolls.reduce((acc, r) => acc + (acc = r.developPrice || 0), 0);
+  const totalDevelopCost = rolls.reduce((acc, r) => acc + (r.developPrice || 0), 0);
   const totalCost = totalFilmCost + totalDevelopCost;
 
   // 3. Film Color Types ratio (Color vs B&W)
