@@ -1,5 +1,7 @@
 import { db, type Camera, type Lens, type FilmStock } from '../db/schema';
 
+let seedDatabasePromise: Promise<void> | null = null;
+
 // Helper to generate sample JPEG images locally using Canvas
 function createSampleImageBlob(color: string, label: string): Promise<Blob> {
   return new Promise((resolve) => {
@@ -31,21 +33,36 @@ function createSampleImageBlob(color: string, label: string): Promise<Blob> {
 }
 
 export async function seedDatabaseIfNeeded(): Promise<void> {
-  const cameraCount = await db.cameras.count();
+  if (seedDatabasePromise) {
+    return seedDatabasePromise;
+  }
+
+  seedDatabasePromise = seedDatabase();
+  try {
+    await seedDatabasePromise;
+  } finally {
+    seedDatabasePromise = null;
+  }
+}
+
+async function seedDatabase(): Promise<void> {
+  const currentUserId = localStorage.getItem('filmory_user_id') || 'mock_uid_123';
+  const existingCameras = await db.cameras.toArray();
+  const cameraCount = existingCameras.filter(camera => camera.userId === currentUserId || !camera.userId).length;
   if (cameraCount > 0) {
     // Database already seeded
     return;
   }
 
-  console.log('Seeding initial Filmory database...');
+  console.info('Seeding initial Filmory database...');
 
   // 1. Seed Cameras
   const defaultCameras: Camera[] = [
-    { name: 'Minolta X-700', type: 'film', format: '135', addedAt: Date.now() },
-    { name: 'Rollei 35', type: 'film', format: '135', notes: 'Sonnar 40mm f/2.8 (fixed)', addedAt: Date.now() },
-    { name: 'Fujifilm X-T5', type: 'digital', format: 'digital', addedAt: Date.now() }
+    { id: crypto.randomUUID(), userId: currentUserId, name: 'Minolta X-700', type: 'film', format: '135', addedAt: Date.now() },
+    { id: crypto.randomUUID(), userId: currentUserId, name: 'Rollei 35', type: 'film', format: '135', notes: 'Sonnar 40mm f/2.8 (fixed)', addedAt: Date.now() },
+    { id: crypto.randomUUID(), userId: currentUserId, name: 'Fujifilm X-T5', type: 'digital', format: 'digital', addedAt: Date.now() }
   ];
-  const cameraIds: number[] = [];
+  const cameraIds: string[] = [];
   for (const cam of defaultCameras) {
     const id = await db.cameras.add(cam);
     cameraIds.push(id);
@@ -53,9 +70,9 @@ export async function seedDatabaseIfNeeded(): Promise<void> {
 
   // 2. Seed Lenses
   const defaultLenses: Lens[] = [
-    { name: 'Minolta MD 50mm f/1.7', focalLength: 50, maxAperture: 'f/1.7', type: 'prime', addedAt: Date.now() },
-    { name: 'Minolta MD 35mm f/2.8', focalLength: 35, maxAperture: 'f/2.8', type: 'prime', addedAt: Date.now() },
-    { name: 'Canon FD 50mm f/1.8', focalLength: 50, maxAperture: 'f/1.8', type: 'prime', addedAt: Date.now() }
+    { id: crypto.randomUUID(), userId: currentUserId, name: 'Minolta MD 50mm f/1.7', focalLength: 50, maxAperture: 'f/1.7', type: 'prime', addedAt: Date.now() },
+    { id: crypto.randomUUID(), userId: currentUserId, name: 'Minolta MD 35mm f/2.8', focalLength: 35, maxAperture: 'f/2.8', type: 'prime', addedAt: Date.now() },
+    { id: crypto.randomUUID(), userId: currentUserId, name: 'Canon FD 50mm f/1.8', focalLength: 50, maxAperture: 'f/1.8', type: 'prime', addedAt: Date.now() }
   ];
   for (const lens of defaultLenses) {
     await db.lenses.add(lens);
@@ -63,18 +80,13 @@ export async function seedDatabaseIfNeeded(): Promise<void> {
 
   // 3. Seed Film Stocks
   const defaultFilmStocks: FilmStock[] = [
-    // System placeholder for digital rolls
-    { brand: 'Digital', name: 'Digital', iso: 100, colorType: 'color', format: 'digital', isSystem: 1, systemKey: 'digital', addedAt: Date.now() },
-    // Standard stocks
-    { brand: 'Kodak', name: 'Color 200', iso: 200, colorType: 'color', format: '135', isSystem: 0, addedAt: Date.now() },
-    { brand: 'Kodak', name: 'Gold 200', iso: 200, colorType: 'color', format: '135', isSystem: 0, addedAt: Date.now() },
-    { brand: 'Kodak', name: 'Portra 400', iso: 400, colorType: 'color', format: '135', isSystem: 0, addedAt: Date.now() },
-    { brand: 'Kodak', name: 'Portra 800', iso: 800, colorType: 'color', format: '135', isSystem: 0, addedAt: Date.now() },
-    { brand: 'Kodak', name: 'Ektar 100', iso: 100, colorType: 'color', format: '135', isSystem: 0, addedAt: Date.now() },
-    { brand: 'Ilford', name: 'HP5 Plus 400', iso: 400, colorType: 'bw', format: '135', isSystem: 0, addedAt: Date.now() },
-    { brand: 'Lomography', name: 'Color Negative 400', iso: 400, colorType: 'color', format: '135', isSystem: 0, addedAt: Date.now() }
+    { id: crypto.randomUUID(), userId: currentUserId, brand: 'Digital', name: 'Sensor', iso: 0, colorType: 'color', format: 'digital', isSystem: 1, systemKey: 'digital', stockCount: 999, addedAt: Date.now() },
+    { id: crypto.randomUUID(), userId: currentUserId, brand: 'Kodak', name: 'Gold 200', iso: 200, colorType: 'color', format: '135', isSystem: 0, stockCount: 5, addedAt: Date.now() },
+    { id: crypto.randomUUID(), userId: currentUserId, brand: 'Kodak', name: 'Portra 400', iso: 400, colorType: 'color', format: '135', isSystem: 0, stockCount: 2, addedAt: Date.now() },
+    { id: crypto.randomUUID(), userId: currentUserId, brand: 'Fujifilm', name: 'C200', iso: 200, colorType: 'color', format: '135', isSystem: 0, stockCount: 1, addedAt: Date.now() },
+    { id: crypto.randomUUID(), userId: currentUserId, brand: 'Ilford', name: 'HP5 Plus', iso: 400, colorType: 'bw', format: '135', isSystem: 0, stockCount: 3, addedAt: Date.now() }
   ];
-  const filmStockIds: number[] = [];
+  const filmStockIds: string[] = [];
   for (const film of defaultFilmStocks) {
     const id = await db.filmStocks.add(film);
     filmStockIds.push(id);
@@ -82,14 +94,16 @@ export async function seedDatabaseIfNeeded(): Promise<void> {
 
   // 4. Seed Sample Rolls & Photos
   const minoltaId = cameraIds[0];
-  const kodakGoldId = filmStockIds[2]; // Gold 200
-  const ilfordHp5Id = filmStockIds[6]; // HP5 Plus 400
-  const lomo400Id = filmStockIds[7];   // Lomo 400
+  const kodakGoldId = filmStockIds[1];
+  const ilfordHp5Id = filmStockIds[4];
 
   // Roll A: 夏日午后 (Gold 200)
-  const rollAId = await db.rolls.add({
+  const rollAId = crypto.randomUUID();
+  await db.rolls.add({
+    id: rollAId,
+    userId: currentUserId,
     name: '夏日午后',
-    cameraId: minoltaId,
+    cameraIds: [minoltaId],
     filmStockId: kodakGoldId,
     status: 'archived',
     startDate: Date.now() - 20 * 24 * 60 * 60 * 1000 - 7 * 24 * 60 * 60 * 1000,
@@ -105,11 +119,14 @@ export async function seedDatabaseIfNeeded(): Promise<void> {
     { color: '#14b8a6', label: 'Pool 03', aperture: 'f/2.0', shutter: '1/500', focal: 50 }
   ];
 
-  let coverAId: number | undefined;
+  let coverAId: string | undefined;
   for (let i = 0; i < rollAPhotos.length; i++) {
     const p = rollAPhotos[i];
     const blob = await createSampleImageBlob(p.color, p.label);
-    const photoId = await db.photoAssets.add({
+    const photoId = crypto.randomUUID();
+    await db.photoAssets.add({
+      id: photoId,
+      userId: currentUserId,
       rollId: rollAId,
       originalFileName: `${p.label.toLowerCase().replace(' ', '_')}.jpg`,
       fileSize: blob.size,
@@ -128,9 +145,12 @@ export async function seedDatabaseIfNeeded(): Promise<void> {
   }
 
   // Roll B: 城市漫步 (HP5 Plus 400)
-  const rollBId = await db.rolls.add({
+  const rollBId = crypto.randomUUID();
+  await db.rolls.add({
+    id: rollBId,
+    userId: currentUserId,
     name: '城市漫步',
-    cameraId: minoltaId,
+    cameraIds: [minoltaId],
     filmStockId: ilfordHp5Id,
     status: 'archived',
     startDate: Date.now() - 10 * 24 * 60 * 60 * 1000 - 5 * 24 * 60 * 60 * 1000,
@@ -146,11 +166,14 @@ export async function seedDatabaseIfNeeded(): Promise<void> {
     { color: '#374151', label: 'Building 03', aperture: 'f/4.0', shutter: '1/250', focal: 35 }
   ];
 
-  let coverBId: number | undefined;
+  let coverBId: string | undefined;
   for (let i = 0; i < rollBPhotos.length; i++) {
     const p = rollBPhotos[i];
     const blob = await createSampleImageBlob(p.color, p.label);
-    const photoId = await db.photoAssets.add({
+    const photoId = crypto.randomUUID();
+    await db.photoAssets.add({
+      id: photoId,
+      userId: currentUserId,
       rollId: rollBId,
       originalFileName: `${p.label.toLowerCase().replace(' ', '_')}.jpg`,
       fileSize: blob.size,
@@ -170,14 +193,30 @@ export async function seedDatabaseIfNeeded(): Promise<void> {
 
   // Roll C: 春日公园 (Lomo 400) - Active
   await db.rolls.add({
+    id: crypto.randomUUID(),
+    userId: currentUserId,
     name: '春日公园',
-    cameraId: minoltaId,
-    filmStockId: lomo400Id,
+    cameraIds: [minoltaId],
+    filmStockId: filmStockIds[0],
     status: 'active',
     startDate: Date.now() - 2 * 24 * 60 * 60 * 1000,
     location: '朝阳公园',
     notes: '进行中的春日拍摄，已经拍了约一半。'
   });
 
-  console.log('Seeding completed successfully!');
+  // 5. Seed Default TagConfigs
+  const defaultTags = [
+    { id: crypto.randomUUID(), userId: currentUserId, name: '人像 (Portrait)', color: '#ec4899' },
+    { id: crypto.randomUUID(), userId: currentUserId, name: '扫街 (Street)', color: '#eab308' },
+    { id: crypto.randomUUID(), userId: currentUserId, name: '风景 (Landscape)', color: '#22c55e' },
+    { id: crypto.randomUUID(), userId: currentUserId, name: '废片 (Failed)', color: '#ef4444' }
+  ];
+  for (const tag of defaultTags) {
+    const existingTag = await db.tagConfigs.where('name').equals(tag.name).first();
+    if (!existingTag) {
+      await db.tagConfigs.add(tag);
+    }
+  }
+
+  console.info('Seeding completed successfully!');
 }

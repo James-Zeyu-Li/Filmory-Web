@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type PhotoAsset } from '../../db/schema';
+import React, { useState, useEffect, useMemo } from 'react';
+import type { PhotoAsset } from '../../db/schema';
 import { Search, Sliders, ChevronLeft, ChevronRight, X, Star, Calendar } from 'lucide-react';
 import './PhotosView.css';
+import { useCameras, useFilmStocks, usePhotoAssets, useRolls } from '../../hooks/useData';
+import { usePhotoUrlMap } from '../../hooks/usePhotoUrlMap';
 
 interface PhotosViewProps {
   enableFilmMode: boolean;
@@ -18,60 +19,46 @@ export const PhotosView: React.FC<PhotosViewProps> = ({ enableFilmMode }) => {
   // Lightbox State
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
-  // Live queries
-  const cameras = useLiveQuery(() => db.cameras.toArray()) || [];
-  const filmStocks = useLiveQuery(() => db.filmStocks.toArray()) || [];
-  const archivedRolls = useLiveQuery(() => db.rolls.where('status').equals('archived').toArray()) || [];
-  const archivedRollIds = archivedRolls.map(r => r.id!);
-
-  const allPhotos = useLiveQuery<PhotoAsset[]>(() => 
-    archivedRollIds.length > 0 
-      ? db.photoAssets.where('rollId').anyOf(archivedRollIds).toArray() 
-      : Promise.resolve([] as PhotoAsset[])
-  , [archivedRollIds.join(',')]) || [];
+  const cameras = useCameras();
+  const filmStocks = useFilmStocks();
+  const rolls = useRolls();
+  const photoAssets = usePhotoAssets();
+  const archivedRolls = useMemo(() => rolls.filter(r => r.status === 'archived'), [rolls]);
+  const archivedRollIds = useMemo(() => archivedRolls.map(r => r.id!), [archivedRolls]);
+  const allPhotos = useMemo(
+    () => photoAssets.filter((photo: PhotoAsset) => archivedRollIds.includes(photo.rollId)),
+    [photoAssets, archivedRollIds]
+  );
 
   // Filtered photos
-  const filteredPhotos = allPhotos.filter(photo => {
+  const filteredPhotos = useMemo(() => allPhotos.filter(photo => {
     // 1. Search filter
     const matchesSearch = photo.originalFileName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (photo.note && photo.note.toLowerCase().includes(searchTerm.toLowerCase()));
 
     // 2. Camera filter
     const roll = archivedRolls.find(r => r.id === photo.rollId);
-    const matchesCamera = filterCameraId === 'all' || (roll && roll.cameraId === Number(filterCameraId));
+    const matchesCamera = filterCameraId === 'all' || (roll && (roll.cameraIds || []).includes(filterCameraId));
 
     // 3. Film filter
-    const matchesFilm = filterFilmId === 'all' || (roll && roll.filmStockId === Number(filterFilmId));
+    const matchesFilm = filterFilmId === 'all' || (roll && roll.filmStockId === filterFilmId);
 
     // 4. Rating filter
     const matchesRating = filterRating === 'all' || (photo.rating && photo.rating >= Number(filterRating));
 
     return matchesSearch && matchesCamera && matchesFilm && matchesRating;
-  });
+  }), [allPhotos, archivedRolls, searchTerm, filterCameraId, filterFilmId, filterRating]);
 
-  // Photo URLs state
-  const [photoUrls, setPhotoUrls] = useState<{ [key: number]: string }>({});
-
-  useEffect(() => {
-    const urls: { [key: number]: string } = {};
-    filteredPhotos.forEach(p => {
-      urls[p.id!] = URL.createObjectURL(p.blob);
-    });
-    setPhotoUrls(urls);
-
-    return () => {
-      Object.values(urls).forEach(url => URL.revokeObjectURL(url));
-    };
-  }, [allPhotos, filterCameraId, filterFilmId, filterRating, searchTerm]);
+  const photoUrls = usePhotoUrlMap(filteredPhotos, { preferFull: lightboxIndex !== null });
 
   // Keyboard navigation for lightbox
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (lightboxIndex === null) return;
       if (e.key === 'ArrowRight') {
-        handleNext();
+        setLightboxIndex(current => current !== null && current < filteredPhotos.length - 1 ? current + 1 : current);
       } else if (e.key === 'ArrowLeft') {
-        handlePrev();
+        setLightboxIndex(current => current !== null && current > 0 ? current - 1 : current);
       } else if (e.key === 'Escape') {
         setLightboxIndex(null);
       }
@@ -96,7 +83,7 @@ export const PhotosView: React.FC<PhotosViewProps> = ({ enableFilmMode }) => {
   const getPhotoMetadata = (photo: PhotoAsset) => {
     const roll = archivedRolls.find(r => r.id === photo.rollId);
     if (!roll) return null;
-    const camera = cameras.find(c => c.id === roll.cameraId);
+    const camera = cameras.find(c => (roll.cameraIds || []).includes(c.id!));
     const film = filmStocks.find(f => f.id === roll.filmStockId);
     return {
       rollName: roll.name,

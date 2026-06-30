@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <g id="icon" filter="url(#softShadow)">
+    <!-- Film leader (side strip) -->
+    <g id="leader">
+      <rect x="240" y="360" width="160" height="220" rx="26" fill="#E04B2D" stroke="#2B2B2B" stroke-width="2"/>
+      <rect x="275" y="395" width="80" height="120" rx="16" fill="#F39C12" opacity="0.18"/>
+      <circle cx="280" cy="530" r="8" fill="#2B2B2B" opacity="0.6"/>
+      <circle cx="320" cy="530" r="8" fill="#2B2B2B" opacity="0.6"/>
+    </g>
+
+    <!-- Lid -->
+    <g id="lid">
+      <rect x="207" y="140" width="610" height="84" rx="18" fill="#1F1F1F" stroke="#2B2B2B" stroke-width="2"/>
+      <rect x="402" y="100" width="220" height="50" rx="12" fill="#1F1F1F" stroke="#2B2B2B" stroke-width="2"/>
+    </g>
+
+    <!-- Body -->
+    <g id="body">
+      <rect x="232" y="210" width="560" height="680" rx="64" fill="#2F2F2F" stroke="#2B2B2B" stroke-width="2"/>
+      <rect x="256" y="234" width="512" height="632" rx="56" fill="none" stroke="#4A4A4A" stroke-width="1"/>
+    </g>
+
+    <!-- Label band (fixed diagonal) -->
+    <g id="label">
+      <path d="M 232 632 L 792 482 L 792 632 L 232 782 Z" fill="#F6C21A"/>
+      <path d="M 232 690 L 792 540 L 792 632 L 232 782 Z" fill="#F39C12" opacity="0.65"/>
+    </g>
+
+    <!-- Highlight slab -->
+    <g id="highlight">
+      <rect x="580" y="360" width="140" height="350" rx="28" fill="#F8F4D6" opacity="0.35"/>
+    </g>
+
+    <!-- Perforation dots -->
+    <g id="perforation">
+      <circle cx="722" cy="810" r="10" fill="#2B2B2B" opacity="0.55"/>
+      <circle cx="672" cy="810" r="10" fill="#2B2B2B" opacity="0.55"/>
+      <circle cx="622" cy="810" r="10" fill="#2B2B2B" opacity="0.55"/>
+    </g>
+  </g>
+</svg>

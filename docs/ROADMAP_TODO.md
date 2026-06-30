@@ -1,180 +1,132 @@
-# Filmory-Web 完整功能对齐代办单 (ROADMAP_TODO)
+# Filmory-Web Roadmap
 
-本计划基于 [DEVELOPMENT_GUIDELINES.md](file:///Users/james/Desktop/1.2-CS/00-projects/Filmory-Web/docs/DEVELOPMENT_GUIDELINES.md) 中的工业级规范，根据 [FEATURE_COMPARISON.md](file:///Users/james/Desktop/1.2-CS/00-projects/Filmory-Web/docs/FEATURE_COMPARISON.md) 与 [WEB_ARCHITECTURE.md](file:///Users/james/Desktop/1.2-CS/00-projects/Filmory-Web/docs/WEB_ARCHITECTURE.md) 的模块及微服务蓝图，整理出了本套**全功能特性（Feature-by-Feature）对齐代办单**。
+本文件是唯一 Roadmap 与待办入口。根目录 `TODO.md` 已移除，避免部署清单与产品 Roadmap 双线维护。
 
-本代办单详细比对了 **Filmory Swift iOS 原生端** 与 **Web 网页端**，明确标识了已实现、部分实现及未实现的项目，以便我们进行后续的循环开发。
+## 当前原则
 
-> [!IMPORTANT]
-> **开发与测试双步工作流红线规则**：
-> 1. 每次只开发**单个模块/功能**。
-> 2. 功能业务代码开发完并确保编译成功后，**必须立即暂停**并询问用户：“是否开始为本功能编写完整测试用例进行校验？”。
-> 3. 禁止在同一个 Turn 动作中同时编写业务与测试代码。
-> 4. **冗余代码清理审计**：在功能实现和编写测试时，必须审计并清理所有未使用的 Import、Mock 数据残留、无用注释、调试日志和废弃代码，维持代码库最简。
+- 每次只处理一个模块或一个明确问题。
+- 优先级顺序：数据正确性/安全 > 明显 UI bug > 当前体验改进 > 商业化闭环 > 上线部署 > 长期维护。
+- 功能实现和测试编写分开推进；业务代码完成后再决定是否补测试。
+- 每轮开发都顺手清理明确无用的临时代码、脚本、缓存和过期注释。
+- `.agents/AGENTS.md` 与 `docs/DEVELOPMENT_GUIDELINES.md` 仍是执行规范来源。
 
----
+## 已完成压缩记录
 
-## 💬 专题讨论：存储方案演进设计
+- 前端主应用已迁移为 React/Vite + Dexie local-first 架构，并接入 Supabase Auth、Postgres 同步、RLS 迁移、PWA、ErrorBoundary、主题切换、移动端导航和核心工作区。
+- 核心业务已覆盖：控制中心、照片库、拍摄卷/项目集、器材库、财务流水、统计、对比工作台、标签、Excel 导入/导出。
+- 近期已完成：认证 bypass 仅开发环境展示、导出文案从 JSON 改为 Excel、一次性修复脚本/模板资产/本地缓存清理、测试从旧 JSON 导出逻辑改为读取 XLSX。
+- 当前验证状态：`npm run lint` / `npm run test` / `npm run build` / `npm run e2e` 均通过；P0 live integration tests 可通过 `RUN_P0_LIVE_TESTS=1` 显式开启；构建仅有 Vite chunk size 警告；lint 仍有非阻塞 warning 待长期清理。
 
-* **开发环境配置**：利用 Docker-compose 运行本地 **MinIO**（兼容 S3 协议的轻量对象存储），后端代码使用 AWS S3 SDK (`@aws-sdk/client-s3`)，前端通过 presigned URL 实现安全的直传。
-* **生产环境切换**：只需更换环境变量中的 AKSK 和 Endpoint，代码无需做任何修改，即可直接切换到真实的 AWS S3。
+## Next Up：当前执行顺序
 
----
+1. [x] **本地多租户隔离全链路闭环**
+   - 现状：部分页面或服务仍可能绕过 `useData`，直接读 Dexie 全表或使用全局同步水位。
+   - 已完成：照片库、财务流水、器材/拍摄卷重名判断、项目集解绑、Excel 导入/导出、seed 初始化、同步队列与同步水位已按当前 `userId` 收口；补 fake-indexeddb 回归测试覆盖 Excel 导入跨租户同名器材/胶卷隔离。
 
-## 📋 全模块功能对齐看板
+2. [x] **Lint / React Compiler / Fast Refresh 规则收口**
+   - 已完成：拆分 Context provider 与 hook/core，修复 React Compiler setState-in-effect / purity / static-components / preserve-memoization 等 error，让 `npm run lint` 恢复通过。
+   - 剩余：仍有未使用变量、hook deps 等 warning，不阻塞 lint 退出码，后续可随相关文件维护时顺手清理。
 
-标记说明：`[x] 已实现` | `[/] 部分实现/进行中` | `[ ] 未实现`
+3. [x] **UI E2E smoke 基线补充**
+   - 已完成：补充 Playwright smoke helper 与当前 UI 流程测试，覆盖 Dev Login、核心导航、器材新增与重复确认、拍摄卷创建、Excel 模板下载与批量导入。
+   - 备注：VIP E2E 暂时 `skip`，因为 VIP 业务接线仍在 P1 Roadmap 中，不能作为当前必过上线门槛。
 
----
+4. [x] **全局危险操作确认规范**
+   - 结论：拍摄卷、器材库、项目集、相册、标签、财务流水的大部分删除入口已经接入 `ConfirmContext`；现有拍摄卷和器材库数据 format 不需要改变。
+   - 已完成：Settings 账号注销改为 `DELETE` 输入校验 + `ConfirmContext` 高危确认 + 统一反馈；重置数据库成功/失败反馈已移除 `alert`。
+   - 已完成：旧 JSON/Zip 覆盖恢复接口 `BackupService.importDatabaseFromZip` 已删除，避免误认为 Excel 批量导入。
+   - 已完成：非危险确认类 `alert` 已替换为全局反馈，包括 Excel 导入结果、导出失败、财务金额校验、设置封面成功、器材头像失败、拍摄卷详情保存成功。
+   - 已覆盖：拍摄卷删除/完成/移出项目集、器材删除、财务记录删除、相册删除/移除照片、项目集删除、标签删除均已接入 `ConfirmContext`，后续只复核文案。
+   - 不纳入本轮：同步队列内部清理、测试 `clear()`、拍摄卷封面替换时清理旧 cover photo。
+   - 测试：本轮至少验证 `lint` / `unit` / `build`，并按现有 E2E smoke 覆盖关键导航和导入链路；更细的取消态 E2E 可在后续单独补强。
 
-### 2. 相机管理模块 (Gear - Cameras)
-* **前端 (Front-End)**
-  - [x] **相机基础 CRUD 表单**：支持名牌、型号、类型（胶片/数码）、格式字段录入。
-  - [ ] **图片头像上传与大图预览**：添加文件拖拽区或选择器，上传图片至存储并支持大图详情弹窗预览。
-* **后端 (Back-End)**
-  - [x] **相机 CRUD API**：支持基本的查询和创建接口。
-  - [ ] **相机头像上传 API**：实现 `POST /api/cameras/:id/avatar` 接口，接收文件并通过 `sharp` 库裁剪压缩为 200x200px 方形 JPEG。
-  - [ ] **常用镜头推荐算法 (OOD 关联分析)**：根据指定相机 (`cameraId`) 统计历史 `rolls` 中最高频率使用的 `lensId`，作为推荐提示返回。
+5. [x] **Landing 登录前页面横向溢出修复**
+   - 已完成：Landing 根容器、fixed nav、hero/features/footer 均按 `width/max-width/min-width` 收口，避免 flex item、fixed padding 和装饰层制造横向溢出。
+   - 已测试：新增 Playwright viewport overflow 断言，覆盖桌面、平板、390px 与 320px 移动端。
 
----
+6. [ ] **统计页指标精简**
+   - 现状：统计页包含“总照片数”等不再需要强调的指标。
+   - 目标：移除总照片数，只保留总卷数、总拍摄集数、机器数字、库存卷、拍过的卷这些核心指标。
 
-### 3. 镜头管理模块 (Gear - Lenses)
-* **前端 (Front-End)**
-  - [x] **镜头基础 CRUD 录入**：支持定焦/变焦、最大光圈、焦段属性录入。
-  - [x] **镜头 UI 升级为网格卡片**：将原有的 Table 表格改为 2 列响应式 Grid 卡片。
-  - [x] **SVG 动态焦段占位头像**：设计 `LensSvgAvatar.tsx`，根据焦段 (`focalLength`) 动态计算并用 SVG 渲染不同的几何线条图案作为无图状态下的占位符。
-* **后端 (Back-End)**
-  - [x] **镜头 CRUD API**：支持基本的查询和创建接口。
+7. [ ] **器材编辑表单缩略图移除**
+   - 范围：相机、镜头、胶卷库存、其他器材的编辑/修改弹窗或表单。
+   - 目标：在“修改”场景中允许移除已存在缩略图/头像；删除后同步更新本地记录，避免旧图继续显示。
 
----
+8. [ ] **生产认证链路收口**
+   - 现状：认证后门已隐藏到开发环境，但还需要验证 Mailpit/线上邮件链接、回调 URL、路由守卫和 session 刷新边界。
+   - 目标：生产环境无 bypass，验证邮件、密码找回、OAuth 回调和跳转都闭环。
 
-### 4. 胶卷管理与库存系统 (Gear - Films & Inventory)
-* **前端 (Front-End)**
-  - [x] **胶卷型号 CRUD 列表**：支持品牌、型号、ISO、色彩类型（彩色/黑白）录入与过滤。
-  - [x] **数码虚拟卷过滤**：在胶片列表中隐藏 `isSystem=1` 的数字虚拟卷。
-  - [ ] **库存量管理**：在列表中直观展示 `stockCount` 库存数量，提供采购时一键增加/减少库存的输入动作。
-* **后端 (Back-End)**
-  - [x] **胶卷 CRUD API**：支持基本的查询和创建接口。
-  - [x] **库存原子操作 API**：实现 `POST /api/films/:id/stock`（修改库存数，如 +1 / -1）。
-  - [x] **原子性扣减库存事务逻辑 (Prisma $transaction)**：新建 Roll（若是胶卷模式）时，自动执行 `stockCount - 1`。若库存为 0 则抛出异常强制事务回滚（Rollback），防止超卖。
+## P0：安全与数据正确性
 
----
+- [x] **Storage 私有桶与 Signed URL**
+  - 已完成：`filmory-assets` 迁移为 Private Bucket，Storage RLS 改为 owner-only，前端上传和展示改用 Signed URL，不再生成 Public URL。
+  - 已测试：补 P0 module tests，覆盖 private bucket migration、public read policy 移除、signed URL 生成与 `storageKey` 优先展示。
+  - 已补充：新增可显式开启的 live integration tests，覆盖同用户 signed URL、匿名/跨用户直接读取失败、bucket `public=false`。
+  - 已修复：补 authenticated/service_role 对 RLS 保护业务表的表级权限 grants，避免只有 RLS policy 但 PostgREST 角色无表权限。
+  - 后续：生产 Supabase 执行 migration 后，需用真实账号复核跨用户盗链失败与同用户 signed URL 成功。
 
-### 5. 拍摄卷管理 (Rolls Management)
-* **前端 (Front-End)**
-  - [x] **进行中与已归档双栏分屏**：展示 Rolls 分类。
-  - [x] **卷详情操作**：支持照片导入、多选、批量删除。
-  - [x] **费用与备注记录**：支持胶卷价格、冲洗备注与地点的保存。
-  - [ ] **照片拖拽重排序**：在卷详情中通过拖拽修改照片的 `orderIndex`。
-  - [ ] **归档卷卡片横向 Carousel 滚动**：在已归档卷的卡片中，允许横滑预览前几张代表照片。
-* **后端 (Back-End)**
-  - [x] **拍摄卷 CRUD API**：支持基本的查询和创建接口。
-  - [x] **事务安全回滚 API**：对齐前端，实现新建/删除的数据库一致性保障。
+- [x] **账号删除 UI**
+  - 已完成：Settings 已提供正式入口，使用 `DELETE` 输入 + `ConfirmContext` 强确认 + 失败反馈。
+  - 已完成：`delete_user()` RPC 已存在并限制为 authenticated 执行；本地 Supabase migration 已验证。
+  - 已测试：补 P0 module tests，覆盖 `SECURITY DEFINER`、删除 auth.users、revoke PUBLIC/anon、grant authenticated。
+  - 已补充：新增可显式开启的 live integration tests，覆盖 authenticated 可调用、anon 失败、删除 auth 用户后用户数据 cascade 清理。
 
----
+## P1：会员能力与产品闭环
 
-### 6. 照片主页与时间轴 (Photos & Timeline)
-* **前端 (Front-End)**
-  - [x] **纵向时间流网格**：时间流网格按图片原始比例展示。
-  - [x] **无极缩放控制**：顶部滑块支持 2~8 列的网格列数调节。
-  - [x] **多维组合过滤**：支持根据相机、胶卷、星级、 pinned 状态进行模糊过滤。
-* **后端 (Back-End)**
-  - [ ] **过滤查询 API**：配合前端 Dexie 查询迁移，实现后端多维度的复合 SQL 查询。
+- [ ] **保留并补齐 VIP 业务接线**
+  - 现状：`UserProfile` / `regular` / `vip` 模型保留；VIP gating 测试保留为 `todo`，避免误判为已完成。
+  - 目标：真正接入普通用户 5 卷限制、VIP 放行、照片上传压缩策略、配额计数和 UI 提示。
 
----
+- [ ] **会员限制的后端硬防线**
+  - 目标：仅靠前端限制不够，后续用 Supabase Edge Function、Postgres Trigger 或 RLS/RPC 方案阻止越权写入。
 
-### 7. 照片查看器 (Photo Viewer)
-* **前端 (Front-End)**
-  - [x] **基础 Modal 查看器**：展示大图、参数（光圈、快门、焦段）、删除/评分等。
-  - [ ] **物理微动效过渡 (Framer Motion)**：点击照片时，模拟 iOS 原生的共享元素形变过渡 (`matchedGeometryEffect`)。
-  - [ ] **滑动关闭手势**：支持移动端或桌面端下拉/斜向滑动关闭详情页面。
-* **后端 (Back-End)**
-  - [x] **纯前端/后端异步 EXIF 解析**：使用 `exifreader` 库或后端 `sharp` 读取焦段、光圈、快门并自动落库。
+- [ ] **PWA 更新提示**
+  - 目标：当新 Service Worker 发布时，给用户明确的“更新到新版本”提示，避免长期停留在旧缓存。
 
----
+## P2：体验与功能优化
 
-### 8. 对比工作台 (Compare Workspace)
-* **前端 (Front-End)**
-  - [x] **A/B 双卷限制**：限制为双对象联动对比。
-  - [x] **左右双列 (Side-by-Side) 与联动滚动**：支持垂直双列滚动百分比同步。
-  - [x] **滑尺对比 (Split)**：像素级左右拖拽裁剪线对比色彩。
-  - [ ] **横向堆叠 (Rows) 对比模式**：上下两行联动对比。
-  - [ ] **代表照片算法 (Representative Photo)**：算法自动筛选各卷中最具代表性的照片作为对比首屏。
-  - [ ] **控制变量筛选 (Control Variable Filter)**：在 A/B 对比时，过滤并仅对比相同焦段/光圈/快门拍摄的照片。
+- [ ] **拍摄卷工作流优化**
+  - 修复 Tab/视图切换闪烁。
+  - 优化项目集、散卷、所有卷的横向滑动和全览模式。
+  - 保持当前数据结构稳定，优先改善交互和空间利用率。
 
----
+- [ ] **危险操作取消态 E2E 补强**
+  - 目标：在现有 `ConfirmContext` 已接入的基础上，补充取消删除、取消账号注销、取消重置等黑盒测试，确认取消路径不会产生数据变更。
 
-### 9. 标签管理模块 (Tags & PhotoTags) - 从零落地
-* **前端 (Front-End)**
-  - [ ] **标签字典配置页**：管理标签的分组、名称与色彩。
-  - [ ] **照片详情关联标签**：支持在 PhotoViewer 底部添加/移除标签。
-  - [ ] **按标签进行网格过滤**：时间流中可通过标签快速聚合照片。
-* **后端 (Back-End)**
-  - [ ] **标签关系建模**：定义 `tags` 与多对多关联表。
-  - [ ] **标签 API**：提供 Tags CRUD 及照片标签批量绑定接口。
+- [ ] **前端模块机会型抽取**
+  - 结论：当前不需要为“面向对象设计”强行重构；仅在修改相关页面时，把重复业务块顺手抽成可复用 hook/component/service。
+  - 优先候选：统计 KPI 卡片、器材编辑头像/缩略图控件、拍摄卷列表卡片、导入导出反馈与校验逻辑。
 
----
+- [ ] **Compare 工作台复核**
+  - 现有对比功能已实现核心能力，但还需要按实际 UI 再复核代表照片、行堆叠、控制变量筛选是否完全符合最终产品预期。
 
-### 10. 数据分析面板 (Stats Dashboard)
-* **前端 (Front-End)**
-  - [x] **核心 KPI 卡片**：总卷数、总片数、总费用统计卡片。
-  - [x] **基础可视化图表**：相机出勤柱状图、ISO 感光度排行柱状图、彩色 vs 黑白圆环图。
-  - [x] **胶卷门控隔离 (Film Mode Gate)**：胶卷选项关闭时，自动隐藏分析面板中的胶卷与彩色比例统计。
-  - [ ] **进阶图表与 12 项统计指标对齐 (iOS Stats Repository 对齐)**：
-    - [x] 1. 总卷数统计 (Total Rolls)
-    - [x] 2. 总片数统计 (Total Photos)
-    - [x] 3. 价格费用统计 (Total Spend: Film & Develop)
-    - [x] 4. 相机出勤排行 (Camera Top 5)
-    - [x] 5. ISO 分布排行 (ISO Distribution)
-    - [x] 6. 彩色 vs 黑白比例 (Color vs B&W Ratio)
-    - [ ] 7. 月度花费趋势折线图 (Monthly Spend Trend)
-    - [ ] 8. 月度拍摄趋势 (Monthly Shooting Trend)
-    - [ ] 9. 胶片成本拆分柱状图 (Film Cost Split: Used vs Inventory value)
-    - [ ] 10. 评分分布柱状图 (Rating Distribution)
-    - [ ] 11. 相机投入与使用排行 (Camera Value & Usage Ranking)
-    - [ ] 12. 高分 Roll Top 5 (High-rated Rolls Top 5)
-  - [ ] **统计图表 UI 实现**：引入 Chart.js / Recharts 绘制折线图与条形图。
+- [ ] **i18n 国际化**
+  - 配置 `i18next` / `react-i18next`，抽离中文硬编码，补 `zh.json` / `en.json`，统一日期和货币格式。
 
----
+## P3：部署上线事项
 
-### 11. 冲洗记录与器材扩展 (Other Equipments)
-* **前端 (Front-End)**
-  - [x] **其他器材管理 Tab**：支持三脚架、药水、清洁工具等 CRUD。
-  - [x] **过期安全警示**：如果药水（Chemical）超过保质期，在卡片上显示红色高亮过期警告。
-  - [x] **冲洗备忘 Notepad**：在拍摄卷详情页面中，加入冲洗 Notepad（记录冲洗方式、时长、温度、备注等文本）。
-* **后端 (Back-End)**
-  - [x] **器材扩展 CRUD API**：支持 `OtherEquipment` 的创建与过期日期校验。
-  - [x] **冲洗记录更新 API**：支持更新 `Roll.developNotes`。
+- [ ] **Supabase 生产项目**
+  - 创建线上 Supabase 项目，配置 `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`，执行迁移与 RPC 部署。
 
----
+- [ ] **真实邮件服务**
+  - 在 Supabase Auth 中配置 Resend、SendGrid、Amazon SES 等 SMTP，并更新注册、验证、密码重置模板。
 
-## 🏁 已完成模块 (Completed Modules)
+- [ ] **前端托管**
+  - 部署到 Cloudflare Pages / Vercel / Netlify，配置构建命令 `npm run build`、输出目录 `dist` 和生产环境变量。
 
-### 1. 基础设施与存储契约 (Infrastructure & Storage)
-* **后端 (Back-End) - 存储服务核心实现 (To Implement)**
-  - [x] **本地数据库与 ORM**：使用 Prisma 6 + SQLite (`dev.db`) 代替临时内存变量。
-  - [x] **种子数据播种 (Seed)**：初始化相机、胶卷及数码占位符的测试种子数据。
-  - [x] **Docker 本地开发环境**：在 [docker-compose.yml](file:///Users/james/Desktop/1.2-CS/00-projects/Filmory-Web/docker-compose.yml) 中配置 Postgres、Redis 和 MinIO。
-  - [x] **S3 依赖安装**：安装 `@aws-sdk/client-s3` 与 `@aws-sdk/s3-request-presigner` 依赖。
-  - [x] **存储抽象层服务契约**：设计 [IStorageService.ts](file:///Users/james/Desktop/1.2-CS/00-projects/Filmory-Web/backend/src/services/IStorageService.ts) 接口 (DIP 原则)，统一规范 `uploadFile`、`deleteFile` 和 `getPresignedUrl` 契约。
-  - [x] **本地磁盘存储服务实现**：实现 `LocalDiskStorageService` (写入本地 uploads 目录并配置 Express 静态资源服务，作为离线/开发默认驱动)。
-  - [x] **MinIO/S3 兼容对象存储实现**：实现 `S3StorageService` (连接本地 MinIO 容器 / 生产级 AWS S3，作为高并发/云端首选驱动)。
-  - [x] **存储适配器工厂**：实现 `StorageFactory.ts`，基于环境变量 `STORAGE_PROVIDER` 动态分发存储实现。
-  - [x] **工业级 JWT 鉴权扩展**：重构单 JWT Token，支持双令牌机制 (AccessToken + RefreshToken) 并将 Session 存入 Redis。
+- [ ] **Auth Redirect URL**
+  - 在线上 Supabase Dashboard 设置 Site URL、Redirect URLs、OAuth 回调域名。
 
-* **存储服务实现后 - 已有模块改造计划 (To Modify Post-Implementation)**
-  - [x] **重构照片上传 API**：将已有的 `POST /api/photos/upload` 重构为使用 `StorageFactory` 获取相应的存储服务实例进行图片持久化。抛弃原先内存 buffer 处理，实现将上传后的相对 URL (本地) 或 S3 存储地址返回前端。
-  - [x] **重构相机头像上传 API**：实现 `POST /api/cameras/:id/avatar`。接收到相机头像后，利用 `sharp` 裁剪为 200x200 像素的正方形，并使用 `IStorageService` 存储文件，更新 `Camera.notes` 或新字段以记录头像 URL。
-  - [x] **增加对象清理触发**：在覆盖相机头像时已实现触发 `IStorageService.deleteFile` 清理旧文件。对于删除照片或相机实体，将在未来实现实体删除 API 时增加对应的级联清理。
+## P4：长期维护
 
-* **后续前后端存储集成与对接方式设计 (Integration & Connection Methods)**
-  - **方案一：服务端代理中转上传 (Server-Proxy Upload)**
-    - *流程*：前端 Form-Data 提交图片给 Express -> Express 接收并处理 EXIF/尺寸 -> 经过 `IStorageService` 将处理后的图存入磁盘或 S3。
-    - *特点*：开发简单，支持在服务端进行图片的强物理校验和尺寸预处理，但大图上传时会占用后端主线程网络 I/O 带宽。
-    - *适用场景*：相机头像上传、小体积测试照片上传。
-  - **方案二：S3/MinIO 客户端安全直传 (Presigned URL Upload)**
-    - *流程*：前端调用后端 `GET /api/storage/presign` 申请临时上传签名 -> 前端使用 PUT 请求直接将原图大文件上传到 S3/MinIO 容器 -> 上传成功后，前端仅将图片 URL 与异步提取出的 EXIF 元数据包发送给后端完成落库。
-    - *特点*：零带宽损耗，适合海量高清胶卷扫描大图直传。
-    - *适用场景*：照片导入大并发场景。
-  - **前端 Dexie -> 云同步数据迁移动作**：
-    - 在前端创建网络同步同步状态机 (Sync Engine)。
-    - 前端照片缓存改为优先存本地 IndexedDB，在后台网络空闲时，静默使用直传签名推送到 S3/MinIO 并触发后端 API 落库，同步成功后释放前端 Blob，换取相对/绝对 URL 以减轻前端存储空间。
+- [ ] **Lint warning 清理**
+  - 当前 lint 退出码已通过；剩余 warning 包括未使用变量、hook deps、组件 props 等，后续按相关文件修改时顺手清理，避免制造无关 diff。
+
+- [ ] **README 与详细规格同步**
+  - README、`docs/supabase_schema.sql` 与 `docs/Detailed-Specs` 仍有旧 backend、Public URL、ZIP/JSON 或历史实现描述，需要改成当前 Vite + Supabase + Dexie + private Storage/Signed URL 架构事实。
+
+- [ ] **Bundle 拆分**
+  - 当前构建通过但存在大 chunk 警告；后续按路由或重依赖拆分。
+
+- [ ] **文档去重**
+  - `docs/Detailed-Specs` 中仍有历史 ZIP/JSON/旧后端描述，后续逐步压缩为当前架构事实。

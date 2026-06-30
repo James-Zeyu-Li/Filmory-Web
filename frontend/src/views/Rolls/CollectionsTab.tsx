@@ -1,0 +1,335 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { db, type Collection } from '../../db/schema';
+import { useCollections, useRolls, usePhotoAssets, useCameras, useFilmStocks } from '../../hooks/useData';
+import { useAuth } from '../../contexts/useAuth';
+import { useConfirm } from '../../contexts/useConfirm';
+import { Edit3, Trash2, X, Calendar, Camera, Film, Folder } from 'lucide-react';
+import { Button } from '../../components/ui/Button';
+import { motion } from 'framer-motion';
+import { IconButton } from '../../components/ui/IconButton';
+import { EmptyState } from '../../components/EmptyState';
+import { Modal } from '../../components/Modal';
+import { HorizontalScroller } from '../../components/HorizontalScroller';
+import { usePhotoUrlMap } from '../../hooks/usePhotoUrlMap';
+
+interface CollectionsTabProps {
+  onCollectionSelect: (collectionId: string) => void;
+  viewMode?: 'grid' | 'list';
+  isViewAll?: boolean;
+}
+
+export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSelect, viewMode = 'list', isViewAll = false }) => {
+  const { user } = useAuth();
+  const { confirm } = useConfirm();
+  const collections = useCollections();
+  const allRolls = useRolls();
+  const allPhotos = usePhotoAssets();
+  const photoUrlMap = usePhotoUrlMap(allPhotos);
+  const cameras = useCameras();
+  const filmStocks = useFilmStocks();
+
+  // Get cover url for a single roll
+  const getRollCoverUrl = (roll: { coverPhotoId?: string }) => {
+    if (!roll.coverPhotoId) return undefined;
+    const p = allPhotos.find(ph => ph.id === roll.coverPhotoId);
+    if (!p) return undefined;
+    return p.id ? photoUrlMap[p.id] : undefined;
+  };
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+
+  
+  const handleOpenModal = (collection?: Collection) => {
+    if (collection) {
+      setEditingCollection(collection);
+      setName(collection.name);
+      setDescription(collection.description || '');
+      setDate(new Date(collection.date).toISOString().split('T')[0]);
+    } else {
+      setEditingCollection(null);
+      setName('');
+      setDescription('');
+      setDate(new Date().toISOString().split('T')[0]);
+    }
+    setIsModalOpen(true);
+  };
+
+  useEffect(() => {
+    const handleOpen = () => handleOpenModal();
+    document.addEventListener('open-new-collection-modal', handleOpen);
+    return () => document.removeEventListener('open-new-collection-modal', handleOpen);
+  }, []);
+  
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    
+    if (editingCollection && editingCollection.id) {
+      await db.collections.update(editingCollection.id, {
+        name: name.trim(),
+        description: description.trim(),
+        date: new Date(date).getTime()
+      });
+    } else {
+      await db.collections.add({
+        id: crypto.randomUUID(),
+        userId: user?.id || 'offline',
+        name: name.trim(),
+        description: description.trim(),
+        date: new Date(date).getTime(),
+        addedAt: Date.now()
+      });
+    }
+    setIsModalOpen(false);
+  };
+  
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const confirmed = await confirm({
+      title: '删除项目集',
+      message: '确认删除此项目？项目内的拍摄卷将保留并转为独立卷，仅解除绑定关系。',
+      confirmText: '确认删除',
+      isDanger: true
+    });
+    if (confirmed) {
+      await db.collections.delete(id);
+      
+      // Detach rolls
+      const linkedRolls = (await db.rolls.where('collectionId').equals(id).toArray())
+        .filter(roll => roll.userId === (user?.id || 'offline'));
+      for (const roll of linkedRolls) {
+        if (roll.id) {
+          await db.rolls.update(roll.id, { collectionId: undefined });
+        }
+      }
+    }
+  };
+
+  const filteredCollections = collections;
+
+  const collectionCards = useMemo(() => {
+    return filteredCollections.map(collection => {
+      const linkedRolls = allRolls.filter(r => r.collectionId === collection.id);
+
+      const uniqueCameraIds = Array.from(new Set(linkedRolls.flatMap(r => r.cameraIds || [])));
+      const cameraNames = uniqueCameraIds.map(id => cameras.find(c => c.id === id)?.name || '未知相机');
+      
+      const uniqueFilmIds = Array.from(new Set(linkedRolls.map(r => r.filmStockId).filter(id => id && id !== 'digital-placeholder')));
+      const filmNames = uniqueFilmIds.map(id => {
+        const f = filmStocks.find(fs => fs.id === id);
+        return f ? `${f.brand} ${f.name}` : '未知胶卷';
+      });
+      
+      // Build mosaic: collect up to 4 cover URLs from linked rolls
+      const mosaicUrls: string[] = [];
+      for (const roll of linkedRolls) {
+        const url = getRollCoverUrl(roll);
+        if (url) mosaicUrls.push(url);
+        if (mosaicUrls.length >= 4) break;
+      }
+
+      if (viewMode === 'grid') {
+        return (
+          <div 
+            key={collection.id} 
+            className="roll-card collection-card"
+            onClick={() => onCollectionSelect(collection.id!)}
+          >
+            <div className="roll-card-cover">
+              {collection.coverUrl ? (
+                <div style={{ backgroundImage: `url(${collection.coverUrl})`, width: '100%', height: '100%', backgroundSize: 'cover', backgroundPosition: 'center' }} />
+              ) : mosaicUrls.length > 0 ? (
+                <div className="collection-mosaic">
+                  {mosaicUrls.map((url, i) => (
+                    <div key={i} className="collection-mosaic-cell" style={{ backgroundImage: `url(${url})` }} />
+                  ))}
+                </div>
+              ) : (
+                <div className="collection-card-name-thumb">
+                  <span>{collection.name.charAt(0).toUpperCase()}</span>
+                </div>
+              )}
+              
+              <div className="roll-card-status">
+                <span className="status-badge active">{linkedRolls.length} 卷</span>
+              </div>
+            </div>
+
+            <div className="roll-card-content">
+              <h3 style={{ margin: 0, marginBottom: '8px' }}>{collection.name}</h3>
+              
+              <p className="roll-card-meta">
+                 <Calendar size={12} style={{ flexShrink: 0 }}/> {new Date(collection.date).toLocaleDateString()}
+              </p>
+              
+              {cameraNames.length > 0 && (
+                 <p className="roll-card-meta">
+                    <Camera size={12} style={{ flexShrink: 0 }}/> {cameraNames.join(', ')}
+                 </p>
+              )}
+              {filmNames.length > 0 && (
+                 <p className="roll-card-meta">
+                    <Film size={12} style={{ flexShrink: 0 }}/> {filmNames.join(', ')}
+                 </p>
+              )}
+              
+              <div className="roll-card-actions">
+                <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleOpenModal(collection); }} title="编辑项目">
+                  <Edit3 size={14} /> <span>编辑</span>
+                </button>
+                <button className="action-btn danger" onClick={(e) => handleDelete(collection.id!, e)} title="删除项目">
+                  <Trash2 size={14} /> <span>删除</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // Default List Mode (Horizontal Scroller)
+      return (
+        <div 
+          key={collection.id} 
+          className="collection-card-row"
+          onClick={() => onCollectionSelect(collection.id!)}
+        >
+          {/* Square thumbnail: mosaic if photos exist, name initials if not */}
+          <div className="collection-card-thumb-wrapper">
+            {collection.coverUrl ? (
+              <div className="collection-card-thumb" style={{ backgroundImage: `url(${collection.coverUrl})` }} />
+            ) : mosaicUrls.length > 0 ? (
+              <div className="collection-mosaic">
+                {mosaicUrls.map((url, i) => (
+                  <div key={i} className="collection-mosaic-cell" style={{ backgroundImage: `url(${url})` }} />
+                ))}
+              </div>
+            ) : (
+              <div className="collection-card-name-thumb">
+                <span>{collection.name.charAt(0).toUpperCase()}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Info */}
+          <div className="collection-card-info">
+            <p className="collection-card-title">{collection.name}</p>
+
+            <p className="collection-card-meta">
+              <Calendar size={12} style={{ flexShrink: 0 }} />
+              {new Date(collection.date).toLocaleDateString()}
+            </p>
+
+            {cameraNames.length > 0 && (
+              <p className="collection-card-meta">
+                <Camera size={12} style={{ flexShrink: 0 }} />
+                {cameraNames.join(', ')}
+              </p>
+            )}
+            {filmNames.length > 0 && (
+              <p className="roll-card-meta">
+                <Film size={12} style={{ flexShrink: 0 }} />
+                {filmNames.join(', ')}
+              </p>
+            )}
+
+            <span className="collection-card-rolls-tag">
+              <Film size={10} /> {linkedRolls.length} 卷
+            </span>
+          </div>
+
+          {/* Actions */}
+          <div className="collection-card-actions roll-card-row-actions" onClick={e => e.stopPropagation()}>
+            <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleOpenModal(collection); }} title="编辑项目">
+              <Edit3 size={14} /> <span>编辑</span>
+            </button>
+            <button className="action-btn danger" onClick={(e) => handleDelete(collection.id!, e)} title="删除项目">
+              <Trash2 size={14} /> <span>删除</span>
+            </button>
+          </div>
+        </div>
+      );
+    });
+  }, [collections, allRolls, allPhotos, cameras, filmStocks, viewMode]);
+
+  return (
+    <div className="collections-tab-container">
+
+      
+        {collections.length === 0 ? (
+          <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
+            <EmptyState 
+              icon={Folder}
+              title="暂无拍摄项目"
+              description="创建一个拍摄项目（如：北海道旅拍），将多个拍摄卷归档在一起统一管理吧。"
+              action={
+                <Button variant="primary" onClick={() => handleOpenModal()}>
+                  新建项目
+                </Button>
+              }
+            />
+          </motion.div>
+        ) : viewMode === 'grid' ? (
+          <motion.div key="grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }} className="rolls-grid">
+            {collectionCards}
+          </motion.div>
+        ) : isViewAll ? (
+          <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }} className="rolls-list">
+            {collectionCards}
+          </motion.div>
+        ) : (
+          <motion.div key="scroller" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
+            <HorizontalScroller>
+              {collectionCards}
+            </HorizontalScroller>
+          </motion.div>
+        )}
+      
+
+      {/* Collection Modal */}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+            <div className="modal-header">
+              <h3>{editingCollection ? '编辑项目' : '新建项目'}</h3>
+              <IconButton type="button" onClick={() => setIsModalOpen(false)} icon={<X size={20} />} />
+            </div>
+            <form onSubmit={handleSave}>
+              <div className="modal-body form-group">
+                <label>项目名称 <span style={{ color: 'var(--danger-color)' }}>*</span></label>
+                <input 
+                  type="text" 
+                  value={name} 
+                  onChange={e => setName(e.target.value)} 
+                  placeholder="例如：2026 东京旅拍" 
+                  required 
+                  autoFocus
+                />
+                
+                <label>拍摄日期 <span style={{ color: 'var(--danger-color)' }}>*</span></label>
+                <input 
+                  type="date" 
+                  value={date} 
+                  onChange={e => setDate(e.target.value)} 
+                  required 
+                />
+                
+                <label>项目描述</label>
+                <textarea 
+                  value={description} 
+                  onChange={e => setDescription(e.target.value)} 
+                  placeholder="记录一些关于这个项目的备忘录..."
+                  rows={3}
+                />
+              </div>
+              
+              <div className="form-actions">
+                <Button type="button" onClick={() => setIsModalOpen(false)}>取消</Button>
+                <Button variant="primary" type="submit">保存</Button>
+              </div>
+            </form>
+      </Modal>
+    </div>
+  );
+};

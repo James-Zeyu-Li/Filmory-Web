@@ -1,0 +1,34 @@
+{
+  "Kodak": {
+    "primary": "#FFB700",
+    "secondary": ["#ED0000"]
+  },
+  "Fujifilm": {
+    "primary": "#008A3B",
+    "secondary": ["#E6001A", "#FFFFFF"]
+  },
+  "Ilford": {
+    "primary": "#111111",
+    "secondary": ["#F5F5F5"]
+  },
+  "Kentmere": {
+    "primary": "#6B3FA0",
+    "secondary": ["#E43B8B"],
+    "note": "Kentmere 包装常见紫/粉视觉"
+  },
+  "Lomography": {
+    "primary": "#FAE397"
+  },
+  "CineStill": {
+    "primary": "#D91F27",
+    "secondary": ["#F6F6F6"]
+  },
+  "Foma (福马)": {
+    "primary": "#A0820A",
+    "secondary": ["#FFFFFF"]
+  },
+  "乐凯 Lucky": {
+    "primary": "#EF2D29",
+    "secondary": ["#FDDE16", "#21A551"]
+  }
+}

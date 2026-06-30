@@ -1,0 +1,57 @@
+import '@testing-library/jest-dom';
+import 'fake-indexeddb/auto';
+import 'vitest-canvas-mock';
+import { vi } from 'vitest';
+
+// Mock matchMedia if needed by some UI components (like Recharts)
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(), // Deprecated
+    removeListener: vi.fn(), // Deprecated
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
+
+// Mock localStorage for Dexie hooks and other components
+Object.defineProperty(window, 'localStorage', {
+  value: {
+    getItem: vi.fn((key: string) => key === 'filmory_user_id' ? 'mock-user-id' : null),
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+    clear: vi.fn(),
+  },
+});
+
+// Mock auth hook globally so components using useAuth() don't crash without AuthProvider
+vi.mock('./contexts/useAuth', () => ({
+  useAuth: () => ({
+    user: { id: 'mock-user-id', email: 'test@filmory.app' },
+    session: null,
+    isLoading: false,
+    signInMock: vi.fn(),
+    logout: vi.fn()
+  })
+}));
+
+// Mock Supabase globally to prevent "supabaseUrl is required" error during vitest runs
+vi.mock('./services/supabaseClient', () => ({
+  supabase: {
+    auth: {
+      getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
+      onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
+      signOut: vi.fn().mockResolvedValue({ error: null }),
+    },
+    storage: {
+      from: vi.fn().mockReturnValue({
+        upload: vi.fn().mockResolvedValue({ data: { path: 'mock/path' }, error: null }),
+        createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: 'mock-signed-url' }, error: null }),
+      }),
+    },
+  },
+}));

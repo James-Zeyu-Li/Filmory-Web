@@ -1,108 +1,107 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type PhotoAsset } from '../../db/schema';
-import { Columns, Split, Link as LinkIcon, Link2Off, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Columns, Split, UploadCloud, X, Image as ImageIcon } from 'lucide-react';
 import './CompareView.css';
 
+interface FileDropzoneProps {
+  target: 'A' | 'B';
+  file: File | null;
+  url: string | null;
+  onDropFile: (e: React.DragEvent<HTMLDivElement>, target: 'A' | 'B') => void;
+  onSelectFile: (e: React.ChangeEvent<HTMLInputElement>, target: 'A' | 'B') => void;
+  onClearFile: (target: 'A' | 'B') => void;
+}
+
+const FileDropzone: React.FC<FileDropzoneProps> = ({ target, file, url, onDropFile, onSelectFile, onClearFile }) => (
+  <div
+    className={`local-dropzone ${file ? 'has-file' : ''}`}
+    onDragOver={e => e.preventDefault()}
+    onDrop={e => onDropFile(e, target)}
+  >
+    {url ? (
+      <div className="dropzone-preview">
+        <img src={url} alt={`Preview ${target}`} />
+        <div className="dropzone-overlay">
+          <span>{file?.name}</span>
+          <button className="icon-btn btn-sm" onClick={() => onClearFile(target)}>
+            <X size={14} />
+          </button>
+        </div>
+      </div>
+    ) : (
+      <label className="dropzone-empty">
+        <UploadCloud size={32} />
+        <h4>拖拽本地原图到此处</h4>
+        <p>或点击选择文件 ({target}路)</p>
+        <input
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={e => onSelectFile(e, target)}
+        />
+      </label>
+    )}
+  </div>
+);
+
 export const CompareView: React.FC = () => {
-  const [rollAId, setRollAId] = useState<number | ''>('');
-  const [rollBId, setRollBId] = useState<number | ''>('');
-  const [viewMode, setViewMode] = useState<'sideBySide' | 'split'>('sideBySide');
-  const [isLinkedScroll, setIsLinkedScroll] = useState(false);
+  const [fileA, setFileA] = useState<File | null>(null);
+  const [fileB, setFileB] = useState<File | null>(null);
 
-  // Split slider select photo state
-  const [photoAId, setPhotoAId] = useState<number | null>(null);
-  const [photoBId, setPhotoBId] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<'split' | 'sideBySide'>('split');
 
-  // Live queries
-  const archivedRolls = useLiveQuery(() => db.rolls.where('status').equals('archived').toArray()) || [];
-  const cameras = useLiveQuery(() => db.cameras.toArray()) || [];
-  const filmStocks = useLiveQuery(() => db.filmStocks.toArray()) || [];
-
-  const photosA = useLiveQuery<PhotoAsset[]>(() => 
-    rollAId ? db.photoAssets.where('rollId').equals(Number(rollAId)).toArray() : Promise.resolve([] as PhotoAsset[])
-  , [rollAId]) || [];
-
-  const photosB = useLiveQuery<PhotoAsset[]>(() => 
-    rollBId ? db.photoAssets.where('rollId').equals(Number(rollBId)).toArray() : Promise.resolve([] as PhotoAsset[])
-  , [rollBId]) || [];
-
-  // Generate Image Blob URLs to prevent memory leak and load fast
-  const [urls, setUrls] = useState<{ [key: number]: string }>({});
+  const urlA = useMemo(() => fileA ? URL.createObjectURL(fileA) : null, [fileA]);
+  const urlB = useMemo(() => fileB ? URL.createObjectURL(fileB) : null, [fileB]);
 
   useEffect(() => {
-    const newUrls: { [key: number]: string } = {};
-    const allCombined = [...photosA, ...photosB];
-    allCombined.forEach(p => {
-      if (p.id) {
-        newUrls[p.id] = URL.createObjectURL(p.blob);
-      }
-    });
-    setUrls(newUrls);
-
-    // Auto-select first photos for split mode when rolls change
-    if (photosA.length > 0 && !photoAId) setPhotoAId(photosA[0].id!);
-    if (photosB.length > 0 && !photoBId) setPhotoBId(photosB[0].id!);
-
     return () => {
-      Object.values(newUrls).forEach(url => URL.revokeObjectURL(url));
+      if (urlA) URL.revokeObjectURL(urlA);
+      if (urlB) URL.revokeObjectURL(urlB);
     };
-  }, [photosA, photosB]);
+  }, [urlA, urlB]);
 
-  // Linked scrolling refs
-  const scrollRefA = useRef<HTMLDivElement>(null);
-  const scrollRefB = useRef<HTMLDivElement>(null);
-  const isScrollingRef = useRef<boolean>(false);
-
-  const handleScroll = (source: 'A' | 'B') => {
-    if (!isLinkedScroll) return;
-    if (isScrollingRef.current) return;
-
-    const sourceEl = source === 'A' ? scrollRefA.current : scrollRefB.current;
-    const targetEl = source === 'A' ? scrollRefB.current : scrollRefA.current;
-
-    if (sourceEl && targetEl) {
-      isScrollingRef.current = true;
-      // Synchronize scroll percentage
-      const scrollPct = sourceEl.scrollTop / (sourceEl.scrollHeight - sourceEl.clientHeight);
-      targetEl.scrollTop = scrollPct * (targetEl.scrollHeight - targetEl.clientHeight);
-      
-      // Reset after a frame
-      requestAnimationFrame(() => {
-        isScrollingRef.current = false;
-      });
+  const handleFileDrop = (e: React.DragEvent<HTMLDivElement>, target: 'A' | 'B') => {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      if (file.type.startsWith('image/')) {
+        if (target === 'A') {
+          setFileA(file);
+        } else {
+          setFileB(file);
+        }
+      }
     }
   };
 
-  const getRollMeta = (id: number) => {
-    const roll = archivedRolls.find(r => r.id === id);
-    if (!roll) return '';
-    const cam = cameras.find(c => c.id === roll.cameraId)?.name || '未知相机';
-    const film = filmStocks.find(f => f.id === roll.filmStockId);
-    const filmName = film ? (film.isSystem === 1 ? '数码' : `${film.brand} ${film.name}`) : '';
-    return `${cam} ${filmName ? `· ${filmName}` : ''}`;
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, target: 'A' | 'B') => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      if (target === 'A') {
+        setFileA(file);
+      } else {
+        setFileB(file);
+      }
+    }
+  };
+
+  const handleClearFile = (target: 'A' | 'B') => {
+    if (target === 'A') {
+      setFileA(null);
+    } else {
+      setFileB(null);
+    }
   };
 
   return (
     <div className="main-content">
       <header className="view-header">
-        <h1>对比工作台</h1>
+        <h1>纯本地极速对比 (Zero-Cost)</h1>
         <div className="view-header-actions">
-          {viewMode === 'sideBySide' && (
-            <button 
-              className={isLinkedScroll ? 'primary' : ''}
-              onClick={() => setIsLinkedScroll(!isLinkedScroll)}
-              title="联动滚动"
-            >
-              {isLinkedScroll ? <LinkIcon size={16} /> : <Link2Off size={16} />}
-              <span>联动滚动: {isLinkedScroll ? '开启' : '关闭'}</span>
-            </button>
-          )}
-
           <div className="compare-mode-toggle">
             <button 
               className={viewMode === 'sideBySide' ? 'primary' : ''}
               onClick={() => setViewMode('sideBySide')}
+              disabled={!urlA || !urlB}
             >
               <Columns size={16} />
               <span>左右双列</span>
@@ -110,7 +109,7 @@ export const CompareView: React.FC = () => {
             <button 
               className={viewMode === 'split' ? 'primary' : ''}
               onClick={() => setViewMode('split')}
-              disabled={!rollAId || !rollBId || photosA.length === 0 || photosB.length === 0}
+              disabled={!urlA || !urlB}
             >
               <Split size={16} />
               <span>滑尺对比</span>
@@ -119,150 +118,44 @@ export const CompareView: React.FC = () => {
         </div>
       </header>
 
-      {/* Select Rolls Bar */}
-      <div className="compare-selector-bar">
-        <div className="roll-picker">
-          <span className="picker-label red-dot">A路 拍摄卷</span>
-          <select 
-            className="form-control"
-            value={rollAId}
-            onChange={e => {
-              setRollAId(e.target.value === '' ? '' : Number(e.target.value));
-              setPhotoAId(null);
-            }}
-          >
-            <option value="">-- 选择A路胶卷 --</option>
-            {archivedRolls.map(r => (
-              <option key={r.id} value={r.id}>{r.name} ({getRollMeta(r.id!)})</option>
-            ))}
-          </select>
+      <div className="view-body compare-workspace-body" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        {/* Intro */}
+        <p style={{ color: 'var(--text-muted)', marginBottom: '16px', fontSize: '13px' }}>
+          此工具 100% 在您的浏览器本地内存中运行。无需上传即可直接拖拽 30MB 以上的 TIFF 高清原图进行极限画质比对，无带宽消耗，断网可用。
+        </p>
+
+        {/* Uploader Bar */}
+        <div className="compare-uploaders-container">
+          <FileDropzone target="A" file={fileA} url={urlA} onDropFile={handleFileDrop} onSelectFile={handleFileSelect} onClearFile={handleClearFile} />
+          <FileDropzone target="B" file={fileB} url={urlB} onDropFile={handleFileDrop} onSelectFile={handleFileSelect} onClearFile={handleClearFile} />
         </div>
 
-        <div className="roll-picker">
-          <span className="picker-label blue-dot">B路 拍摄卷</span>
-          <select 
-            className="form-control"
-            value={rollBId}
-            onChange={e => {
-              setRollBId(e.target.value === '' ? '' : Number(e.target.value));
-              setPhotoBId(null);
-            }}
-          >
-            <option value="">-- 选择B路胶卷 --</option>
-            {archivedRolls.map(r => (
-              <option key={r.id} value={r.id}>{r.name} ({getRollMeta(r.id!)})</option>
-            ))}
-          </select>
+        {/* Viewer */}
+        <div className="compare-viewer-container" style={{ flex: 1, minHeight: 0, marginTop: '16px', position: 'relative', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+          {(!urlA || !urlB) ? (
+            <div className="empty-state" style={{ height: '100%' }}>
+              <ImageIcon size={48} />
+              <h3>等待载入对比图</h3>
+              <p>请在上方分别放入需要对比的两张本地照片。</p>
+            </div>
+          ) : (
+            <>
+              {viewMode === 'split' && <ImageSlider imgA={urlA} imgB={urlB} />}
+              {viewMode === 'sideBySide' && (
+                <div style={{ display: 'flex', width: '100%', height: '100%', gap: '4px' }}>
+                  <div style={{ flex: 1, position: 'relative', height: '100%' }}>
+                    <img src={urlA} alt="A" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    <span style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: 600 }}>A路</span>
+                  </div>
+                  <div style={{ flex: 1, position: 'relative', height: '100%' }}>
+                    <img src={urlB} alt="B" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    <span style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: 600 }}>B路</span>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
-      </div>
-
-      <div className="view-body compare-workspace-body">
-        {(!rollAId || !rollBId) ? (
-          <div className="empty-state compare-empty">
-            <Sparkles size={48} />
-            <h3>开始你的影像对比</h3>
-            <p>请在上方分别选择A路和B路的已归档胶卷，以便在侧边并列查看色彩、颗粒感和宽容度细节。</p>
-          </div>
-        ) : (
-          <>
-            {/* SIDE-BY-SIDE MODE */}
-            {viewMode === 'sideBySide' && (
-              <div className="side-by-side-container">
-                {/* Column A */}
-                <div 
-                  className="compare-column" 
-                  ref={scrollRefA}
-                  onScroll={() => handleScroll('A')}
-                >
-                  <div className="column-info sticky-info">
-                    <h4>{archivedRolls.find(r => r.id === rollAId)?.name}</h4>
-                    <span>{getRollMeta(Number(rollAId))}</span>
-                  </div>
-                  <div className="compare-photos-list">
-                    {photosA.length === 0 ? (
-                      <p className="no-items">这卷没有照片</p>
-                    ) : (
-                      photosA.map(photo => (
-                        <div key={photo.id} className="compare-photo-tile">
-                          <img src={urls[photo.id!]} alt={photo.originalFileName} />
-                          <div className="compare-photo-meta">
-                            {photo.focalLength && `${photo.focalLength}mm `}
-                            {photo.aperture && `${photo.aperture} `}
-                            {photo.shutterSpeed && `${photo.shutterSpeed}`}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                {/* Column B */}
-                <div 
-                  className="compare-column" 
-                  ref={scrollRefB}
-                  onScroll={() => handleScroll('B')}
-                >
-                  <div className="column-info sticky-info">
-                    <h4>{archivedRolls.find(r => r.id === rollBId)?.name}</h4>
-                    <span>{getRollMeta(Number(rollBId))}</span>
-                  </div>
-                  <div className="compare-photos-list">
-                    {photosB.length === 0 ? (
-                      <p className="no-items">这卷没有照片</p>
-                    ) : (
-                      photosB.map(photo => (
-                        <div key={photo.id} className="compare-photo-tile">
-                          <img src={urls[photo.id!]} alt={photo.originalFileName} />
-                          <div className="compare-photo-meta">
-                            {photo.focalLength && `${photo.focalLength}mm `}
-                            {photo.aperture && `${photo.aperture} `}
-                            {photo.shutterSpeed && `${photo.shutterSpeed}`}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* SPLIT SLIDER MODE */}
-            {viewMode === 'split' && photoAId && photoBId && (
-              <div className="split-slider-workspace">
-                <div className="split-photo-selectors">
-                  <div className="photo-picker-cell">
-                    <span>A路照片选择:</span>
-                    <select 
-                      className="form-control"
-                      value={photoAId}
-                      onChange={e => setPhotoAId(Number(e.target.value))}
-                    >
-                      {photosA.map((p, idx) => (
-                        <option key={p.id} value={p.id}>照片 {idx + 1} ({p.originalFileName})</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="photo-picker-cell">
-                    <span>B路照片选择:</span>
-                    <select 
-                      className="form-control"
-                      value={photoBId}
-                      onChange={e => setPhotoBId(Number(e.target.value))}
-                    >
-                      {photosB.map((p, idx) => (
-                        <option key={p.id} value={p.id}>照片 {idx + 1} ({p.originalFileName})</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="split-slider-canvas">
-                  <ImageSlider imgA={urls[photoAId]} imgB={urls[photoBId]} />
-                </div>
-              </div>
-            )}
-          </>
-        )}
       </div>
     </div>
   );
@@ -275,7 +168,7 @@ interface ImageSliderProps {
 }
 
 const ImageSlider: React.FC<ImageSliderProps> = ({ imgA, imgB }) => {
-  const [sliderPosition, setSliderPosition] = useState(50); // percentage 0 - 100
+  const [sliderPosition, setSliderPosition] = useState(50);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleMove = (clientX: number) => {
@@ -287,10 +180,13 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ imgA, imgB }) => {
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    // Only move if dragging or just on mouse move (like slider hover)
-    if (e.buttons === 1 || e.buttons === 0) {
+    if (e.buttons === 1) {
       handleMove(e.clientX);
     }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    handleMove(e.clientX);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -304,30 +200,34 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ imgA, imgB }) => {
       className="image-slider-container" 
       ref={containerRef}
       onMouseMove={handleMouseMove}
+      onMouseDown={handleMouseDown}
       onTouchMove={handleTouchMove}
+      style={{ height: '100%', width: '100%', position: 'relative', cursor: 'ew-resize', touchAction: 'none' }}
     >
-      {/* Background Image B */}
-      <img src={imgB} className="image-slider-bg" alt="Image B" />
+      <img src={imgB} className="image-slider-bg" alt="Image B" draggable={false} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }} />
       
-      {/* Foreground Image A (clipped by container width) */}
-      <div 
-        className="image-slider-fg-container" 
-        style={{ width: `${sliderPosition}%` }}
-      >
-        <img src={imgA} className="image-slider-fg" alt="Image A" />
-      </div>
+      <img 
+        src={imgA} 
+        className="image-slider-fg" 
+        alt="Image A" 
+        draggable={false}
+        style={{ 
+          position: 'absolute', 
+          top: 0, 
+          left: 0, 
+          width: '100%', 
+          height: '100%', 
+          objectFit: 'contain',
+          clipPath: `inset(0 ${100 - sliderPosition}% 0 0)`
+        }} 
+      />
 
-      {/* Slider Split Drag Handle Line */}
       <div 
         className="image-slider-handle" 
-        style={{ left: `${sliderPosition}%` }}
+        style={{ position: 'absolute', top: 0, bottom: 0, left: `${sliderPosition}%`, width: '2px', background: 'var(--accent)', transform: 'translateX(-50%)', transition: 'none' }}
       >
-        <div className="handle-line" />
-        <div className="handle-button">↔</div>
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent)', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>↔</div>
       </div>
-
-      <div className="slider-label label-left">A路 (左)</div>
-      <div className="slider-label label-right">B路 (右)</div>
     </div>
   );
 };
