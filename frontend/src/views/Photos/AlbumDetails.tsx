@@ -4,6 +4,7 @@ import { useConfirm } from '../../contexts/useConfirm';
 import { useFeedback } from '../../contexts/useFeedback';
 import { usePhotoUrlMap } from '../../hooks/usePhotoUrlMap';
 import { useAlbums, useAlbumPhotos, usePhotoAssets, useCameras, useFilmStocks, useTagConfigs, useRolls } from '../../hooks/useData';
+import { EmptyState } from '../../components/EmptyState';
 import { 
   ChevronLeft, ChevronRight, Plus, Trash2, Image as ImageIcon, 
   Star, X, Check, Trash, Sliders, Calendar 
@@ -274,14 +275,12 @@ export const AlbumDetails: React.FC<AlbumDetailsProps> = ({
 
       {/* Album Photos Grid */}
       {photos.length === 0 ? (
-        <div className="empty-state">
-          <ImageIcon size={48} />
-          <h3>相册内暂无照片</h3>
-          <p>点击上方“添加照片”按钮，从不同拍摄卷中勾选导入精彩作品吧。</p>
-          <button className="primary" onClick={() => setShowAddModal(true)} style={{ marginTop: '10px' }}>
-            添加照片
-          </button>
-        </div>
+        <EmptyState
+          icon={ImageIcon}
+          title="相册内暂无照片"
+          description="点击上方“添加照片”按钮，从不同胶卷记录中挑选作品加入相册。"
+          action={<button className="primary" onClick={() => setShowAddModal(true)}>添加照片</button>}
+        />
       ) : (
         <div className="photos-masonry-grid" style={{ gridTemplateColumns: `repeat(4, 1fr)` }}>
           {photos.map((photo, index) => {
@@ -663,7 +662,7 @@ const AddPhotosModal: React.FC<AddPhotosModalProps> = ({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '750px', width: '90%' }}>
         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: 700 }}>从拍摄卷中勾选添加照片</h3>
+          <h3 style={{ fontSize: '18px', fontWeight: 700 }}>从胶卷记录中挑选照片</h3>
           <button className="modal-close" onClick={onClose} style={{ position: 'static', padding: '4px' }}>
             <X size={18} />
           </button>
@@ -690,7 +689,7 @@ const AddPhotosModal: React.FC<AddPhotosModalProps> = ({
             value={filterRollId}
             onChange={e => setFilterRollId(e.target.value)}
           >
-            <option value="all">🎞️ 所有拍摄卷</option>
+            <option value="all">🎞️ 全部胶卷记录</option>
             {archivedRolls
               .filter(r => filterCameraId === 'all' || (r.cameraIds || []).includes(filterCameraId))
               .map(r => {

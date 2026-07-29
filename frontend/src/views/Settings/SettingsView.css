@@ -5,41 +5,95 @@
   height: 100vh;
 }
 
+/* ─── Modal Header ─────────────────────────────────────────── */
+.settings-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+}
+
+.settings-modal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-modal-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background-color: var(--accent-bg);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.settings-modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.settings-modal-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 2px 0 0;
+  line-height: 1;
+}
+
+.settings-modal-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* ─── Body ─────────────────────────────────────────────────── */
 .settings-body {
-  padding: 24px;
-  max-width: 600px;
-  margin: 0 auto;
+  padding: 20px;
+  max-width: 100%;
   width: 100%;
 }
 
 .settings-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 32px;
+  gap: 10px;
+  margin-bottom: 28px;
 }
 
 .section-header h3 {
-  font-size: 13px;
-  color: var(--text-secondary);
+  font-size: 11px;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 600;
-  margin-left: 8px;
+  letter-spacing: 0.8px;
+  font-weight: 700;
+  margin-left: 4px;
 }
 
+/* ─── List Group ───────────────────────────────────────────── */
 .settings-list-group {
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
 }
 
 .settings-list-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   padding: 16px;
   border-bottom: 1px solid var(--border-color);
   transition: background-color var(--transition-fast);
@@ -54,14 +108,20 @@
 }
 
 .settings-list-item.danger-zone:hover {
-  background-color: rgba(239, 68, 68, 0.05);
+  background-color: rgba(239, 68, 68, 0.04);
 }
 
+.settings-list-item-vertical {
+  align-items: flex-start;
+}
+
+/* ─── Item Content ─────────────────────────────────────────── */
 .settings-item-content {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   flex: 1;
+  min-width: 0;
 }
 
 .settings-item-icon {
@@ -89,11 +149,12 @@
 .settings-item-text {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
+  min-width: 0;
 }
 
 .settings-item-text h4 {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
@@ -103,26 +164,217 @@
   font-size: 12px;
   color: var(--text-muted);
   margin: 0;
-  line-height: 1.4;
-  max-width: 280px;
+  line-height: 1.45;
 }
 
 .settings-item-action {
   flex-shrink: 0;
 }
 
-/* Theme Toggle Segmented Control */
+/* ─── Sub-card (for complex settings blocks) ───────────────── */
+/* Sits INSIDE .settings-list-group as a standalone card row */
+.settings-sub-card {
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color var(--transition-fast);
+}
+
+.settings-sub-card:last-child {
+  border-bottom: none;
+}
+
+.settings-sub-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 16px 0;
+}
+
+.settings-sub-card-body {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ─── Account Role Badge ───────────────────────────────────── */
+.account-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.account-role-badge.admin {
+  color: var(--accent);
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+}
+
+/* ─── Currency inline actions ──────────────────────────────── */
+.settings-inline-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.settings-inline-actions .form-control {
+  width: auto;
+  min-width: 140px;
+  max-width: 160px;
+}
+
+/* ─── Rolls Tab Order Panel ────────────────────────────────── */
+.settings-rolls-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.settings-rolls-toggle-row strong {
+  display: block;
+  font-size: 13px;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.settings-rolls-toggle-row p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.settings-rolls-order-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-rolls-order-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  transition: border-color var(--transition-fast);
+}
+
+.settings-rolls-order-item:hover {
+  border-color: var(--accent-border);
+}
+
+.settings-rolls-order-item.locked {
+  background: var(--bg-tertiary);
+  opacity: 0.65;
+}
+
+.settings-rolls-order-item.hidden-tab {
+  border-style: dashed;
+  background: var(--bg-tertiary);
+}
+
+.settings-rolls-order-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.settings-rolls-order-copy span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.settings-rolls-order-copy small {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.settings-rolls-order-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* ─── Danger Zone ──────────────────────────────────────────── */
+.settings-danger-action {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.settings-list-item-vertical .settings-danger-action {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.delete-account-confirm-panel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  border-radius: var(--radius-md);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.delete-account-confirm-panel p {
+  margin: 0;
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.delete-account-confirm-panel input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  background: var(--bg-primary);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  color: var(--text-primary);
+  border-radius: 8px;
+}
+
+.delete-account-error {
+  font-weight: 500 !important;
+}
+
+.delete-account-confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+/* ─── Theme Segmented Control ──────────────────────────────── */
 .theme-segmented-control {
   display: flex;
   background-color: var(--bg-tertiary);
-  padding: 4px;
+  padding: 3px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
 }
 
 .theme-segment-btn {
   padding: 6px 12px;
-  border-radius: var(--radius-sm);
+  border-radius: 6px;
   border: none;
   background: transparent;
   color: var(--text-secondary);
@@ -131,8 +383,9 @@
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   transition: all var(--transition-fast);
+  white-space: nowrap;
 }
 
 .theme-segment-btn:hover {
@@ -142,14 +395,15 @@
 .theme-segment-btn.active {
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
 }
 
-/* Toggle Switch (smaller) */
+/* ─── Toggle Switch ────────────────────────────────────────── */
 .compact-toggle {
   position: relative;
   width: 40px;
   height: 22px;
+  flex-shrink: 0;
 }
 .compact-toggle input {
   opacity: 0;
@@ -184,4 +438,73 @@
 }
 .compact-toggle input:checked + label:before {
   transform: translateX(18px);
+}
+.compact-toggle input:disabled + label {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ─── Responsive ───────────────────────────────────────────── */
+@media (max-width: 540px) {
+  .settings-modal-header {
+    padding: 14px 16px;
+  }
+
+  .settings-modal-subtitle {
+    display: none;
+  }
+
+  .settings-body {
+    padding: 16px !important;
+  }
+
+  .settings-list-item,
+  .settings-list-item-vertical {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .settings-item-action,
+  .settings-inline-actions,
+  .settings-danger-action {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .settings-inline-actions .form-control,
+  .settings-item-action button,
+  .settings-inline-actions button {
+    width: 100%;
+  }
+
+  .delete-account-confirm-panel {
+    max-width: none;
+  }
+
+  .delete-account-confirm-actions button {
+    flex: 1;
+  }
+
+  .theme-segmented-control {
+    width: 100%;
+  }
+
+  .theme-segment-btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .settings-rolls-toggle-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .settings-rolls-order-item {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .settings-rolls-order-actions {
+    width: 100%;
+  }
 }

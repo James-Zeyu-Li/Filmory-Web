@@ -1,0 +1,70 @@
+.sync-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sync-status-badge.compact {
+  min-height: 26px;
+  padding-inline: 9px;
+}
+
+.sync-status-badge-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sync-status-badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.45);
+}
+
+.sync-status-badge.local {
+  color: #94a3b8;
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+.sync-status-badge.offline {
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.sync-status-badge.syncing {
+  color: var(--accent);
+  border-color: rgba(226, 176, 40, 0.28);
+}
+
+.sync-status-badge.synced {
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.sync-status-badge.error {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.sync-status-badge-spin {
+  animation: sync-status-badge-spin 1s linear infinite;
+}
+
+@keyframes sync-status-badge-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

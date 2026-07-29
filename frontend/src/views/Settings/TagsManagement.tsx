@@ -77,6 +77,7 @@ export const TagsManagement: React.FC = () => {
             await db.tagConfigs.delete(localId);
             await db.tagConfigs.add({
               id: cloudTag.id,
+              userId: user?.id || 'offline',
               name: trimmedName,
               color: selectedColor
             });

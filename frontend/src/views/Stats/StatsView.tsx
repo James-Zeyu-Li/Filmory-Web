@@ -1,12 +1,13 @@
 import React from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
-  PieChart, Pie, AreaChart, Area, ComposedChart, Line, Legend
+  PieChart, Pie, AreaChart, Area, ComposedChart, Legend
 } from 'recharts';
-import { BarChart3, TrendingUp, DollarSign, Camera, Film, Layers, Star } from 'lucide-react';
+import { BarChart3, TrendingUp, DollarSign, Camera, Film, Layers, Star, Package } from 'lucide-react';
 import './StatsView.css';
-import { useRolls, useCameras, useFilmStocks, usePhotoAssets } from '../../hooks/useData';
+import { useRolls, useCameras, useFilmStocks, usePhotoAssets, useCollections } from '../../hooks/useData';
 import { usePhotoUrlMap } from '../../hooks/usePhotoUrlMap';
+import { useCurrency } from '../../contexts/useCurrency';
 
 interface StatsViewProps {
   enableFilmMode: boolean;
@@ -18,18 +19,21 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
   const rolls = useRolls();
   const cameras = useCameras();
   const filmStocks = useFilmStocks();
+  const collections = useCollections();
   const photoAssets = usePhotoAssets();
   const photoUrlMap = usePhotoUrlMap(photoAssets);
+  const { currencySymbol, formatCurrency } = useCurrency();
 
   // ===== KPI Calculations =====
   const totalRolls = rolls.length;
   const activeRolls = rolls.filter(r => r.status === 'active').length;
   const archivedRolls = rolls.filter(r => r.status === 'archived').length;
-  const totalPhotos = photoAssets.length;
-
-  const totalFilmCost = rolls.reduce((acc, r) => acc + (r.filmPrice || 0), 0);
-  const totalDevelopCost = rolls.reduce((acc, r) => acc + (r.developPrice || 0), 0);
-  const totalCost = totalFilmCost + totalDevelopCost;
+  const totalCollections = collections.length;
+  const totalCameras = cameras.length;
+  const inventoryRolls = filmStocks
+    .filter(f => f.isSystem === 0)
+    .reduce((acc, film) => acc + (film.stockCount || 0), 0);
+  const savedSamplePhotos = photoAssets.length;
 
   // ===== Color vs B&W Ratio =====
   const filmRolls = rolls.filter(r => {
@@ -96,9 +100,9 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
     last12Months.push(`${d.getFullYear()}-${mm}`);
   }
 
-  const monthlyDataMap: Record<string, { month: string, spend: number, rollsShot: number, photosShot: number }> = {};
+  const monthlyDataMap: Record<string, { month: string, spend: number, rollsShot: number }> = {};
   last12Months.forEach(m => {
-    monthlyDataMap[m] = { month: m, spend: 0, rollsShot: 0, photosShot: 0 };
+    monthlyDataMap[m] = { month: m, spend: 0, rollsShot: 0 };
   });
 
   rolls.filter(r => r.status === 'archived').forEach(r => {
@@ -109,8 +113,6 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
       if (monthlyDataMap[key]) {
         monthlyDataMap[key].spend += (Number(r.filmPrice) || 0) + (Number(r.developPrice) || 0);
         monthlyDataMap[key].rollsShot += 1;
-        const rollPhotos = photoAssets.filter(p => p.rollId === r.id).length;
-        monthlyDataMap[key].photosShot += rollPhotos;
       }
     }
   });
@@ -147,17 +149,15 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
   // C. Camera Value & Usage Ranking (ROI)
   const cameraRoiData = cameras.filter(c => c.type === 'film').map(c => {
     const usedRolls = rolls.filter(r => (r.cameraIds || []).includes(c.id!));
-    const photosGenerated = photoAssets.filter(p => usedRolls.some(r => r.id === p.rollId)).length;
     const price = Number(c.purchasePrice) || 0;
     return {
       name: c.name,
       price: price,
       rolls: usedRolls.length,
-      photos: photosGenerated,
-      roi: price > 0 ? (photosGenerated / price) : 0
+      roi: price > 0 ? (usedRolls.length / price) : 0
     };
-  }).filter(c => c.photos > 0 || c.price > 0)
-    .sort((a, b) => b.photos - a.photos)
+  }).filter(c => c.rolls > 0 || c.price > 0)
+    .sort((a, b) => b.rolls - a.rolls)
     .slice(0, 8);
 
   // D. High-Rated Rolls Top 5
@@ -177,7 +177,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
     <div className={isEmbedded ? "" : "main-content"}>
       {!isEmbedded && (
         <header className="view-header">
-          <h1>数据分析</h1>
+          <h1>拍摄统计</h1>
           <div className="view-header-actions" />
         </header>
       )}
@@ -188,27 +188,45 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
           <div className="kpi-card stats-kpi-gold">
             <div className="kpi-icon"><Film size={22} /></div>
             <div className="kpi-content">
-              <span>总拍摄卷数</span>
+              <span>总卷数</span>
               <h2>{totalRolls} 卷</h2>
               <p>{activeRolls} 进行中 · {archivedRolls} 已归档</p>
             </div>
           </div>
 
           <div className="kpi-card stats-kpi-sky">
-            <div className="kpi-icon"><BarChart3 size={22} /></div>
+            <div className="kpi-icon"><Layers size={22} /></div>
             <div className="kpi-content">
-              <span>总片数</span>
-              <h2>{totalPhotos} 张</h2>
-              <p>平均每卷 {totalRolls > 0 ? Math.round(totalPhotos / totalRolls) : 0} 张照片</p>
+              <span>总项目数</span>
+              <h2>{totalCollections} 个</h2>
+              <p>按项目整理的拍摄主题</p>
             </div>
           </div>
 
           <div className="kpi-card stats-kpi-emerald">
-            <div className="kpi-icon"><DollarSign size={22} /></div>
+            <div className="kpi-icon"><Camera size={22} /></div>
             <div className="kpi-content">
-              <span>总投入费用</span>
-              <h2>¥{totalCost.toFixed(0)}</h2>
-              <p>胶卷: ¥{totalFilmCost.toFixed(0)} · 冲洗: ¥{totalDevelopCost.toFixed(0)}</p>
+              <span>相机数量</span>
+              <h2>{totalCameras} 台</h2>
+              <p>当前器材库已登记的相机</p>
+            </div>
+          </div>
+
+          <div className="kpi-card stats-kpi-gold">
+            <div className="kpi-icon"><Package size={22} /></div>
+            <div className="kpi-content">
+              <span>库存卷</span>
+              <h2>{inventoryRolls} 卷</h2>
+              <p>未拍摄的胶卷库存</p>
+            </div>
+          </div>
+
+          <div className="kpi-card stats-kpi-sky">
+            <div className="kpi-icon"><BarChart3 size={22} /></div>
+            <div className="kpi-content">
+              <span>已拍完胶卷</span>
+              <h2>{archivedRolls} 卷</h2>
+              <p>{savedSamplePhotos} 张精选照片已保存</p>
             </div>
           </div>
         </div>
@@ -219,11 +237,11 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
           <div className="chart-card">
             <div className="chart-header">
               <Camera size={18} />
-              <h3>相机出勤排行 (Top 5)</h3>
+              <h3>相机使用排行</h3>
             </div>
             <div className="chart-content">
               {cameraChartData.length === 0 ? (
-                <p className="no-data">暂无相机出勤记录</p>
+                <p className="no-data">暂无相机使用记录</p>
               ) : (
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={cameraChartData} layout="vertical" margin={{ left: -10, right: 10 }}>
@@ -233,7 +251,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
                       contentStyle={{ background: '#20222a', border: '1px solid #272930', borderRadius: 8, fontSize: 12 }}
                       cursor={{ fill: 'rgba(226,176,40,0.05)' }}
                     />
-                    <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={16} name="出勤卷数">
+                    <Bar dataKey="count" radius={[4, 4, 4, 4]} barSize={24} name="使用卷数">
                       {cameraChartData.map((_, i) => (
                         <Cell key={i} fill={barColors[i % barColors.length]} />
                       ))}
@@ -248,11 +266,11 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
           <div className="chart-card">
             <div className="chart-header">
               <TrendingUp size={18} />
-              <h3>感光度 (ISO) 偏好排行</h3>
+              <h3>常用感光度</h3>
             </div>
             <div className="chart-content">
               {isoChartData.length === 0 ? (
-                <p className="no-data">暂无感光度使用记录</p>
+                <p className="no-data">暂无感光度记录</p>
               ) : (
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={isoChartData} layout="vertical" margin={{ left: -10, right: 10 }}>
@@ -262,7 +280,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
                       contentStyle={{ background: '#20222a', border: '1px solid #272930', borderRadius: 8, fontSize: 12 }}
                       cursor={{ fill: 'rgba(245,158,11,0.05)' }}
                     />
-                    <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={16} name="使用卷数" fill="#f59e0b">
+                    <Bar dataKey="count" radius={[4, 4, 4, 4]} barSize={24} name="使用卷数" fill="#f59e0b">
                       {isoChartData.map((_, i) => (
                         <Cell key={i} fill={barColors[i % barColors.length]} />
                       ))}
@@ -288,7 +306,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
                     contentStyle={{ background: '#20222a', border: '1px solid #272930', borderRadius: 8, fontSize: 12 }}
                     cursor={{ fill: 'rgba(255,255,255,0.03)' }}
                   />
-                  <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={20} fill="rgba(56, 189, 248, 0.7)" name="卷数" />
+                  <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={32} fill="rgba(56, 189, 248, 0.7)" name="卷数" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -299,7 +317,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
             <div className="chart-card">
               <div className="chart-header">
                 <Layers size={18} />
-                <h3>彩色 vs 黑白胶片比例</h3>
+                <h3>彩色与黑白占比</h3>
               </div>
               <div className="chart-content flex-center-donut">
                 {filmRolls.length === 0 ? (
@@ -344,7 +362,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
           <div className="chart-card" style={{ gridColumn: '1 / -1' }}>
             <div className="chart-header">
               <DollarSign size={18} />
-              <h3>月度花费趋势 (近12个月)</h3>
+              <h3>近 12 个月花费变化</h3>
             </div>
             <div className="chart-content">
               <ResponsiveContainer width="100%" height={250}>
@@ -361,7 +379,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
                     contentStyle={{ background: '#20222a', border: '1px solid #272930', borderRadius: 8, fontSize: 12 }}
                     itemStyle={{ color: '#10b981' }}
                   />
-                  <Area type="monotone" dataKey="spend" name="总支出 (¥)" stroke="#10b981" fillOpacity={1} fill="url(#colorSpend)" />
+                  <Area type="monotone" dataKey="spend" name={`总支出 (${currencySymbol})`} stroke="#10b981" fillOpacity={1} fill="url(#colorSpend)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -371,20 +389,18 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
           <div className="chart-card" style={{ gridColumn: '1 / -1' }}>
             <div className="chart-header">
               <Camera size={18} />
-              <h3>月度拍摄产出趋势</h3>
+              <h3>近 12 个月完成卷数</h3>
             </div>
             <div className="chart-content">
               <ResponsiveContainer width="100%" height={250}>
                 <ComposedChart data={monthlyTrendData} margin={{ left: -20, right: 10, top: 10, bottom: 0 }}>
                   <XAxis dataKey="month" tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis yAxisId="left" tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis yAxisId="right" orientation="right" tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
                   <Tooltip
                     contentStyle={{ background: '#20222a', border: '1px solid #272930', borderRadius: 8, fontSize: 12 }}
                   />
                   <Legend wrapperStyle={{ fontSize: 12, paddingTop: '10px' }} />
-                  <Bar yAxisId="left" dataKey="rollsShot" name="消耗卷数" barSize={20} fill="rgba(56, 189, 248, 0.7)" radius={[4, 4, 0, 0]} />
-                  <Line yAxisId="right" type="monotone" dataKey="photosShot" name="总快门数" stroke="#f59e0b" strokeWidth={3} dot={{ r: 4, fill: '#f59e0b', stroke: '#1f2937' }} />
+                  <Bar yAxisId="left" dataKey="rollsShot" name="归档卷数" barSize={32} fill="rgba(56, 189, 248, 0.7)" radius={[4, 4, 0, 0]} />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -395,7 +411,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
             <div className="chart-card">
               <div className="chart-header">
                 <DollarSign size={18} />
-                <h3>资产：沉淀与冻结 (历史均价推算)</h3>
+                <h3>胶卷投入与库存估值</h3>
               </div>
               <div className="chart-content flex-center-donut">
                 <ResponsiveContainer width="100%" height={200}>
@@ -416,7 +432,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
                     </Pie>
                     <Tooltip
                       contentStyle={{ background: '#20222a', border: '1px solid #272930', borderRadius: 8, fontSize: 12 }}
-                      formatter={(value: any) => `¥${value}`}
+                      formatter={(value: any) => formatCurrency(Number(value))}
                     />
                     <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 12 }} />
                   </PieChart>
@@ -429,22 +445,22 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
           <div className="chart-card">
             <div className="chart-header">
               <Camera size={18} />
-              <h3>器材性价比排行 (按出片数)</h3>
+              <h3>相机使用效率</h3>
             </div>
             <div className="chart-content">
               {cameraRoiData.length === 0 ? (
-                <p className="no-data">暂无机身价格或产出记录</p>
+                <p className="no-data">暂无相机价格或使用记录</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', height: '100%', padding: '10px 0', overflowY: 'auto' }}>
                   {cameraRoiData.map((c, i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '10px 12px', borderRadius: '8px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
                         <span style={{ fontSize: '13px', fontWeight: 600 }}>{c.name}</span>
-                        <span style={{ fontSize: '11px', color: '#9ca3af' }}>买入价: {c.price > 0 ? `¥${c.price}` : '未记录'}</span>
+                        <span style={{ fontSize: '11px', color: '#9ca3af' }}>入手价：{c.price > 0 ? formatCurrency(c.price) : '未记录'}</span>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '13px', color: '#e2b028', fontWeight: 600 }}>{c.photos} 张</div>
-                        <div style={{ fontSize: '11px', color: '#6b7280' }}>ROI: {c.roi > 0 ? c.roi.toFixed(1) : '-'} 张/¥</div>
+                        <div style={{ fontSize: '13px', color: '#e2b028', fontWeight: 600 }}>{c.rolls} 卷</div>
+                        <div style={{ fontSize: '11px', color: '#6b7280' }}>每 {currencySymbol} 使用：{c.roi > 0 ? c.roi.toFixed(2) : '-'} 卷</div>
                       </div>
                     </div>
                   ))}
@@ -457,11 +473,11 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
           <div className="chart-card" style={{ gridColumn: '1 / -1' }}>
             <div className="chart-header">
               <Star size={18} fill="#e2b028" color="#e2b028" />
-              <h3>年度巅峰高分卷 (Top 5)</h3>
+              <h3>年度高分胶卷</h3>
             </div>
             <div className="chart-content" style={{ padding: '0 16px 16px 16px' }}>
               {topRolls.length === 0 ? (
-                <p className="no-data">暂无4星以上的高分胶卷</p>
+                <p className="no-data">暂无 4 星以上的高分记录</p>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginTop: '16px' }}>
                   {topRolls.map((r, i) => {
@@ -503,7 +519,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
                               </div>
                             </div>
                             <div style={{ fontSize: '12px', color: '#9ca3af', fontWeight: 600 }}>
-                              {r.photosCount} 张
+                              {r.photosCount} 张样片
                             </div>
                           </div>
                         </div>

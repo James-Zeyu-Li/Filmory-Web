@@ -130,17 +130,6 @@
   padding-left: 8px;
 }
 
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-full);
-}
-
-.status-dot.green {
-  background-color: var(--success);
-  box-shadow: 0 0 8px var(--success);
-}
-
 .footer-status span {
   font-size: 12px;
   font-weight: 500;

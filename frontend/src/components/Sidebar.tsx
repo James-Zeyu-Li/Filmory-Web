@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { 
+import {
   Camera, 
   Settings, 
   Film,
@@ -10,6 +10,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
+import { SyncStatusBadge } from './SyncStatusBadge';
 import './Sidebar.css';
 
 export type ActiveTab = 'dashboard' | 'photos' | 'rolls' | 'gear' | 'settings' | 'insights';
@@ -74,7 +75,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, isOpen, onClos
         <img src="/logo.png" alt="Filmory Logo" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
         <div className="brand-text">
           <h2>Filmory</h2>
-          <span>Web Workspace</span>
+          <span>摄影工作台</span>
         </div>
       </div>
 
@@ -94,7 +95,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, isOpen, onClos
           onClick={onClose}
         >
           <Film size={20} />
-          <span>拍摄卷 (Rolls)</span>
+          <span>胶卷记录</span>
         </NavLink>
 
         <NavLink 
@@ -112,7 +113,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, isOpen, onClos
           onClick={onClose}
         >
           <BarChart2 size={20} />
-          <span>数据与财务 (Insights)</span>
+          <span>统计与花费</span>
         </NavLink>
 
         <NavLink 
@@ -121,7 +122,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, isOpen, onClos
           onClick={onClose}
         >
           <Columns size={20} />
-          <span>对比台 (Compare)</span>
+          <span>照片对照</span>
         </NavLink>
 
       </nav>
@@ -148,8 +149,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, isOpen, onClos
         </button>
         <div className="nav-spacer" style={{ height: '16px' }} />
         <div className="footer-status">
-          <div className="status-dot green" />
-          <span>Local-First (Offline)</span>
+          <SyncStatusBadge />
         </div>
       </div>
     </aside>

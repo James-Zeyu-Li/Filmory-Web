@@ -4,6 +4,7 @@ import type { LedgerTransaction } from '../../db/schema';
 import { useAuth } from '../../contexts/useAuth';
 import { useConfirm } from '../../contexts/useConfirm';
 import { useFeedback } from '../../contexts/useFeedback';
+import { useCurrency } from '../../contexts/useCurrency';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useCameras, useLenses, useRolls } from '../../hooks/useData';
 import { Wallet, TrendingUp, TrendingDown, Plus, Camera as CameraIcon, AlertTriangle } from 'lucide-react';
@@ -26,6 +27,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
   const { user } = useAuth();
   const { confirm } = useConfirm();
   const { notify } = useFeedback();
+  const { currencySymbol, formatCurrency } = useCurrency();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTx, setNewTx] = useState<Partial<LedgerTransaction>>(createEmptyTransactionDraft);
 
@@ -48,13 +50,12 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
   
   const totalMissing = missingCameras.length + missingLenses.length + missingRollsFilm.length + missingRollsDev.length;
 
-  // Aggregations
-  let totalGearAssets = 0; // Camera + Lens + Accessory (Expense - Income)
-  let totalFilmBurned = 0; // Film + Develop + Chemical (Expense)
-  let totalServiceIncome = 0; // Service (Income)
-  let totalOtherExpense = 0; // Repair + Other (Expense)
+	  // Aggregations
+	  let totalGearAssets = 0; // Camera + Lens + Accessory (Expense - Income)
+	  let totalFilmBurned = 0; // Film + Develop + Chemical (Expense)
+	  let totalServiceIncome = 0; // Service (Income)
 
-  transactions.forEach((tx: any) => {
+	  transactions.forEach((tx: any) => {
     const isExpense = tx.type === 'expense';
     const amt = Math.abs(tx.amount);
 
@@ -64,13 +65,12 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
     } else if (tx.category === 'film' || tx.category === 'develop' || tx.category === 'chemical') {
       if (isExpense) totalFilmBurned += amt;
       else totalFilmBurned -= amt; // e.g. selling unused film
-    } else if (tx.category === 'service') {
-      if (!isExpense) totalServiceIncome += amt;
-    } else {
-      if (isExpense) totalOtherExpense += amt;
-      else totalServiceIncome += amt; // Any other unexpected income
-    }
-  });
+	    } else if (tx.category === 'service') {
+	      if (!isExpense) totalServiceIncome += amt;
+	    } else {
+	      if (!isExpense) totalServiceIncome += amt; // Any other unexpected income
+	    }
+	  });
 
   const handleAddTx = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,7 +106,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
   const handleDeleteTx = async (id: string) => {
     const confirmed = await confirm({
       title: '删除财务记录',
-      message: '确认删除这条财务流水吗？这将重新计算总资产，且操作不可恢复。',
+      message: '确认删除这条收支记录吗？这将重新计算统计结果，且操作不可恢复。',
       confirmText: '确认删除',
       isDanger: true
     });
@@ -143,7 +143,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
     <div className={isEmbedded ? "" : "main-content"}>
       {!isEmbedded && (
         <header className="view-header">
-          <h1>资产与财务 (The Ledger)</h1>
+          <h1>摄影账本</h1>
           <div className="view-header-actions">
             <button className="primary" onClick={() => setIsModalOpen(true)}>
               <Plus size={16} /> 记一笔账
@@ -165,25 +165,25 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
           <div className="kpi-card" style={{ background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(56, 189, 248, 0.05) 100%)', borderColor: 'rgba(56, 189, 248, 0.2)' }}>
             <div className="kpi-icon" style={{ color: '#38bdf8' }}><CameraIcon size={24} /></div>
             <div className="kpi-content">
-              <h3>防潮箱总资产 (Frozen Asset)</h3>
-              <div className="kpi-value">￥ {totalGearAssets.toLocaleString()}</div>
-              <span className="kpi-subtext">机身 / 镜头 / 配件当前估值</span>
+              <h3>器材投入</h3>
+              <div className="kpi-value">{formatCurrency(totalGearAssets)}</div>
+              <span className="kpi-subtext">机身、镜头和配件相关支出</span>
             </div>
           </div>
           <div className="kpi-card" style={{ background: 'linear-gradient(135deg, rgba(248, 113, 113, 0.1) 0%, rgba(248, 113, 113, 0.05) 100%)', borderColor: 'rgba(248, 113, 113, 0.2)' }}>
             <div className="kpi-icon" style={{ color: '#f87171' }}><TrendingDown size={24} /></div>
             <div className="kpi-content">
-              <h3>累计耗材燃烧 (Burn Rate)</h3>
-              <div className="kpi-value">￥ {totalFilmBurned.toLocaleString()}</div>
-              <span className="kpi-subtext">胶卷 / 冲扫 / 药水开销</span>
+              <h3>胶卷与冲洗花费</h3>
+              <div className="kpi-value">{formatCurrency(totalFilmBurned)}</div>
+              <span className="kpi-subtext">胶卷、冲洗和药水相关开销</span>
             </div>
           </div>
           <div className="kpi-card" style={{ background: 'linear-gradient(135deg, rgba(52, 211, 153, 0.1) 0%, rgba(52, 211, 153, 0.05) 100%)', borderColor: 'rgba(52, 211, 153, 0.2)' }}>
             <div className="kpi-icon" style={{ color: '#34d399' }}><TrendingUp size={24} /></div>
             <div className="kpi-content">
-              <h3>回血与外快 (Income)</h3>
-              <div className="kpi-value">￥ {totalServiceIncome.toLocaleString()}</div>
-              <span className="kpi-subtext">接单洗卷 / 器材维修溢价</span>
+              <h3>回款与收入</h3>
+              <div className="kpi-value">{formatCurrency(totalServiceIncome)}</div>
+              <span className="kpi-subtext">接单、转卖或其他摄影收入</span>
             </div>
           </div>
         </div>
@@ -193,10 +193,10 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
           <div className="finance-alert-panel" style={{ background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
             <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f59e0b', marginTop: 0, marginBottom: '12px', fontSize: '15px' }}>
               <AlertTriangle size={18} />
-              有 {totalMissing} 项资产/耗材缺少价格记录
+              有 {totalMissing} 项价格待补充
             </h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: '0 0 16px 0' }}>
-              补全以下信息，才能获得最准确的资产与开支报表。请前往相应的器材库或拍摄卷页面进行补录。
+              补全以下价格后，器材投入和花费统计会更准确。请前往相应页面补录。
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {missingCameras.map(c => (
@@ -218,7 +218,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
         {/* Ledger Table */}
         <div className="finance-ledger">
           <div className="ledger-header-row">
-            <h2>账单流水对账单</h2>
+            <h2>收支记录</h2>
             <span className="ledger-count">共 {transactions.length} 笔记录</span>
           </div>
           
@@ -241,7 +241,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
                     <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
                       <Wallet size={48} style={{ opacity: 0.2, marginBottom: '16px' }} />
                       <p>暂无财务记录</p>
-                      <p style={{ fontSize: '13px' }}>在器材库新增设备或在这里手动记账时会产生流水</p>
+                      <p style={{ fontSize: '13px' }}>你可以在这里手动记账，或在新增器材、记录胶卷成本后自动生成。</p>
                     </td>
                   </tr>
                 ) : (
@@ -269,7 +269,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
                         {tx.notes || '-'}
                       </td>
                       <td style={{ textAlign: 'right', fontWeight: 600, color: tx.type === 'expense' ? 'var(--text-color)' : '#34d399' }}>
-                        {tx.type === 'expense' ? '-' : '+'} ￥{Math.abs(tx.amount).toLocaleString()}
+                        {tx.type === 'expense' ? '-' : '+'} {formatCurrency(Math.abs(tx.amount))}
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <button className="icon-btn danger" onClick={() => handleDeleteTx(tx.id!)}>
@@ -306,7 +306,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
                     onClick={() => setNewTx({...newTx, type: 'income'})}
                     style={{ flex: 1, padding: '8px', border: '1px solid var(--border-color)', background: newTx.type === 'income' ? 'rgba(52, 211, 153, 0.1)' : 'transparent', color: newTx.type === 'income' ? '#34d399' : 'var(--text-secondary)', borderRadius: '6px' }}
                   >
-                    收入 (回血)
+                    收入（回款）
                   </button>
                 </div>
               </div>
@@ -326,13 +326,13 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
                   <option value="develop">冲洗费</option>
                   <option value="chemical">药水耗材</option>
                   <option value="accessory">配件 / 周边</option>
-                  <option value="service">提供冲洗服务费 (赚外快)</option>
+                  <option value="service">提供冲洗服务</option>
                   <option value="other">其他</option>
                 </select>
               </div>
 
               <div className="form-group">
-                <label>金额 (￥)</label>
+                <label>金额 ({currencySymbol})</label>
                 <input 
                   type="number" 
                   className="form-control" 

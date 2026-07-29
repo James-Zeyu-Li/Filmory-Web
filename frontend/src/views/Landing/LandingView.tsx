@@ -42,19 +42,19 @@ export const LandingView: React.FC = () => {
         >
           <motion.div variants={itemVariants} className="hero-badge">
             <span className="pulse-dot"></span>
-            v2.0 纯本地优先架构上线
+            胶片记录新版本已上线
           </motion.div>
           <motion.h1 variants={itemVariants}>
             为摄影师打造的<br />
             <span className="text-gradient">极简数字化资产管理</span>
           </motion.h1>
           <motion.p variants={itemVariants} className="hero-subtitle">
-            本地优先、数据主权、硬核财务流追踪。<br/>
-            抛弃笨重的管理方式，找回最纯粹的胶片记录体验。
+            把器材、胶卷、拍摄和花费整理到一个地方。<br/>
+            少一点表格和备忘录，多一点专注拍摄本身。
           </motion.p>
           <motion.div variants={itemVariants} className="hero-actions">
             <Link to="/login" className="btn-primary large">
-              开启工作台 <ArrowRight size={18} />
+              开始整理拍摄记录 <ArrowRight size={18} />
             </Link>
           </motion.div>
         </motion.div>
@@ -78,8 +78,8 @@ export const LandingView: React.FC = () => {
             <div className="feature-icon bg-emerald">
               <Camera size={24} />
             </div>
-            <h3>设备统计</h3>
-            <p>追踪每一台相机与镜头的出勤率。记录购买价格与维护成本，为您计算精准的防潮箱资产估值与使用性价比。</p>
+            <h3>器材使用</h3>
+            <p>记住每一台相机、每一支镜头的出勤情况，也把购入价格与维护成本整理清楚。</p>
           </motion.div>
 
           {/* Feature 2 */}
@@ -87,8 +87,8 @@ export const LandingView: React.FC = () => {
             <div className="feature-icon bg-blue">
               <Image size={24} />
             </div>
-            <h3>拍摄记录</h3>
-            <p>结构化地归档每一次快门。支持记录光圈、快门、焦段及冲洗配方，为您呈现完美的时间流照片墙与精美相册。</p>
+            <h3>拍摄归档</h3>
+            <p>按胶卷记录、相机、镜头和胶片整理每一次拍摄，把参数、笔记和成片放回同一条记录里。</p>
           </motion.div>
 
           {/* Feature 3 */}
@@ -96,8 +96,8 @@ export const LandingView: React.FC = () => {
             <div className="feature-icon bg-purple">
               <Layers size={24} />
             </div>
-            <h3>库存统计</h3>
-            <p>从购入胶卷、装机开拍到最终冲洗，全流程跟踪胶片库存。支持各种型号的底片备忘与评级，告别混乱的耗材管理。</p>
+            <h3>胶卷库存</h3>
+            <p>从购入、装卷到冲洗，清楚知道每一卷胶片现在在哪里，也不再忘记库存和批次。</p>
           </motion.div>
 
           {/* Feature 4 */}
@@ -105,8 +105,8 @@ export const LandingView: React.FC = () => {
             <div className="feature-icon bg-amber">
               <Wallet size={24} />
             </div>
-            <h3>资金总结</h3>
-            <p>像专业会计一样管理摄影开支。多维度图表解析器材买卖、胶片燃烧及冲洗费用，让每一笔花销都有迹可循。</p>
+            <h3>花费整理</h3>
+            <p>器材购入、胶卷消耗、冲洗费用和日常开支集中记录，让摄影预算看得见也理得顺。</p>
           </motion.div>
         </motion.div>
       </section>
@@ -118,7 +118,7 @@ export const LandingView: React.FC = () => {
             <span>Filmory</span>
           </div>
           <p className="footer-copyright">
-            © {new Date().getFullYear()} Filmory Workspace. Built with precision and passion.
+            © {new Date().getFullYear()} Filmory · 为认真拍照的人准备的记录工具
           </p>
         </div>
       </footer>

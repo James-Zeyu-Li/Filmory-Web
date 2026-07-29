@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { PhotoAsset } from '../../db/schema';
-import { Search, Sliders, ChevronLeft, ChevronRight, X, Star, Calendar } from 'lucide-react';
+import { Search, Sliders, ChevronLeft, ChevronRight, X, Star, Calendar, Images } from 'lucide-react';
 import './PhotosView.css';
 import { useCameras, useFilmStocks, usePhotoAssets, useRolls } from '../../hooks/useData';
 import { usePhotoUrlMap } from '../../hooks/usePhotoUrlMap';
+import { EmptyState } from '../../components/EmptyState';
 
 interface PhotosViewProps {
   enableFilmMode: boolean;
@@ -94,11 +95,27 @@ export const PhotosView: React.FC<PhotosViewProps> = ({ enableFilmMode }) => {
 
   const currentLightboxPhoto = lightboxIndex !== null ? filteredPhotos[lightboxIndex] : null;
   const currentMeta = currentLightboxPhoto ? getPhotoMetadata(currentLightboxPhoto) : null;
+  const hasActiveFilters = searchTerm.trim() !== '' || filterCameraId !== 'all' || filterFilmId !== 'all' || filterRating !== 'all';
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setFilterCameraId('all');
+    setFilterFilmId('all');
+    setFilterRating('all');
+  };
 
   return (
     <div className="main-content">
       <header className="view-header">
-        <h1>照片库</h1>
+        <div className="view-header-title-container">
+          <div className="view-header-icon">
+            <Images size={20} />
+          </div>
+          <div className="view-header-text-group">
+            <h1>照片库</h1>
+            <p className="view-header-subtitle">浏览已归档胶卷记录中的精选照片和参考照片。</p>
+          </div>
+        </div>
         <div className="view-header-actions">
           <div className="grid-zoom-slider">
             <span>网格缩放</span>
@@ -165,10 +182,16 @@ export const PhotosView: React.FC<PhotosViewProps> = ({ enableFilmMode }) => {
 
       <div className="view-body">
         {filteredPhotos.length === 0 ? (
-          <div className="empty-state">
-            <Sliders size={48} />
-            <p>没有找到符合条件的照片。请检查归档卷内是否有照片或调整过滤器。</p>
-          </div>
+          <EmptyState
+            icon={Sliders}
+            title={allPhotos.length === 0 ? '还没有可浏览的照片' : '没有找到符合条件的照片'}
+            description={
+              allPhotos.length === 0
+                ? '先在已归档的胶卷记录里保存几张精选照片，这里就会自动整理出来。'
+                : '尝试清除搜索词或筛选条件，重新查看全部照片。'
+            }
+            action={hasActiveFilters ? <button className="primary" onClick={resetFilters}>清除筛选</button> : undefined}
+          />
         ) : (
           <div 
             className="photos-masonry-grid" 

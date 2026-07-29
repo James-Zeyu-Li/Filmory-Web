@@ -1,5 +1,6 @@
 import React from 'react';
 import { Menu } from 'lucide-react';
+import { SyncStatusBadge } from './SyncStatusBadge';
 import './MobileHeader.css';
 
 interface MobileHeaderProps {
@@ -13,9 +14,12 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ onOpenSidebar }) => 
         <img src="/logo.png" alt="Filmory Logo" className="mobile-logo" />
         <h2>Filmory</h2>
       </div>
-      <button className="mobile-menu-btn" onClick={onOpenSidebar} aria-label="Open Menu">
-        <Menu size={24} />
-      </button>
+      <div className="mobile-header-actions">
+        <SyncStatusBadge compact />
+        <button className="mobile-menu-btn" onClick={onOpenSidebar} aria-label="Open Menu">
+          <Menu size={24} />
+        </button>
+      </div>
     </header>
   );
 };

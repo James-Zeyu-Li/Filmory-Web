@@ -4,6 +4,7 @@ import { FolderHeart, Plus, Calendar, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '../../contexts/useAuth';
 import { useAlbums, useAlbumPhotos, usePhotoAssets } from '../../hooks/useData';
 import { usePhotoUrlMap } from '../../hooks/usePhotoUrlMap';
+import { EmptyState } from '../../components/EmptyState';
 
 interface AlbumsTabProps {
   onSelectAlbum: (id: string) => void;
@@ -94,14 +95,12 @@ export const AlbumsTab: React.FC<AlbumsTabProps> = ({ onSelectAlbum }) => {
       </div>
 
       {albums.length === 0 ? (
-        <div className="empty-state">
-          <FolderHeart size={48} />
-          <h3>你还没有创建任何相册</h3>
-          <p>相册是独立于胶卷的照片合集，你可以把不同胶卷里的照片整理到同一个相册中。</p>
-          <button className="primary" onClick={() => setShowCreateModal(true)} style={{ marginTop: '10px' }}>
-            立即创建第一个相册
-          </button>
-        </div>
+        <EmptyState
+          icon={FolderHeart}
+          title="你还没有创建任何相册"
+          description="相册是独立于胶卷的照片合集，你可以把不同胶卷里的照片整理到同一个相册中。"
+          action={<button className="primary" onClick={() => setShowCreateModal(true)}>立即创建第一个相册</button>}
+        />
       ) : (
         <div className="albums-grid">
           {albums.map(album => {

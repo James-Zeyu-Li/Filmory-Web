@@ -30,8 +30,8 @@ const FileDropzone: React.FC<FileDropzoneProps> = ({ target, file, url, onDropFi
     ) : (
       <label className="dropzone-empty">
         <UploadCloud size={32} />
-        <h4>拖拽本地原图到此处</h4>
-        <p>或点击选择文件 ({target}路)</p>
+        <h4>把照片拖到这里</h4>
+        <p>或点击选择一张照片（{target}）</p>
         <input
           type="file"
           accept="image/*"
@@ -95,7 +95,7 @@ export const CompareView: React.FC = () => {
   return (
     <div className="main-content">
       <header className="view-header">
-        <h1>纯本地极速对比 (Zero-Cost)</h1>
+        <h1>照片对照</h1>
         <div className="view-header-actions">
           <div className="compare-mode-toggle">
             <button 
@@ -121,7 +121,7 @@ export const CompareView: React.FC = () => {
       <div className="view-body compare-workspace-body" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         {/* Intro */}
         <p style={{ color: 'var(--text-muted)', marginBottom: '16px', fontSize: '13px' }}>
-          此工具 100% 在您的浏览器本地内存中运行。无需上传即可直接拖拽 30MB 以上的 TIFF 高清原图进行极限画质比对，无带宽消耗，断网可用。
+          直接把两张照片放进来，对照颗粒、锐度、色偏和构图细节。整个过程都在本机完成，不需要上传。
         </p>
 
         {/* Uploader Bar */}
@@ -135,7 +135,7 @@ export const CompareView: React.FC = () => {
           {(!urlA || !urlB) ? (
             <div className="empty-state" style={{ height: '100%' }}>
               <ImageIcon size={48} />
-              <h3>等待载入对比图</h3>
+              <h3>等待载入照片</h3>
               <p>请在上方分别放入需要对比的两张本地照片。</p>
             </div>
           ) : (

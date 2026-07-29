@@ -321,12 +321,18 @@
   flex-shrink: 0;
 }
 
-/* Rolls list container (Grid of list items for wider screens) */
+/* Rolls list container */
 .rolls-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   align-items: stretch;
+}
+
+@media (max-width: 1100px) {
+  .rolls-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Grid for collections: single-column list */
@@ -379,17 +385,22 @@
   line-height: 1;
 }
 
-/* Tab Navigation in Header */
-.tab-navigation {
+.rolls-tab-navigation {
   display: flex;
   gap: 8px;
   background-color: var(--bg-tertiary);
   padding: 4px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
+  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 4px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
-.tab-btn {
+.rolls-tab-btn {
+  flex: 0 0 auto;
   padding: 6px 16px;
   border-radius: var(--radius-sm);
   font-size: 13px;
@@ -401,14 +412,95 @@
   transition: all var(--transition-fast);
 }
 
-.tab-btn:hover {
+.rolls-tab-btn:hover {
   color: var(--text-primary);
 }
 
-.tab-btn.active {
+.rolls-tab-btn.active {
   background-color: var(--bg-secondary);
   color: var(--text-primary);
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.view-toggle-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 8px;
+  padding: 4px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+}
+
+.view-toggle-btn {
+  min-width: 32px;
+  height: 30px;
+  padding: 0 9px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.view-toggle-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+.view-toggle-btn.active {
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.sort-trigger-btn {
+  height: 36px;
+}
+
+.film-back-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
+}
+
+.film-back-option {
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.film-back-option.active {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.film-back-option:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.film-back-option small,
+.roll-form-hint {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.roll-form-hint {
+  padding: 10px 12px;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.unified-rolls-view .rolls-toolbar {
+  position: sticky;
+  top: 89px;
+  z-index: 8;
+  background: var(--bg-primary);
+  padding: 12px 0;
 }
 
 /* Slide-Over Drawer */
@@ -623,6 +715,35 @@
   font-style: italic;
 }
 
+.modal-helper-text {
+  margin: -4px 0 16px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.quick-format-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.quick-format-option {
+  min-height: 34px;
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.quick-format-option.active {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-border);
+}
+
 /* Premium Search Input */
 .search-input-wrapper {
   position: relative;
@@ -737,13 +858,13 @@
 }
 
 /* Tab Active State Premium Polish */
-.tab-btn.active {
+.rolls-tab-btn.active {
   background-color: var(--accent-bg) !important;
   color: var(--accent) !important;
   border-bottom: 2px solid var(--accent) !important;
   border-radius: 8px 8px 0 0;
 }
-.tab-navigation {
+.rolls-tab-navigation {
   align-items: flex-end; /* Prevent tabs from overflowing bottom border */
 }
 
@@ -801,6 +922,10 @@
 /* === MOBILE RESPONSIVE LAYOUT (Max width: 768px) === */
 
 @media (max-width: 768px) {
+  .unified-rolls-view .rolls-toolbar {
+    position: static;
+  }
+
   /* 1. Header Layout */
   .view-header {
     flex-direction: column;
@@ -820,12 +945,12 @@
     justify-content: center;
   }
   
-  .view-header-actions .tab-navigation {
+  .view-header-actions .view-toggle-group {
     width: 100%;
     margin-right: 0 !important;
   }
 
-  .view-header-actions .tab-navigation button {
+  .view-header-actions .view-toggle-group button {
     flex: 1;
   }
   
@@ -844,7 +969,7 @@
     padding-bottom: 0 !important;
   }
   
-  .rolls-tabs .tab-btn {
+  .rolls-tabs .rolls-tab-btn {
     white-space: nowrap;
     flex: 1 0 auto;
     text-align: center;

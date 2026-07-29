@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { db, type Collection } from '../../db/schema';
 import { useCollections, useRolls, usePhotoAssets, useCameras, useFilmStocks } from '../../hooks/useData';
 import { useAuth } from '../../contexts/useAuth';
@@ -9,16 +9,14 @@ import { motion } from 'framer-motion';
 import { IconButton } from '../../components/ui/IconButton';
 import { EmptyState } from '../../components/EmptyState';
 import { Modal } from '../../components/Modal';
-import { HorizontalScroller } from '../../components/HorizontalScroller';
 import { usePhotoUrlMap } from '../../hooks/usePhotoUrlMap';
 
 interface CollectionsTabProps {
   onCollectionSelect: (collectionId: string) => void;
   viewMode?: 'grid' | 'list';
-  isViewAll?: boolean;
 }
 
-export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSelect, viewMode = 'list', isViewAll = false }) => {
+export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSelect, viewMode = 'list' }) => {
   const { user } = useAuth();
   const { confirm } = useConfirm();
   const collections = useCollections();
@@ -29,12 +27,12 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
   const filmStocks = useFilmStocks();
 
   // Get cover url for a single roll
-  const getRollCoverUrl = (roll: { coverPhotoId?: string }) => {
+  const getRollCoverUrl = useCallback((roll: { coverPhotoId?: string }) => {
     if (!roll.coverPhotoId) return undefined;
     const p = allPhotos.find(ph => ph.id === roll.coverPhotoId);
     if (!p) return undefined;
     return p.id ? photoUrlMap[p.id] : undefined;
-  };
+  }, [allPhotos, photoUrlMap]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
@@ -87,11 +85,11 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
     setIsModalOpen(false);
   };
   
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
+  const handleDelete = useCallback(async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const confirmed = await confirm({
       title: '删除项目集',
-      message: '确认删除此项目？项目内的拍摄卷将保留并转为独立卷，仅解除绑定关系。',
+      message: '确认删除此项目？项目内的胶卷记录会保留并回到散卷列表，只会解除项目关联。',
       confirmText: '确认删除',
       isDanger: true
     });
@@ -107,7 +105,7 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
         }
       }
     }
-  };
+  }, [confirm, user]);
 
   const filteredCollections = collections;
 
@@ -253,7 +251,7 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
         </div>
       );
     });
-  }, [collections, allRolls, allPhotos, cameras, filmStocks, viewMode]);
+  }, [filteredCollections, allRolls, cameras, filmStocks, viewMode, onCollectionSelect, getRollCoverUrl, handleDelete]);
 
   return (
     <div className="collections-tab-container">
@@ -264,7 +262,7 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
             <EmptyState 
               icon={Folder}
               title="暂无拍摄项目"
-              description="创建一个拍摄项目（如：北海道旅拍），将多个拍摄卷归档在一起统一管理吧。"
+              description="创建一个拍摄项目（如：北海道旅拍），把多卷胶卷记录放在一起整理。"
               action={
                 <Button variant="primary" onClick={() => handleOpenModal()}>
                   新建项目
@@ -276,15 +274,9 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
           <motion.div key="grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }} className="rolls-grid">
             {collectionCards}
           </motion.div>
-        ) : isViewAll ? (
+        ) : (
           <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }} className="rolls-list">
             {collectionCards}
-          </motion.div>
-        ) : (
-          <motion.div key="scroller" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
-            <HorizontalScroller>
-              {collectionCards}
-            </HorizontalScroller>
           </motion.div>
         )}
       
@@ -319,7 +311,7 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
                 <textarea 
                   value={description} 
                   onChange={e => setDescription(e.target.value)} 
-                  placeholder="记录一些关于这个项目的备忘录..."
+                  placeholder="记录这个项目的拍摄想法、地点或备忘..."
                   rows={3}
                 />
               </div>

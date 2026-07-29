@@ -24,15 +24,16 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
     // 'solid' provides a solid background for cases like the back button on white backgrounds.
     
     let variantClass = '';
-    if (variant === 'danger') variantClass = 'danger';
-    if (variant === 'primary') variantClass = 'primary';
-    if (variant === 'success') variantClass = 'success';
-    if (variant === 'solid') variantClass = 'secondary'; // Uses generic secondary styling which provides a background.
+	    if (variant === 'danger') variantClass = 'danger';
+	    if (variant === 'primary') variantClass = 'primary';
+	    if (variant === 'success') variantClass = 'success';
+	    if (variant === 'solid') variantClass = 'secondary'; // Uses generic secondary styling which provides a background.
+	    const sizeClass = size === 'sm' ? 'icon-btn-sm' : size === 'lg' ? 'icon-btn-lg' : '';
 
-    return (
-      <button
-        ref={ref}
-        className={`icon-btn ${variantClass} ${className}`.trim()}
+	    return (
+	      <button
+	        ref={ref}
+	        className={`icon-btn ${sizeClass} ${variantClass} ${className}`.trim()}
         disabled={disabled}
         style={{
           ...style,
