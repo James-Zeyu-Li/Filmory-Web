@@ -1,109 +1,147 @@
--- Filmory-Web: Supabase Postgres Initialization Script
--- Execute this script in your Supabase SQL Editor.
+-- Filmory-Web: current Supabase initialization reference.
+-- Prefer applying files in supabase/migrations for real environments.
+-- Includes Dexie parity for collections, rolls.cameraIds, and rolls.collectionId.
 
--- Enable UUID generation
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- ==========================================
--- 1. Create Tables
--- ==========================================
+-- App tables
 
--- Cameras
-CREATE TABLE cameras (
+CREATE TABLE IF NOT EXISTS public.cameras (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name text NOT NULL,
   type text NOT NULL,
   format text NOT NULL,
+  camera_system_id uuid,
+  back_type text NOT NULL DEFAULT 'fixed' CHECK (back_type IN ('fixed', 'interchangeable')),
   notes text,
   avatar_url text,
-  added_at bigint NOT NULL,
-  updated_at timestamp with time zone DEFAULT now(),
-  deleted_at timestamp with time zone
+  purchase_price numeric,
+  status text DEFAULT 'active',
+  added_at bigint,
+  updated_at timestamptz DEFAULT now(),
+  deleted_at timestamptz
 );
 
--- Lenses
-CREATE TABLE lenses (
+CREATE TABLE IF NOT EXISTS public.camera_systems (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name text NOT NULL,
-  focal_length int NOT NULL,
-  max_aperture text NOT NULL,
-  type text NOT NULL,
-  avatar_url text,
-  added_at bigint NOT NULL,
-  updated_at timestamp with time zone DEFAULT now(),
-  deleted_at timestamp with time zone
+  mount_key text,
+  notes text,
+  added_at bigint,
+  updated_at timestamptz DEFAULT now(),
+  deleted_at timestamptz
 );
 
--- Film Stocks
-CREATE TABLE film_stocks (
+ALTER TABLE public.cameras
+  DROP CONSTRAINT IF EXISTS cameras_camera_system_id_fkey;
+ALTER TABLE public.cameras
+  ADD CONSTRAINT cameras_camera_system_id_fkey
+  FOREIGN KEY (camera_system_id) REFERENCES public.camera_systems(id) ON DELETE SET NULL;
+
+CREATE TABLE IF NOT EXISTS public.film_backs (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  camera_system_id uuid NOT NULL REFERENCES public.camera_systems(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  format text NOT NULL DEFAULT '120',
+  status text NOT NULL DEFAULT 'active',
+  notes text,
+  added_at bigint,
+  updated_at timestamptz DEFAULT now(),
+  deleted_at timestamptz
+);
+
+CREATE TABLE IF NOT EXISTS public.lenses (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  focal_length numeric NOT NULL,
+  max_aperture text NOT NULL,
+  type text NOT NULL,
+  mount_key text,
+  avatar_url text,
+  purchase_price numeric,
+  status text DEFAULT 'active',
+  added_at bigint,
+  updated_at timestamptz DEFAULT now(),
+  deleted_at timestamptz
+);
+
+CREATE TABLE IF NOT EXISTS public.film_stocks (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   brand text NOT NULL,
   name text NOT NULL,
-  iso int NOT NULL,
+  iso numeric NOT NULL,
   color_type text NOT NULL,
   format text NOT NULL,
-  is_system smallint NOT NULL DEFAULT 0,
+  is_system integer DEFAULT 0,
   system_key text,
-  stock_count int,
+  stock_count integer DEFAULT 0,
+  price_per_roll numeric,
   avatar_url text,
-  added_at bigint NOT NULL,
-  updated_at timestamp with time zone DEFAULT now(),
-  deleted_at timestamp with time zone
+  added_at bigint,
+  updated_at timestamptz DEFAULT now(),
+  deleted_at timestamptz
 );
 
--- Rolls
-CREATE TABLE rolls (
+CREATE TABLE IF NOT EXISTS public.rolls (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name text NOT NULL,
-  camera_id uuid REFERENCES cameras(id) ON DELETE SET NULL,
-  film_stock_id uuid REFERENCES film_stocks(id) ON DELETE SET NULL,
+  camera_id uuid REFERENCES public.cameras(id) ON DELETE SET NULL,
+  camera_ids uuid[],
+  lens_ids uuid[],
+  film_back_id uuid REFERENCES public.film_backs(id) ON DELETE SET NULL,
+  film_stock_id uuid REFERENCES public.film_stocks(id) ON DELETE SET NULL,
+  collection_id uuid,
   status text NOT NULL,
   start_date bigint,
   end_date bigint,
-  rating smallint,
+  rating integer,
   location text,
   notes text,
   develop_notes text,
-  cover_photo_id uuid, -- Reference photo_assets (added after table creation)
+  cover_photo_id uuid,
   film_price numeric,
   develop_price numeric,
-  updated_at timestamp with time zone DEFAULT now(),
-  deleted_at timestamp with time zone
+  added_at bigint,
+  updated_at timestamptz DEFAULT now(),
+  deleted_at timestamptz
 );
 
--- Photo Assets
-CREATE TABLE photo_assets (
+CREATE TABLE IF NOT EXISTS public.photo_assets (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  roll_id uuid REFERENCES rolls(id) ON DELETE CASCADE,
+  roll_id uuid REFERENCES public.rolls(id) ON DELETE CASCADE,
   original_file_name text NOT NULL,
-  file_size int NOT NULL,
+  file_size numeric,
   thumbnail_url text,
   preview_url text,
   storage_key text,
-  added_at bigint NOT NULL,
   note text,
   focal_length numeric,
   aperture text,
   shutter_speed text,
   exposure_compensation numeric,
-  is_pinned smallint NOT NULL DEFAULT 0,
-  rating smallint,
+  is_pinned integer DEFAULT 0,
+  rating integer,
   tags text,
-  order_index int,
-  updated_at timestamp with time zone DEFAULT now(),
-  deleted_at timestamp with time zone
+  order_index numeric,
+  added_at bigint,
+  updated_at timestamptz DEFAULT now(),
+  deleted_at timestamptz
 );
 
--- Add foreign key back to Rolls for cover_photo
-ALTER TABLE rolls ADD CONSTRAINT rolls_cover_photo_id_fkey FOREIGN KEY (cover_photo_id) REFERENCES photo_assets(id) ON DELETE SET NULL;
+ALTER TABLE public.rolls
+  DROP CONSTRAINT IF EXISTS rolls_cover_photo_id_fkey;
+ALTER TABLE public.rolls
+  ADD CONSTRAINT rolls_cover_photo_id_fkey
+  FOREIGN KEY (cover_photo_id) REFERENCES public.photo_assets(id) ON DELETE SET NULL;
 
--- Other Equipment
-CREATE TABLE other_equipments (
+CREATE TABLE IF NOT EXISTS public.other_equipments (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name text NOT NULL,
@@ -112,129 +150,263 @@ CREATE TABLE other_equipments (
   purchase_date bigint,
   expiry_date bigint,
   avatar_url text,
-  added_at bigint NOT NULL,
-  updated_at timestamp with time zone DEFAULT now(),
-  deleted_at timestamp with time zone
+  purchase_price numeric,
+  added_at bigint,
+  updated_at timestamptz DEFAULT now(),
+  deleted_at timestamptz
 );
 
--- Tag Configs
-CREATE TABLE tag_configs (
+CREATE TABLE IF NOT EXISTS public.tag_configs (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name text NOT NULL,
   color text NOT NULL,
-  updated_at timestamp with time zone DEFAULT now(),
-  deleted_at timestamp with time zone
+  added_at bigint,
+  updated_at timestamptz DEFAULT now(),
+  deleted_at timestamptz,
+  UNIQUE(user_id, name)
 );
 
--- Albums
-CREATE TABLE albums (
+CREATE TABLE IF NOT EXISTS public.albums (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name text NOT NULL,
   description text,
-  cover_photo_id uuid REFERENCES photo_assets(id) ON DELETE SET NULL,
-  added_at bigint NOT NULL,
-  updated_at timestamp with time zone DEFAULT now(),
-  deleted_at timestamp with time zone
+  cover_photo_id uuid REFERENCES public.photo_assets(id) ON DELETE SET NULL,
+  added_at bigint,
+  updated_at timestamptz DEFAULT now(),
+  deleted_at timestamptz
 );
 
--- Album Photos Relation
-CREATE TABLE album_photos (
+CREATE TABLE IF NOT EXISTS public.album_photos (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  album_id uuid REFERENCES albums(id) ON DELETE CASCADE,
-  photo_id uuid REFERENCES photo_assets(id) ON DELETE CASCADE,
-  added_at bigint NOT NULL,
-  updated_at timestamp with time zone DEFAULT now(),
-  deleted_at timestamp with time zone
+  album_id uuid REFERENCES public.albums(id) ON DELETE CASCADE,
+  photo_id uuid REFERENCES public.photo_assets(id) ON DELETE CASCADE,
+  added_at bigint,
+  updated_at timestamptz DEFAULT now(),
+  deleted_at timestamptz,
+  UNIQUE(album_id, photo_id)
 );
 
--- User Profiles (VIP / Regular Tier)
-CREATE TABLE user_profiles (
+CREATE TABLE IF NOT EXISTS public.collections (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  date bigint NOT NULL,
+  description text,
+  cover_url text,
+  added_at bigint,
+  updated_at timestamptz DEFAULT now(),
+  deleted_at timestamptz
+);
+
+ALTER TABLE public.rolls
+  DROP CONSTRAINT IF EXISTS rolls_collection_id_fkey;
+ALTER TABLE public.rolls
+  ADD CONSTRAINT rolls_collection_id_fkey
+  FOREIGN KEY (collection_id) REFERENCES public.collections(id) ON DELETE SET NULL;
+
+CREATE TABLE IF NOT EXISTS public.ledger_transactions (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  amount numeric NOT NULL,
+  date bigint NOT NULL,
+  type text NOT NULL,
+  category text NOT NULL,
+  related_entity_id uuid,
+  notes text,
+  added_at bigint,
+  updated_at timestamptz DEFAULT now(),
+  deleted_at timestamptz
+);
+
+CREATE TABLE IF NOT EXISTS public.user_profiles (
   id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   tier text NOT NULL DEFAULT 'regular',
-  high_res_quota_used int NOT NULL DEFAULT 0,
-  updated_at timestamp with time zone DEFAULT now()
+  role text NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+  high_res_quota_used integer NOT NULL DEFAULT 0,
+  membership_request_status text CHECK (membership_request_status IN ('pending')),
+  membership_requested_at bigint,
+  membership_contact_email text,
+  membership_request_note text,
+  membership_request_source text CHECK (membership_request_source IN ('generic', 'roll-limit')),
+  updated_at timestamptz DEFAULT now(),
+  deleted_at timestamptz
 );
 
+-- updated_at trigger
 
--- ==========================================
--- 2. Create Triggers for updated_at
--- ==========================================
-
-CREATE OR REPLACE FUNCTION update_modified_column() 
-RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION public.update_modified_column()
+RETURNS trigger AS $$
 BEGIN
-    NEW.updated_at = now();
-    RETURN NEW; 
+  NEW.updated_at = now();
+  RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$ LANGUAGE plpgsql;
 
-CREATE TRIGGER update_cameras_modtime BEFORE UPDATE ON cameras FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
-CREATE TRIGGER update_lenses_modtime BEFORE UPDATE ON lenses FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
-CREATE TRIGGER update_film_stocks_modtime BEFORE UPDATE ON film_stocks FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
-CREATE TRIGGER update_rolls_modtime BEFORE UPDATE ON rolls FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
-CREATE TRIGGER update_photo_assets_modtime BEFORE UPDATE ON photo_assets FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
-CREATE TRIGGER update_other_equipments_modtime BEFORE UPDATE ON other_equipments FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
-CREATE TRIGGER update_tag_configs_modtime BEFORE UPDATE ON tag_configs FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
-CREATE TRIGGER update_albums_modtime BEFORE UPDATE ON albums FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
-CREATE TRIGGER update_album_photos_modtime BEFORE UPDATE ON album_photos FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
-CREATE TRIGGER update_user_profiles_modtime BEFORE UPDATE ON user_profiles FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+DO $$
+DECLARE
+  t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY[
+    'cameras', 'camera_systems', 'film_backs', 'lenses', 'film_stocks', 'rolls', 'photo_assets',
+    'other_equipments', 'tag_configs', 'albums', 'album_photos', 'collections',
+    'ledger_transactions', 'user_profiles'
+  ]
+  LOOP
+    EXECUTE format('DROP TRIGGER IF EXISTS update_%s_modtime ON public.%I;', t, t);
+    EXECUTE format(
+      'CREATE TRIGGER update_%s_modtime BEFORE UPDATE ON public.%I FOR EACH ROW EXECUTE PROCEDURE public.update_modified_column();',
+      t, t
+    );
+  END LOOP;
+END $$;
 
--- ==========================================
--- 2.1 Create Auth Trigger for User Profiles
--- ==========================================
+-- User profile bootstrap
+
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
   INSERT INTO public.user_profiles (id, user_id, tier, high_res_quota_used)
-  VALUES (new.id, new.id, 'regular', 0);
+  VALUES (new.id, new.id, 'regular', 0)
+  ON CONFLICT (id) DO NOTHING;
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
+-- Membership hard guard: regular users can have at most 5 active rolls.
 
--- ==========================================
--- 3. Enable Row Level Security (RLS)
--- ==========================================
+CREATE OR REPLACE FUNCTION public.enforce_membership_active_roll_limit()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  user_tier text;
+  active_roll_count integer;
+  active_roll_limit integer := 5;
+BEGIN
+  IF auth.role() = 'service_role' THEN
+    RETURN NEW;
+  END IF;
 
-ALTER TABLE cameras ENABLE ROW LEVEL SECURITY;
-ALTER TABLE lenses ENABLE ROW LEVEL SECURITY;
-ALTER TABLE film_stocks ENABLE ROW LEVEL SECURITY;
-ALTER TABLE rolls ENABLE ROW LEVEL SECURITY;
-ALTER TABLE photo_assets ENABLE ROW LEVEL SECURITY;
-ALTER TABLE other_equipments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE tag_configs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE albums ENABLE ROW LEVEL SECURITY;
-ALTER TABLE album_photos ENABLE ROW LEVEL SECURITY;
+  IF NEW.deleted_at IS NOT NULL OR NEW.status <> 'active' THEN
+    RETURN NEW;
+  END IF;
 
--- Create Policies (Only users can view and edit their own data)
+  PERFORM pg_advisory_xact_lock(hashtext(NEW.user_id::text));
 
-CREATE POLICY "Users can manage their own cameras" ON cameras FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Users can manage their own lenses" ON lenses FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Users can manage their own film_stocks" ON film_stocks FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Users can manage their own rolls" ON rolls FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Users can manage their own photo_assets" ON photo_assets FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Users can manage their own other_equipments" ON other_equipments FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Users can manage their own tag_configs" ON tag_configs FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Users can manage their own albums" ON albums FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Users can manage their own album_photos" ON album_photos FOR ALL USING (auth.uid() = user_id);
+  SELECT COALESCE(up.tier, 'regular')
+    INTO user_tier
+  FROM public.user_profiles up
+  WHERE up.user_id = NEW.user_id
+    AND up.deleted_at IS NULL
+  LIMIT 1;
 
-ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can manage their own profiles" ON user_profiles FOR ALL USING (auth.uid() = user_id);
+  IF COALESCE(user_tier, 'regular') = 'vip' THEN
+    RETURN NEW;
+  END IF;
 
--- ==========================================
--- 4. RPC Functions
--- ==========================================
+  SELECT count(*)
+    INTO active_roll_count
+  FROM public.rolls r
+  WHERE r.user_id = NEW.user_id
+    AND r.status = 'active'
+    AND r.deleted_at IS NULL
+    AND r.id <> NEW.id;
 
--- Function to allow users to delete their own account securely
-CREATE OR REPLACE FUNCTION delete_user()
+  IF active_roll_count >= active_roll_limit THEN
+    RAISE EXCEPTION 'FREE_ACTIVE_ROLL_LIMIT_REACHED'
+      USING ERRCODE = 'P0001',
+            DETAIL = 'Regular users can have at most 5 active rolls.',
+            HINT = 'Archive an active roll or upgrade the user profile to vip.';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS enforce_membership_active_roll_limit_on_rolls ON public.rolls;
+CREATE TRIGGER enforce_membership_active_roll_limit_on_rolls
+  BEFORE INSERT OR UPDATE OF user_id, status, deleted_at ON public.rolls
+  FOR EACH ROW
+  EXECUTE FUNCTION public.enforce_membership_active_roll_limit();
+
+-- RLS and table grants
+
+DO $$
+DECLARE
+  t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY[
+    'cameras', 'camera_systems', 'film_backs', 'lenses', 'film_stocks', 'rolls', 'photo_assets',
+    'other_equipments', 'tag_configs', 'albums', 'album_photos', 'collections',
+    'ledger_transactions', 'user_profiles'
+  ]
+  LOOP
+    EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY;', t);
+    EXECUTE format('DROP POLICY IF EXISTS "Tenant Isolation Policy" ON public.%I;', t);
+    EXECUTE format(
+      'CREATE POLICY "Tenant Isolation Policy" ON public.%I FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);',
+      t
+    );
+    EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.%I TO authenticated;', t);
+    EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.%I TO service_role;', t);
+  END LOOP;
+END $$;
+
+-- Private Storage bucket and policies
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('filmory-assets', 'filmory-assets', false)
+ON CONFLICT (id) DO UPDATE SET public = false;
+
+DROP POLICY IF EXISTS "Public Read Access" ON storage.objects;
+DROP POLICY IF EXISTS "Owner Read Access" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated Insert" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated Update" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated Delete" ON storage.objects;
+
+CREATE POLICY "Owner Read Access"
+ON storage.objects FOR SELECT
+USING (
+  bucket_id = 'filmory-assets'
+  AND auth.uid() = owner
+);
+
+CREATE POLICY "Authenticated Insert"
+ON storage.objects FOR INSERT
+WITH CHECK (
+  bucket_id = 'filmory-assets'
+  AND auth.role() = 'authenticated'
+  AND (storage.foldername(name))[1] = auth.uid()::text
+);
+
+CREATE POLICY "Authenticated Update"
+ON storage.objects FOR UPDATE
+USING (
+  bucket_id = 'filmory-assets'
+  AND auth.uid() = owner
+);
+
+CREATE POLICY "Authenticated Delete"
+ON storage.objects FOR DELETE
+USING (
+  bucket_id = 'filmory-assets'
+  AND auth.uid() = owner
+);
+
+-- Account deletion RPC
+
+CREATE OR REPLACE FUNCTION public.delete_user()
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -245,11 +417,10 @@ BEGIN
     RAISE EXCEPTION 'Not authenticated';
   END IF;
 
-  -- Delete the caller from the auth.users table.
   DELETE FROM auth.users WHERE id = auth.uid();
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION delete_user() TO authenticated;
-
--- DONE!
+REVOKE EXECUTE ON FUNCTION public.delete_user() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.delete_user() FROM anon;
+GRANT EXECUTE ON FUNCTION public.delete_user() TO authenticated;

@@ -1,154 +1,203 @@
-# Filmory-Web 对象级数据库架构设计 (Object-Oriented Database Schema)
+# Filmory-Web 数据库架构
 
-本文档阐述了 Filmory-Web 在底层数据建模上的核心理念。我们的后端设计（基于 Dexie 本地映射到 Supabase PostgreSQL）贯彻了**最顶级的面向对象设计模式 (Best Object-Oriented Design)**。
+本文档描述当前真实数据模型：前端以 Dexie/IndexedDB 为 local-first 主读写层。Supabase Postgres schema、RLS、Storage 与同步映射已作为后续云同步/生产上线准备，但当前日常开发可在不连接 Supabase API 的情况下运行。所有用户数据都必须携带 `userId/user_id`，本地查询和云端 RLS 均以该字段做租户隔离。
 
-通过实体剥离、聚合根管控以及多层级联关系，我们实现了一套极高内聚、极低耦合的工业级影像数据库。
+## 设计边界
 
----
+- 当前不是为了“纯 OOP”而强行抽象的架构。实体按业务领域划分，优先保证数据正确、同步清晰、UI 读写简单。
+- Dexie 是前端即时读写源；Supabase Postgres 是后续跨设备同步与生产安全边界。
+- 账号密码、邮箱验证、找回密码、session 等认证凭据生命周期属于 Supabase Auth 与前端 auth flow；业务表只承载应用数据和 `user_profiles` 这类扩展资料，不保存密码策略本身。
+- 大图不再以 Public URL 暴露；`photoAssets.storageKey` 指向 private bucket 对象，展示时按需生成 signed URL。
+- 器材头像和缩略图类轻量图片仍可用本地 Base64/Data URL 存在 `avatarUrl` 或 `thumbnailUrl` 中，避免为小图增加 Storage 成本。
+- 常见相机、镜头、胶卷数据是 reference catalog，用于快速填表；只有用户保存后才进入 `cameras`、`lenses`、`filmStocks` 用户资产表。
 
-## 🏛️ 领域驱动架构 (Domain-Driven Layers)
+## 核心实体
 
-整个数据库架构被划分为四大面向对象层次：
+### `Camera`
 
-1. **物理器材层 (Physical Asset Entities)**: 独立存在的基础物理实体（相机、镜头、胶卷库存），不依赖于任何动作存在。
-2. **行为聚合层 (Action Aggregate Roots)**: 代表一次真实拍摄周期的载体（拍摄卷 `Roll`）。它是核心枢纽，将离散的物理器材组合（Compose）在一起。
-3. **衍生数字资产层 (Derivative Asset Entities)**: 具体产出的底片与数码照片（`PhotoAsset`）。它们是受 `Roll` 强生命周期管辖的子对象。
-4. **逻辑装饰器层 (Logical Decorators)**: 用于为数字资产打标、分组的抽象结构（`TagConfig`、`Album`）。
+相机资产。
 
----
+- `id`: UUID
+- `userId`: 当前用户
+- `name`, `type`, `format`
+- `cameraSystemId`: 120 可换后背相机所属系统
+- `backType`: `fixed` / `interchangeable`
+- `notes`
+- `avatarUrl`: 本地头像预览
+- `purchasePrice`: 购入成本
+- `status`: `active` / `archived`
+- `addedAt`
 
-## 📦 核心实体结构 (Core Entities)
+### `CameraSystem`
 
-### 1. 物理器材层
+120/中画幅可换后背系统，用于表达多个机身共用同一批后背的关系。
 
-#### 📷 `Camera` (相机实体)
-* **职责**: 描述一个机身的物理属性与价值。
-* **属性**:
-  * `id`: UUID (PK)
-  * `userId`: UUID (租户隔离)
-  * `name`, `type` (Film/Digital), `format` (135/120)
-  * `purchasePrice`: 购入成本（用于 ROI 计算）
-  * `avatarUrl`: 物理头像地址 (Base64)
+- `id`: UUID
+- `userId`
+- `name`: 例如 Hasselblad V、Mamiya RB67
+- `mountKey`: 系统/卡口 key
+- `notes`
+- `addedAt`
 
-#### 🔍 `Lens` (镜头实体)
-* **职责**: 描述光学仪器的焦段与光圈属性。
-* **属性**:
-  * `id`: UUID (PK)
-  * `focalLength`, `maxAperture`, `type` (Prime/Zoom)
-  * `avatarUrl`: 物理头像地址 (Base64)
+### `FilmBack`
 
-#### 🎞️ `FilmStock` (胶片库存实体)
-* **职责**: 管理胶片的类型与**原子化的库存数量**。
-* **属性**:
-  * `id`: UUID (PK)
-  * `brand`, `name`, `iso`, `colorType`, `format`
-  * `stockCount`: 核心状态，通过原子操作增减
-  * `isSystem`: 虚拟对象标识（区分真实胶片与虚拟数码卷）
-  * `avatarUrl`: 物理头像地址 (Base64)
+120/中画幅后背或片盒，属于 `CameraSystem`，不是普通其他器材。
 
----
+- `id`: UUID
+- `userId`
+- `cameraSystemId`
+- `name`: 例如 A12 Back、6x7 Back
+- `format`: 默认 `120`
+- `status`: `active` / `archived`
+- `notes`
+- `addedAt`
 
-### 2. 行为聚合层 (The Aggregate Root)
+### `Lens`
 
-#### 📼 `Roll` (拍摄卷聚合)
-* **职责**: **系统中最核心的控制者。** 它代表了"一段拍摄旅程"。在面向对象的设计中，`Roll` 是一个聚合根，它拥有生命周期 (`status`: active -> archived)。
-* **关系绑定**:
-  * 组合 (Has-A) `Camera`: 外键 `cameraId`
-  * 组合 (Has-A) `FilmStock`: 外键 `filmStockId`
-* **属性**:
-  * `id`: UUID (PK)
-  * `status`, `location`, `developNotes` (冲洗配方), `rating`
-* **行为约定**:
-  * **创建生命周期**: 创建 `Roll` 的瞬间，必须触发 `FilmStock` 对象的 `stockCount - 1` 方法（原子扣减）。
-  * **销毁生命周期**: 当一个 `Roll` 对象被销毁 (Delete) 时，必须触发级联删除，将其辖区下的所有 `PhotoAsset` 彻底抹除。
+镜头资产。
 
-#### 💸 `LedgerTransaction` (复式财务流水)
-* **职责**: 作为独立的财务总账，跟踪所有实体引发的金钱流动。
-* **关系绑定**:
-  * 多态关联 (Polymorphic) `relatedEntityId`: 可指向 `Camera`, `Lens`, `FilmStock` 或 `Roll`。
-* **属性**:
-  * `id`: UUID (PK)
-  * `amount`: 正负数表示收支
-  * `type`, `category`
-  * `addedAt`
-* **行为约定**:
-  * **原子注入**: 在创建需要花钱的实体（如购买相机）时，必须在同一个 Dexie Transaction 中原子写入一条对应的 LedgerTransaction。
+- `id`: UUID
+- `userId`
+- `name`, `focalLength`, `maxAperture`, `type`
+- `mountKey`: 可选卡口/系统标识，例如 `leica-m`、`nikon-f`、`hasselblad-v`；用于后续兼容性提示，不表示镜头被绑定或占用
+- `avatarUrl`
+- `purchasePrice`
+- `status`
+- `addedAt`
 
----
+### `FilmStock`
 
-### 3. 衍生数字资产层
+胶卷型号与库存。
 
-#### 🖼️ `PhotoAsset` (数字资产实体)
-* **职责**: 承载一张图片的绝对物理映射（路径、EXIF、打分）。
-* **关系绑定**:
-  * 归属 (Belongs-To) `Roll`: 外键 `rollId`
-* **属性**:
-  * `id`: UUID (PK)
-  * `storageKey`: 高清图在 Supabase 的相对路径指针
-  * `focalLength`, `aperture`, `shutterSpeed`: 从二进制文件中抽取的物理属性 (EXIF)
-  * `rating`: 独立打分
-  * `tags`: `String` 采用 Flat-String 紧凑序列化（例如 `"Portrait,Street"`），以换取 O(1) 的正则检索速度，而无需建立沉重的多对多中间表。
+- `id`: UUID
+- `userId`
+- `brand`, `name`, `iso`, `colorType`, `format`
+- `isSystem`, `systemKey`: 数码占位卷等系统记录
+- `stockCount`: 当前库存
+- `pricePerRoll`: 平均单卷价格
+- `avatarUrl`
+- `addedAt`
 
----
+### `Roll`
 
-### 4. 逻辑装饰器层
+一次拍摄周期，是照片的聚合根。
 
-#### 🏷️ `TagConfig` & 📂 `Album`
-* **职责**: 作为虚拟容器或标签，给底层的 `PhotoAsset` 提供额外的分类维度。
-* **特点**: 它们与照片是松耦合的。删除一个 `Album` 或 `TagConfig`，完全不会影响 `PhotoAsset` 本身的任何生命周期。
+- `id`: UUID
+- `userId`
+- `name`
+- `cameraIds`: 支持一卷关联多台机器
+- `lensIds`: 支持一卷关联 0 到多支镜头；只记录卷级使用关系，不表示镜头被全局占用
+- `filmBackId`: 120 可换后背机型的当前装片后背
+- `filmStockId`
+- `status`: `active` / `archived`
+- `startDate`, `endDate`
+- `rating`, `location`, `notes`, `developNotes`
+- `coverPhotoId`
+- `filmPrice`, `developPrice`
+- `collectionId`: 归属拍摄项目集
 
----
+### `PhotoAsset`
 
-### 5. 系统鉴权与控制层
+单张照片资产。
 
-#### 👑 `UserProfile` (VIP 权限表)
-* **职责**: 控制账户的会员层级与高负载 API 限流。
-* **关系绑定**:
-  * `id`: 1:1 强绑定 `auth.uid()`。
-* **属性**:
-  * `tier`: `regular` / `vip`
-  * `highResQuotaUsed`: 高清大图使用量配额。
-* **行为约定**:
-  * 新用户注册时，通过 Postgres Trigger 自动下发 `regular` 身份。
-  * 前端检测到限额时，启动浏览器 Canvas 强制压缩，保护后端服务器。
+- `id`: UUID
+- `userId`
+- `rollId`
+- `originalFileName`, `fileSize`
+- `thumbnailUrl`: 本地轻量缩略图 fallback
+- `previewUrl`: 历史或临时预览字段，不作为长期公开访问凭据
+- `storageKey`: Supabase private Storage 对象路径
+- `note`, `focalLength`, `aperture`, `shutterSpeed`, `exposureCompensation`
+- `isPinned`, `rating`, `tags`, `orderIndex`
+- `addedAt`
 
----
+### `Collection`
 
-### 6. 离线同步层 (Offline Sync Engine)
+拍摄项目集，用于聚合多个拍摄卷。该实体已接入 Dexie、Supabase schema 与同步映射。
 
-#### 🔄 `SyncQueue` (同步拦截队列)
-* **职责**: 全景记录用户的每一次增删改查动作，为离线操作提供无缝保障，并在连网后进行增量云端推送。
-* **属性**:
-  * `id`: 自增 ID (本地专用)
-  * `action`: `UPSERT` / `DELETE`
-  * `tableName`: 涉及变动的表名
-  * `recordId`: 被变动记录的 UUID
-  * `timestamp`: 发生时间
-* **行为约定**:
-  * 由前置的 `Dexie.js` Hook (创建/更新/删除) 自动生成，对上层业务完全透明。
+- `id`: UUID
+- `userId`
+- `name`, `date`, `description`
+- `coverUrl`
+- `addedAt`
 
----
+### `Album` / `AlbumPhoto`
 
-## 🌟 为什么这是最出色的 OOD 设计？
+跨卷相册与照片关联。
 
-1. **强生命周期管理 (Strong Lifecycle Ownership)**
-   - 彻底告别了面条式的散装数据，一切照片都有根(`Roll`)，一切卷都有来源(`Camera` & `Film`)。
-2. **极简主义与性能平衡 (Simplicity & Performance)**
-   - 我们没有为 `Tags` 建立三级关联表（Photo <-> PhotoTagMapping <-> Tag），而是利用 Flat-String 在 `PhotoAsset` 本身留存标签字符串。这种非标准范式（NoSQL 理念引入）为纯前端内存搜索带来了极高的查询速度！
-3. **租户硬隔离 (Multi-tenant Fortress)**
-   - 每一个面向对象实体的顶层，都注入了 `userId`。无论是在本地 Dexie 还是远端 PostgreSQL，这种横跨所有实体的全局隔离属性，确保了不同对象的权限界限不可逾越。
+- `Album`: `id`, `userId`, `name`, `description`, `coverPhotoId`, `addedAt`
+- `AlbumPhoto`: `id`, `userId`, `albumId`, `photoId`, `addedAt`
 
-### 8. Collections (拍摄项目集)
-用于将多卷胶卷或多个数码相册归纳为一个大项目（如“2026北海道旅拍”）。
-```typescript
-interface Collection {
-  id?: string;
-  userId: string;       // 租户隔离
-  name: string;         // 项目名称
-  date: number;         // 拍摄日期
-  description?: string; // 备注描述
-  coverUrl?: string;    // 封面图
-  addedAt: number;
-}
-```
-**注意**：`Roll` 实体新增了 `collectionId` 字段，以实现对项目集的多对一归属。
+### `TagConfig`
+
+标签字典。
+
+- `id`: UUID
+- `userId`
+- `name`
+- `color`
+
+### `OtherEquipment`
+
+其他器材和耗材。
+
+- `id`: UUID
+- `userId`
+- `name`, `type`, `notes`
+- `avatarUrl`
+- `purchaseDate`, `expiryDate`, `purchasePrice`
+- `addedAt`
+
+### `LedgerTransaction`
+
+财务流水。
+
+- `id`: UUID
+- `userId`
+- `amount`, `date`, `type`, `category`
+- `relatedEntityId`
+- `notes`
+- `addedAt`
+
+### `UserProfile`
+
+会员能力预留表。
+
+- `id`: 等同 auth user id
+- `userId`
+- `tier`: `regular` / `vip`
+- `role`: `user` / `admin`
+- `highResQuotaUsed`
+- `membershipRequestStatus`: 本地/后续可同步的手动升级申请状态，当前使用 `pending`
+- `membershipRequestedAt`: 最近一次记录手动升级申请的时间
+- `membershipContactEmail`: 人工开通确认使用的联系邮箱
+- `membershipRequestNote`: 用户补充说明
+- `membershipRequestSource`: `generic` / `roll-limit`
+- `updatedAt`
+
+当前 VIP 模型已完成前后端接线：普通用户最多 5 个进行中胶卷记录，VIP 放行；器材库、胶卷库存、项目集和历史归档卷不做会员限制。前端限制由 `membershipPolicy` 统一配置，Upgrade Modal 与 Settings 共用同一能力来源。Supabase 侧通过 `enforce_membership_active_roll_limit_on_rolls` trigger 阻止 regular 用户越权创建第 6 个 active roll，并已用 live integration test 覆盖 regular 拦截、archived 放行和 VIP 放行。当前仍未完成的是支付/开通回写、生产商业化闭环和云端图片存储配额策略。`role=admin` 是正式账号权限标记，不等于开发环境的 Dev Bypass。
+
+### `SyncQueue`
+
+本地同步队列。
+
+- `id`: 本地自增
+- `userId`
+- `tableName`
+- `action`: `upsert` / `delete`
+- `recordId`
+- `payload`
+- `timestamp`
+
+`syncQueue` 由 Dexie hooks 自动生成；业务组件不应该直接绕过数据层向 Supabase 写业务表。
+
+当前本地-only 阶段：`syncQueue` 可被生成并由测试覆盖；`SyncService` 已接入默认关闭的 App 生命周期开关，只有 `VITE_ENABLE_SUPABASE_SYNC=true` 且 Supabase URL/key 格式匹配时才会自动 sync 与订阅 Realtime。节流 push、网络/窗口恢复重试、退出登录停止订阅和状态展示已实现；本地 `supabase db reset`、P0 live security tests 与 `RUN_SYNC_LIVE_TESTS=1` sync live test 已通过。生产/Cloud 接入前仍需确认 legacy `rolls.camera_id` 是否保留，以及用真实环境变量做跨设备 smoke。
+
+## 安全约束
+
+- 所有 Supabase 业务表必须启用 RLS。
+- `authenticated` 角色需要表级 `SELECT/INSERT/UPDATE/DELETE` grant，RLS policy 再按 `auth.uid() = user_id` 收口。
+- 会员 active roll 后端硬限制由 `public.enforce_membership_active_roll_limit()` trigger 负责；不要用客户端前端状态作为唯一边界。
+- `filmory-assets` bucket 必须 `public=false`。
+- Storage 不允许 Public Read policy。
+- `delete_user()` RPC 只授予 `authenticated`，并显式 revoke `PUBLIC` 与 `anon`。
