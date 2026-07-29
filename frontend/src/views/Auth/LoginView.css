@@ -55,6 +55,28 @@
   gap: 24px;
 }
 
+.auth-glass-card {
+  max-width: 460px;
+}
+
+.auth-back-link {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: rgba(255, 255, 255, 0.6);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.auth-back-link:hover {
+  color: #fff;
+}
+
 .login-header {
   text-align: center;
 }
@@ -158,6 +180,190 @@
   margin: 0;
 }
 
+.auth-secondary-row {
+  display: flex;
+  justify-content: center;
+  margin-top: -4px;
+}
+
+.auth-inline-link {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-inline-link:hover {
+  text-decoration: underline;
+}
+
+.auth-inline-panel,
+.auth-state-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.auth-inline-panel p,
+.auth-state-panel p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.auth-inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.auth-inline-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth-password-row {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.auth-password-input {
+  flex: 1 1 auto;
+}
+
+.auth-password-toggle {
+  flex: 0 0 auto;
+  min-width: 64px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-password-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.auth-password-panel,
+.auth-security-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.auth-password-panel p,
+.auth-security-panel span {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.auth-security-panel {
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+.auth-security-panel svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--accent);
+}
+
+.auth-password-rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.auth-password-rule {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.auth-password-rule.passed {
+  color: #6ee7b7;
+  border-color: rgba(16, 185, 129, 0.28);
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.auth-state-panel h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #fff;
+}
+
+.auth-state-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  background: rgba(226, 176, 40, 0.14);
+  border: 1px solid rgba(226, 176, 40, 0.25);
+}
+
+.auth-state-cta {
+  width: 100%;
+  text-align: center;
+  text-decoration: none;
+}
+
+.auth-processing-panel {
+  align-items: center;
+  text-align: center;
+  padding-block: 28px;
+}
+
+.auth-spinner {
+  animation: auth-spin 1.2s linear infinite;
+}
+
+.auth-centered-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth-footer-block {
+  margin-top: -8px;
+}
+
+@keyframes auth-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Alert Boxes */
 .alert-box {
   display: flex;
@@ -190,5 +396,27 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .login-glass-card,
+  .auth-glass-card {
+    max-width: min(460px, calc(100vw - 24px));
+    padding: 32px 20px 24px;
+  }
+
+  .auth-back-link {
+    top: 18px;
+    left: 18px;
+  }
+
+  .auth-password-row {
+    flex-wrap: wrap;
+  }
+
+  .auth-password-toggle {
+    width: 100%;
+    min-height: 42px;
   }
 }

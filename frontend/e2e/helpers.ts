@@ -17,7 +17,7 @@ export async function resetBrowserData(page: Page) {
 
 export async function loginWithDevBypass(page: Page) {
   await page.goto('/login', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: /Dev Login/i }).click();
+  await page.getByRole('button', { name: /本机测试登录/ }).click();
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: /控制中心/ })).toBeVisible();
 }

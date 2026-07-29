@@ -1,48 +1,97 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAuth } from '../../contexts/useAuth';
 import { supabase } from '../../services/supabaseClient';
 import type { Provider } from '@supabase/supabase-js';
-import { LogIn, UserPlus, AlertCircle, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { LogIn, UserPlus, AlertCircle, ArrowLeft, MailPlus, ShieldCheck } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { isDevBypassEnabled } from '../../services/authMode';
+import {
+  AUTH_ROUTES,
+  buildCheckEmailUrl,
+  buildOAuthRedirectUrl,
+  buildSignupEmailRedirectUrl,
+  getAuthErrorMessage,
+  getMailpitHint,
+  getPasswordValidationMessage,
+  isEmailNotConfirmedError,
+  PASSWORD_POLICY,
+} from '../../services/authFlow';
+import { AuthPasswordField } from './AuthPasswordField';
+import { PasswordPolicyHint } from './PasswordPolicyHint';
 import './LoginView.css';
 
 export const LoginView: React.FC = () => {
   const { signInMock } = useAuth();
-  const showDevBypass = import.meta.env.DEV;
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const showDevBypass = isDevBypassEnabled();
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [needsEmailVerification, setNeedsEmailVerification] = useState(false);
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
+  const prefixedMessage = useMemo(() => searchParams.get('message') || '', [searchParams]);
+  const authTitle = isRegister ? '创建账号' : '欢迎回来';
+  const authSubtitle = isRegister
+    ? '创建你的 Filmory 账号，开始整理器材、胶卷和拍摄项目。'
+    : '整理你的器材、胶卷与拍摄记录';
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
+    setNeedsEmailVerification(false);
 
     try {
+      const normalizedEmail = email.trim().toLowerCase();
+
       if (isRegister) {
-        // --- 注册流程 ---
+        const passwordValidationMessage = getPasswordValidationMessage(password);
+        if (passwordValidationMessage) {
+          setErrorMsg(passwordValidationMessage);
+          return;
+        }
+
+        if (password !== confirmPassword) {
+          setErrorMsg('两次输入的密码不一致，请重新确认。');
+          return;
+        }
+
         const { error } = await supabase.auth.signUp({
-          email,
+          email: normalizedEmail,
           password,
+          options: {
+            emailRedirectTo: buildSignupEmailRedirectUrl(),
+          },
         });
         if (error) throw error;
-        setSuccessMsg('✅ 注册成功！由于开启了邮箱验证，请打开浏览器访问 Mailpit (默认 http://127.0.0.1:54324) 查收注册验证邮件，点击链接激活后即可登录。');
+        navigate(buildCheckEmailUrl(normalizedEmail));
       } else {
-        // --- 登录流程 ---
         const { error } = await supabase.auth.signInWithPassword({
-          email,
+          email: normalizedEmail,
           password,
         });
         if (error) throw error;
-        // 成功登录后，全局 AuthContext 会自动监听到状态改变，并重载整个 App
       }
-    } catch (err: any) {
-      console.error('Login Error Raw:', err);
-      setErrorMsg(err.message || (typeof err === 'object' ? JSON.stringify(err) : String(err)) || '验证失败，请检查账号密码。');
+    } catch (error) {
+      const message = getAuthErrorMessage(
+        error,
+        isRegister ? 'signup' : 'login',
+        isRegister ? '注册失败，请稍后再试。' : '验证失败，请检查账号密码。'
+      );
+      if (!isRegister && isEmailNotConfirmedError(message)) {
+        setNeedsEmailVerification(true);
+        setErrorMsg('该邮箱尚未完成验证。请先打开验证邮件完成确认后，再回来登录。');
+      } else {
+        setErrorMsg(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -55,15 +104,43 @@ export const LoginView: React.FC = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: window.location.origin + '/dashboard'
+          redirectTo: buildOAuthRedirectUrl(),
         }
       });
       if (error) throw error;
-      // Redirect happens automatically
-    } catch (err: any) {
-      console.error('OAuth Error:', err);
-      setErrorMsg(err.message || '快捷登录失败，请稍后再试。');
+    } catch (error) {
+      setErrorMsg(getAuthErrorMessage(error, 'oauth', '快捷登录失败，请稍后再试。'));
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      setErrorMsg('请先填写需要验证的邮箱，再重新发送验证邮件。');
+      return;
+    }
+
+    setIsResendingVerification(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: normalizedEmail,
+        options: {
+          emailRedirectTo: buildSignupEmailRedirectUrl(),
+        },
+      });
+      if (error) throw error;
+
+      setSuccessMsg(`验证邮件已重新发送到 ${normalizedEmail}。${getMailpitHint()}`);
+    } catch (error) {
+      setErrorMsg(getAuthErrorMessage(error, 'resend-verification', '重新发送验证邮件失败，请稍后再试。'));
+    } finally {
+      setIsResendingVerification(false);
     }
   };
 
@@ -75,9 +152,15 @@ export const LoginView: React.FC = () => {
         </Link>
         <div className="login-header">
           <img src="/logo.png" alt="Filmory Logo" className="login-logo-img" style={{ width: '64px', height: '64px', objectFit: 'contain', margin: '0 auto', display: 'block' }} />
-          <h2>Welcome to Filmory</h2>
-          <p>工业级云端胶片资产管理平台</p>
+          <h2>{authTitle}</h2>
+          <p>{authSubtitle}</p>
         </div>
+
+        {prefixedMessage && (
+          <div className="alert-box success">
+            <span>{prefixedMessage}</span>
+          </div>
+        )}
 
         {errorMsg && (
           <div className="alert-box error">
@@ -92,10 +175,31 @@ export const LoginView: React.FC = () => {
           </div>
         )}
 
+        {needsEmailVerification && (
+          <div className="auth-inline-panel">
+            <p>如果你还没收到验证邮件，可以重新发送一封到当前填写的邮箱。</p>
+            <div className="auth-inline-actions">
+              <button
+                type="button"
+                className="secondary auth-inline-button"
+                onClick={handleResendVerification}
+                disabled={isResendingVerification}
+              >
+                <MailPlus size={16} />
+                {isResendingVerification ? '发送中...' : '重新发送验证邮件'}
+              </button>
+              <Link to={buildCheckEmailUrl(email)} className="auth-inline-link">
+                查看说明
+              </Link>
+            </div>
+          </div>
+        )}
+
         <form className="login-form" onSubmit={handleAuth}>
           <div className="form-group">
-            <label>邮箱 (Email)</label>
+            <label htmlFor="login-email">邮箱</label>
             <input 
+              id="login-email"
               type="email" 
               className="form-control" 
               placeholder="请输入您的邮箱" 
@@ -104,22 +208,40 @@ export const LoginView: React.FC = () => {
               required 
             />
           </div>
-          <div className="form-group">
-            <label>密码 (Password)</label>
-            <input 
-              type="password" 
-              className="form-control" 
-              placeholder="••••••••" 
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required 
-              minLength={6}
-            />
-          </div>
+          <AuthPasswordField
+            id="login-password"
+            label="密码"
+            value={password}
+            onChange={setPassword}
+            placeholder={isRegister ? '至少 8 位，包含大小写字母和数字' : '请输入账号密码'}
+            visible={showPassword}
+            onToggleVisibility={() => setShowPassword(current => !current)}
+            minLength={PASSWORD_POLICY.minLength}
+          />
+
+          {isRegister && (
+            <>
+              <AuthPasswordField
+                id="login-password-confirm"
+                label="确认密码"
+                value={confirmPassword}
+                onChange={setConfirmPassword}
+                placeholder="请再次输入同一密码"
+                visible={showConfirmPassword}
+                onToggleVisibility={() => setShowConfirmPassword(current => !current)}
+                minLength={PASSWORD_POLICY.minLength}
+              />
+              <PasswordPolicyHint password={password} />
+              <div className="auth-security-panel">
+                <ShieldCheck size={16} />
+                <span>注册后需要先完成邮箱验证，验证成功后才能正式登录。</span>
+              </div>
+            </>
+          )}
           
           <button type="submit" className="btn-primary login-btn" disabled={loading}>
             {isRegister ? <UserPlus size={18} /> : <LogIn size={18} />}
-            <span>{loading ? '处理中...' : (isRegister ? '创建账号' : '登录云端')}</span>
+            <span>{loading ? '处理中...' : (isRegister ? '创建账号' : '登录')}</span>
           </button>
         </form>
 
@@ -130,14 +252,31 @@ export const LoginView: React.FC = () => {
           <button 
             type="button" 
             style={{ background: 'none', border: 'none', color: 'var(--accent)', fontWeight: 600, cursor: 'pointer', marginLeft: '8px' }}
-            onClick={() => { setIsRegister(!isRegister); setErrorMsg(''); setSuccessMsg(''); }}
+            onClick={() => {
+              setIsRegister(!isRegister);
+              setPassword('');
+              setConfirmPassword('');
+              setShowPassword(false);
+              setShowConfirmPassword(false);
+              setErrorMsg('');
+              setSuccessMsg('');
+              setNeedsEmailVerification(false);
+            }}
           >
             {isRegister ? '返回登录' : '立即注册'}
           </button>
         </div>
 
+        {!isRegister && (
+          <div className="auth-secondary-row">
+            <Link to={AUTH_ROUTES.forgotPassword} className="auth-inline-link">
+              忘记密码？
+            </Link>
+          </div>
+        )}
+
         <div className="login-divider">
-          <span>或使用快捷登录</span>
+          <span>或使用以下方式登录</span>
         </div>
 
         <div className="login-social-actions" style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
@@ -174,12 +313,12 @@ export const LoginView: React.FC = () => {
         {showDevBypass && (
           <>
             <div className="login-divider" style={{ marginTop: '24px' }}>
-              <span>Dev Access</span>
+              <span>开发测试入口</span>
             </div>
 
             <div className="login-social-actions">
               <button type="button" className="btn-social" onClick={signInMock} style={{ opacity: 0.6 }}>
-                <span>Dev Login (Bypass Auth)</span>
+                <span>本机测试登录</span>
               </button>
             </div>
           </>
