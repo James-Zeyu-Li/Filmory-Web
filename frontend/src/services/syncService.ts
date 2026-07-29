@@ -1,9 +1,25 @@
 import { supabase } from './supabaseClient';
 import { db, type SyncQueueItem } from '../db/schema';
 
+const isLocalSupabaseUrl = (url: string) => (
+  url.includes('127.0.0.1:54321') || url.includes('localhost:54321')
+);
+
+const hasValidSupabaseKeyPair = () => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+  if (!supabaseUrl || !supabaseAnonKey) return false;
+  if (isLocalSupabaseUrl(supabaseUrl)) return supabaseAnonKey.startsWith('eyJ');
+  return supabaseAnonKey.startsWith('sb_publishable_') || supabaseAnonKey.startsWith('eyJ');
+};
+
+const hasAutoSyncFlag = () => import.meta.env.VITE_ENABLE_SUPABASE_SYNC === 'true';
+
 // --- Utility Functions for Key Case Conversion ---
 const camelToSnake = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
 const snakeToCamel = (str: string) => str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+
+const localOnlyFields = new Set(['blob']);
 
 const convertKeysToSnakeCase = (obj: any): any => {
   if (typeof obj !== 'object' || obj === null) return obj;
@@ -13,7 +29,7 @@ const convertKeysToSnakeCase = (obj: any): any => {
   for (const key in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
       // Omit local-only fields that shouldn't go to Supabase
-      if (key === 'blob') continue; 
+      if (localOnlyFields.has(key)) continue;
       
       newObj[camelToSnake(key)] = convertKeysToSnakeCase(obj[key]);
     }
@@ -28,6 +44,7 @@ const convertKeysToCamelCase = (obj: any): any => {
   const newObj: any = {};
   for (const key in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      if (localOnlyFields.has(snakeToCamel(key))) continue;
       newObj[snakeToCamel(key)] = convertKeysToCamelCase(obj[key]);
     }
   }
@@ -37,11 +54,14 @@ const convertKeysToCamelCase = (obj: any): any => {
 // Map Dexie table names to Supabase table names
 const tableMap: Record<string, string> = {
   cameras: 'cameras',
+  cameraSystems: 'camera_systems',
+  filmBacks: 'film_backs',
   lenses: 'lenses',
   filmStocks: 'film_stocks',
   rolls: 'rolls',
   photoAssets: 'photo_assets',
   otherEquipments: 'other_equipments',
+  collections: 'collections',
   albums: 'albums',
   albumPhotos: 'album_photos',
   tagConfigs: 'tag_configs',
@@ -61,13 +81,138 @@ const getUserQueue = async (userId: string) => {
   return queue.filter(item => queueBelongsToUser(item, userId));
 };
 
+const supabaseTables = Object.values(tableMap);
+export const LOCAL_CHANGE_EVENT = 'filmory-sync-request';
+export const SYNC_STATUS_EVENT = 'filmory-sync-status';
+export type SyncStatusState = 'local' | 'offline' | 'syncing' | 'synced' | 'error';
+const SYNC_DEBOUNCE_MS = 1500;
+const RESUME_SYNC_DEBOUNCE_MS = 400;
+const RETRY_SYNC_DELAY_MS = 5000;
+
+const dispatchSyncStatus = (status: SyncStatusState) => {
+  window.dispatchEvent(new CustomEvent(SYNC_STATUS_EVENT, { detail: status }));
+};
+
 export class SyncService {
+  private static activeUserId: string | null = null;
+  private static activeCleanup: (() => void) | null = null;
+  private static scheduledSyncTimer: ReturnType<typeof setTimeout> | null = null;
+  private static retryTimer: ReturnType<typeof setTimeout> | null = null;
+  private static inFlightSync: Promise<void> | null = null;
+  private static shouldRunAgain = false;
+
+  static isAutoSyncEnabled(): boolean {
+    return hasAutoSyncFlag() && hasValidSupabaseKeyPair();
+  }
+
+  static start(): void {
+    const userId = getCurrentUserId();
+    if (!userId) {
+      this.stop();
+      return;
+    }
+
+    if (!this.isAutoSyncEnabled()) {
+      this.stop();
+      dispatchSyncStatus('local');
+      return;
+    }
+
+    if (this.activeUserId === userId && this.activeCleanup) return;
+
+    this.stop();
+    this.activeUserId = userId;
+
+    const unsubscribeRealtime = this.setupRealtimeSubscription();
+
+    const handleOnline = () => {
+      this.requestSync('online', RESUME_SYNC_DEBOUNCE_MS);
+    };
+
+    const handleOffline = () => {
+      dispatchSyncStatus('offline');
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        this.requestSync('visibility', RESUME_SYNC_DEBOUNCE_MS);
+      }
+    };
+
+    const handleLocalChange = () => {
+      this.requestSync('local-change', SYNC_DEBOUNCE_MS);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener(LOCAL_CHANGE_EVENT, handleLocalChange as EventListener);
+
+    this.activeCleanup = () => {
+      unsubscribeRealtime?.();
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener(LOCAL_CHANGE_EVENT, handleLocalChange as EventListener);
+    };
+
+    if (!navigator.onLine) {
+      dispatchSyncStatus('offline');
+      return;
+    }
+
+    this.requestSync('start', 0);
+  }
+
+  static stop(): void {
+    this.activeCleanup?.();
+    this.activeCleanup = null;
+    this.activeUserId = null;
+    this.shouldRunAgain = false;
+    this.inFlightSync = null;
+
+    if (this.scheduledSyncTimer) {
+      clearTimeout(this.scheduledSyncTimer);
+      this.scheduledSyncTimer = null;
+    }
+
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
+    }
+  }
+
+  static requestSync(reason = 'manual', delayMs = 0): void {
+    void reason;
+    if (!this.isAutoSyncEnabled() || !this.activeUserId) return;
+
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
+    }
+
+    if (this.inFlightSync) {
+      this.shouldRunAgain = true;
+      return;
+    }
+
+    if (this.scheduledSyncTimer) {
+      clearTimeout(this.scheduledSyncTimer);
+    }
+
+    this.scheduledSyncTimer = setTimeout(() => {
+      this.scheduledSyncTimer = null;
+      void this.sync();
+    }, Math.max(0, delayMs));
+  }
+
   /**
    * PUSH: Consume the local sync queue and send changes to Supabase
    */
   static async push(): Promise<void> {
     const userId = getCurrentUserId();
     if (!userId) return;
+    let hadErrors = false;
 
     // 1. Fetch only this user's pending queue items
     const queue = await getUserQueue(userId);
@@ -134,9 +279,14 @@ export class SyncService {
         await db.syncQueue.bulkDelete(queueIdsToClear);
 
       } catch (err) {
+        hadErrors = true;
         console.error('Failed to push sync queue batch:', err);
         // Will retry on next push call since we didn't delete from syncQueue
       }
+    }
+
+    if (hadErrors) {
+      throw new Error('One or more sync push batches failed.');
     }
   }
 
@@ -162,6 +312,8 @@ export class SyncService {
 
     // Enable silent mode so local hooks don't throw fetched data back into the queue
     window.__filmory_is_pulling = true;
+
+    let syncError: Error | null = null;
 
     try {
       for (const [dexieTable, supaTable] of Object.entries(tableMap)) {
@@ -250,10 +402,15 @@ export class SyncService {
       localStorage.setItem(getSyncWatermarkKey(userId), newSyncTime);
 
     } catch (err) {
+      syncError = err instanceof Error ? err : new Error('Unknown sync pull failure.');
       console.error('Failed to pull from cloud:', err);
     } finally {
       // Disengage silent mode
       window.__filmory_is_pulling = false;
+    }
+
+    if (syncError) {
+      throw syncError;
     }
   }
 
@@ -261,19 +418,47 @@ export class SyncService {
    * Run a full cycle (Push then Pull)
    */
   static async sync(): Promise<void> {
+    if (!this.isAutoSyncEnabled()) {
+      dispatchSyncStatus('local');
+      return;
+    }
     // Basic connectivity check
-    if (!navigator.onLine) return;
+    if (!navigator.onLine) {
+      dispatchSyncStatus('offline');
+      return;
+    }
+
+    if (this.inFlightSync) {
+      this.shouldRunAgain = true;
+      return this.inFlightSync;
+    }
     
     // Dispatch sync start event
-    window.dispatchEvent(new CustomEvent('filmory-sync-status', { detail: 'syncing' }));
+    dispatchSyncStatus('syncing');
 
-    try {
-      await this.push();
-      await this.pull();
-      window.dispatchEvent(new CustomEvent('filmory-sync-status', { detail: 'synced' }));
-    } catch (err) {
-      window.dispatchEvent(new CustomEvent('filmory-sync-status', { detail: 'error' }));
-    }
+    this.inFlightSync = (async () => {
+      try {
+        await this.push();
+        await this.pull();
+        dispatchSyncStatus('synced');
+      } catch {
+        dispatchSyncStatus('error');
+        if (this.activeUserId) {
+          this.retryTimer = setTimeout(() => {
+            this.retryTimer = null;
+            this.requestSync('retry', 0);
+          }, RETRY_SYNC_DELAY_MS);
+        }
+      } finally {
+        this.inFlightSync = null;
+        if (this.shouldRunAgain && this.activeUserId) {
+          this.shouldRunAgain = false;
+          this.requestSync('follow-up', RESUME_SYNC_DEBOUNCE_MS);
+        }
+      }
+    })();
+
+    return this.inFlightSync;
   }
 
   /**
@@ -281,16 +466,24 @@ export class SyncService {
    */
   static setupRealtimeSubscription() {
     const userId = getCurrentUserId();
-    if (!userId) return;
+    if (!userId || !this.isAutoSyncEnabled()) return;
 
     console.log('[Sync Realtime] Subscribing to postgres changes...');
-    const channel = supabase.channel(`filmory-user-${userId}`)
-      .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+    let channel = supabase.channel(`filmory-user-${userId}`);
+
+    for (const table of supabaseTables) {
+      channel = channel.on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table,
+        filter: `user_id=eq.${userId}`,
+      }, (payload) => {
         console.log('[Sync Realtime] Cloud mutated!', payload);
-        // Trigger a background pull immediately
-        this.sync();
-      })
-      .subscribe();
+        this.requestSync('realtime', RESUME_SYNC_DEBOUNCE_MS);
+      });
+    }
+
+    channel.subscribe();
 
     return () => {
       supabase.removeChannel(channel);

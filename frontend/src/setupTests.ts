@@ -43,6 +43,13 @@ vi.mock('./contexts/useAuth', () => ({
 vi.mock('./services/supabaseClient', () => ({
   supabase: {
     auth: {
+      signUp: vi.fn().mockResolvedValue({ data: {}, error: null }),
+      signInWithPassword: vi.fn().mockResolvedValue({ data: {}, error: null }),
+      signInWithOAuth: vi.fn().mockResolvedValue({ data: {}, error: null }),
+      resetPasswordForEmail: vi.fn().mockResolvedValue({ data: {}, error: null }),
+      updateUser: vi.fn().mockResolvedValue({ data: {}, error: null }),
+      resend: vi.fn().mockResolvedValue({ data: {}, error: null }),
+      exchangeCodeForSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
       getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
       onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
       signOut: vi.fn().mockResolvedValue({ error: null }),

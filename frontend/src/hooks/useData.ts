@@ -15,6 +15,16 @@ export const useCameras = () => {
   return useLiveQuery(() => user ? db.cameras.where('userId').equals(user.id).toArray() : [], [user]) ?? EMPTY_ARRAY;
 };
 
+export const useCameraSystems = () => {
+  const { user } = useAuth();
+  return useLiveQuery(() => user ? db.cameraSystems.where('userId').equals(user.id).toArray() : [], [user]) ?? EMPTY_ARRAY;
+};
+
+export const useFilmBacks = () => {
+  const { user } = useAuth();
+  return useLiveQuery(() => user ? db.filmBacks.where('userId').equals(user.id).toArray() : [], [user]) ?? EMPTY_ARRAY;
+};
+
 export const useLenses = () => {
   const { user } = useAuth();
   return useLiveQuery(() => user ? db.lenses.where('userId').equals(user.id).toArray() : [], [user]) ?? EMPTY_ARRAY;
@@ -62,5 +72,5 @@ export const useUserProfile = () => {
 
 export const useCollections = () => {
   const { user } = useAuth();
-  return useLiveQuery(() => db.collections.where('userId').equals(user?.id || 'offline').reverse().sortBy('addedAt'), [user?.id]) || [];
+  return useLiveQuery(() => user ? db.collections.where('userId').equals(user.id).reverse().sortBy('addedAt') : [], [user]) ?? EMPTY_ARRAY;
 };

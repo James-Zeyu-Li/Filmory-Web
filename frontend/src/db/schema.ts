@@ -32,7 +32,13 @@ export interface UserProfile {
   id: string; // matches userId for 1:1 relation
   userId: string;
   tier: 'regular' | 'vip';
+  role?: 'user' | 'admin';
   highResQuotaUsed: number;
+  membershipRequestStatus?: 'pending';
+  membershipRequestedAt?: number;
+  membershipContactEmail?: string;
+  membershipRequestNote?: string;
+  membershipRequestSource?: 'roll-limit' | 'generic';
   updatedAt?: number;
 }
 
@@ -41,12 +47,34 @@ export interface Camera {
   name: string;
   type: 'film' | 'digital';
   format: string; // '135', '120', etc.
+  cameraSystemId?: string;
+  backType?: 'fixed' | 'interchangeable';
   notes?: string;
-  avatarUrl?: string; // Camera profile image URL/relative path
+  avatarUrl?: string | null; // Camera profile image URL/relative path
   purchasePrice?: number; // Price of the camera body
   status?: 'active' | 'archived';
   addedAt: number;
   userId?: string;
+}
+
+export interface CameraSystem {
+  id?: string;
+  userId: string;
+  name: string;
+  mountKey?: string;
+  notes?: string;
+  addedAt: number;
+}
+
+export interface FilmBack {
+  id?: string;
+  userId: string;
+  cameraSystemId: string;
+  name: string;
+  format: string;
+  status?: 'active' | 'archived';
+  notes?: string;
+  addedAt: number;
 }
 
 export interface Lens {
@@ -55,7 +83,8 @@ export interface Lens {
   focalLength: number;
   maxAperture: string; // e.g. 'f/1.8'
   type: string;        // 'prime' or 'zoom'
-  avatarUrl?: string;
+  mountKey?: string;
+  avatarUrl?: string | null;
   purchasePrice?: number;
   status?: 'active' | 'archived';
   addedAt: number;
@@ -73,7 +102,7 @@ export interface FilmStock {
   systemKey?: string; // 'digital'
   stockCount?: number; // Inventory count
   pricePerRoll?: number; // Average purchase price per roll
-  avatarUrl?: string;
+  avatarUrl?: string | null;
   addedAt: number;
   userId?: string;
 }
@@ -82,6 +111,8 @@ export interface Roll {
   id?: string;
   name: string;
   cameraIds: string[];
+  lensIds?: string[];
+  filmBackId?: string;
   filmStockId: string;
   status: 'active' | 'archived';
   startDate?: number;
@@ -102,7 +133,7 @@ export interface OtherEquipment {
   name: string;
   type: 'chemical' | 'tripod' | 'cleaner' | 'other';
   notes?: string;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
   purchaseDate?: number; // timestamp
   expiryDate?: number;   // timestamp
   purchasePrice?: number;
@@ -168,6 +199,8 @@ export interface AlbumPhoto {
 
 export class FilmoryDatabase extends Dexie {
   cameras!: Table<Camera>;
+  cameraSystems!: Table<CameraSystem, string>;
+  filmBacks!: Table<FilmBack, string>;
   lenses!: Table<Lens>;
   filmStocks!: Table<FilmStock>;
   rolls!: Table<Roll>;
@@ -418,6 +451,101 @@ export class FilmoryDatabase extends Dexie {
       collections: 'id, userId, name, date, addedAt'
     });
 
+    // Version 17: Add medium-format camera systems and interchangeable film backs
+    this.version(17).stores({
+      cameras: 'id, userId, name, type, format, cameraSystemId, backType, avatarUrl, addedAt',
+      cameraSystems: 'id, userId, name, mountKey, addedAt',
+      filmBacks: 'id, userId, cameraSystemId, name, format, status, addedAt',
+      lenses: 'id, userId, name, focalLength, maxAperture, type, addedAt',
+      filmStocks: 'id, userId, brand, name, iso, colorType, format, isSystem, systemKey, addedAt',
+      rolls: 'id, userId, name, *cameraIds, filmBackId, filmStockId, status, startDate, endDate, rating, location, developNotes, collectionId',
+      photoAssets: 'id, userId, rollId, originalFileName, fileSize, thumbnailUrl, previewUrl, storageKey, addedAt, isPinned, rating, tags, orderIndex',
+      otherEquipments: 'id, userId, name, type, notes, purchaseDate, expiryDate, addedAt',
+      albums: 'id, userId, name, description, coverPhotoId, addedAt',
+      albumPhotos: 'id, userId, albumId, photoId, addedAt',
+      tagConfigs: 'id, userId, &name, color',
+      syncQueue: '++id, userId, tableName, action, recordId, timestamp',
+      ledgerTransactions: 'id, userId, amount, date, type, category, relatedEntityId, addedAt',
+      userProfiles: 'id, userId, tier',
+      collections: 'id, userId, name, date, addedAt'
+    });
+
+    // Version 18: Track roll-level lens usage without global lens occupancy
+    this.version(18).stores({
+      cameras: 'id, userId, name, type, format, cameraSystemId, backType, avatarUrl, addedAt',
+      cameraSystems: 'id, userId, name, mountKey, addedAt',
+      filmBacks: 'id, userId, cameraSystemId, name, format, status, addedAt',
+      lenses: 'id, userId, name, focalLength, maxAperture, type, addedAt',
+      filmStocks: 'id, userId, brand, name, iso, colorType, format, isSystem, systemKey, addedAt',
+      rolls: 'id, userId, name, *cameraIds, *lensIds, filmBackId, filmStockId, status, startDate, endDate, rating, location, developNotes, collectionId',
+      photoAssets: 'id, userId, rollId, originalFileName, fileSize, thumbnailUrl, previewUrl, storageKey, addedAt, isPinned, rating, tags, orderIndex',
+      otherEquipments: 'id, userId, name, type, notes, purchaseDate, expiryDate, addedAt',
+      albums: 'id, userId, name, description, coverPhotoId, addedAt',
+      albumPhotos: 'id, userId, albumId, photoId, addedAt',
+      tagConfigs: 'id, userId, &name, color',
+      syncQueue: '++id, userId, tableName, action, recordId, timestamp',
+      ledgerTransactions: 'id, userId, amount, date, type, category, relatedEntityId, addedAt',
+      userProfiles: 'id, userId, tier',
+      collections: 'id, userId, name, date, addedAt'
+    });
+
+    // Version 19: Add optional lens mount metadata for future compatibility hints
+    this.version(19).stores({
+      cameras: 'id, userId, name, type, format, cameraSystemId, backType, avatarUrl, addedAt',
+      cameraSystems: 'id, userId, name, mountKey, addedAt',
+      filmBacks: 'id, userId, cameraSystemId, name, format, status, addedAt',
+      lenses: 'id, userId, name, focalLength, maxAperture, type, mountKey, addedAt',
+      filmStocks: 'id, userId, brand, name, iso, colorType, format, isSystem, systemKey, addedAt',
+      rolls: 'id, userId, name, *cameraIds, *lensIds, filmBackId, filmStockId, status, startDate, endDate, rating, location, developNotes, collectionId',
+      photoAssets: 'id, userId, rollId, originalFileName, fileSize, thumbnailUrl, previewUrl, storageKey, addedAt, isPinned, rating, tags, orderIndex',
+      otherEquipments: 'id, userId, name, type, notes, purchaseDate, expiryDate, addedAt',
+      albums: 'id, userId, name, description, coverPhotoId, addedAt',
+      albumPhotos: 'id, userId, albumId, photoId, addedAt',
+      tagConfigs: 'id, userId, &name, color',
+      syncQueue: '++id, userId, tableName, action, recordId, timestamp',
+      ledgerTransactions: 'id, userId, amount, date, type, category, relatedEntityId, addedAt',
+      userProfiles: 'id, userId, tier',
+      collections: 'id, userId, name, date, addedAt'
+    });
+
+    // Version 20: Match Supabase tag_configs UNIQUE(user_id, name)
+    this.version(20).stores({
+      cameras: 'id, userId, name, type, format, cameraSystemId, backType, avatarUrl, addedAt',
+      cameraSystems: 'id, userId, name, mountKey, addedAt',
+      filmBacks: 'id, userId, cameraSystemId, name, format, status, addedAt',
+      lenses: 'id, userId, name, focalLength, maxAperture, type, mountKey, addedAt',
+      filmStocks: 'id, userId, brand, name, iso, colorType, format, isSystem, systemKey, addedAt',
+      rolls: 'id, userId, name, *cameraIds, *lensIds, filmBackId, filmStockId, status, startDate, endDate, rating, location, developNotes, collectionId',
+      photoAssets: 'id, userId, rollId, originalFileName, fileSize, thumbnailUrl, previewUrl, storageKey, addedAt, isPinned, rating, tags, orderIndex',
+      otherEquipments: 'id, userId, name, type, notes, purchaseDate, expiryDate, addedAt',
+      albums: 'id, userId, name, description, coverPhotoId, addedAt',
+      albumPhotos: 'id, userId, albumId, photoId, addedAt',
+      tagConfigs: 'id, userId, &[userId+name], color',
+      syncQueue: '++id, userId, tableName, action, recordId, timestamp',
+      ledgerTransactions: 'id, userId, amount, date, type, category, relatedEntityId, addedAt',
+      userProfiles: 'id, userId, tier',
+      collections: 'id, userId, name, date, addedAt'
+    });
+
+    // Version 21: Store local-only manual VIP upgrade request status on user profiles
+    this.version(21).stores({
+      cameras: 'id, userId, name, type, format, cameraSystemId, backType, avatarUrl, addedAt',
+      cameraSystems: 'id, userId, name, mountKey, addedAt',
+      filmBacks: 'id, userId, cameraSystemId, name, format, status, addedAt',
+      lenses: 'id, userId, name, focalLength, maxAperture, type, mountKey, addedAt',
+      filmStocks: 'id, userId, brand, name, iso, colorType, format, isSystem, systemKey, addedAt',
+      rolls: 'id, userId, name, *cameraIds, *lensIds, filmBackId, filmStockId, status, startDate, endDate, rating, location, developNotes, collectionId',
+      photoAssets: 'id, userId, rollId, originalFileName, fileSize, thumbnailUrl, previewUrl, storageKey, addedAt, isPinned, rating, tags, orderIndex',
+      otherEquipments: 'id, userId, name, type, notes, purchaseDate, expiryDate, addedAt',
+      albums: 'id, userId, name, description, coverPhotoId, addedAt',
+      albumPhotos: 'id, userId, albumId, photoId, addedAt',
+      tagConfigs: 'id, userId, &[userId+name], color',
+      syncQueue: '++id, userId, tableName, action, recordId, timestamp',
+      ledgerTransactions: 'id, userId, amount, date, type, category, relatedEntityId, addedAt',
+      userProfiles: 'id, userId, tier, membershipRequestStatus, membershipRequestedAt',
+      collections: 'id, userId, name, date, addedAt'
+    });
+
     // Auto-inject userId and track sync changes on creation
     this.on('ready', () => {
       this.tables.forEach(table => {
@@ -445,6 +573,7 @@ export class FilmoryDatabase extends Dexie {
               payload: obj,
               timestamp: Date.now()
             });
+            window.dispatchEvent(new CustomEvent('filmory-sync-request', { detail: { source: 'dexie-create' } }));
           }
 
           if (!primKey && assignedId) {
@@ -464,6 +593,7 @@ export class FilmoryDatabase extends Dexie {
               payload: updatedObj,
               timestamp: Date.now()
             });
+            window.dispatchEvent(new CustomEvent('filmory-sync-request', { detail: { source: 'dexie-update' } }));
           }
         });
 
@@ -477,6 +607,7 @@ export class FilmoryDatabase extends Dexie {
               recordId: primKey as string,
               timestamp: Date.now()
             });
+            window.dispatchEvent(new CustomEvent('filmory-sync-request', { detail: { source: 'dexie-delete' } }));
           }
         });
       });

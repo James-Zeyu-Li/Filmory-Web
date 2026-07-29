@@ -76,7 +76,11 @@ stop_all() {
     
     # 2. 关闭 Supabase 集群
     echo "▶ [后端] 正在挂起 Supabase..."
-    supabase stop 2>/dev/null
+    if supabase stop; then
+        echo "✅ Supabase 已停止。"
+    else
+        echo "⚠️ Supabase 未运行或停止失败；如你没有启动本地 Supabase，可以忽略。"
+    fi
     
     # 3. 关闭 Docker Compose 中的 Postgres, Redis, MinIO (如果启动了的话)
     echo "▶ [后端] 正在清理 Docker-Compose 容器 (Postgres/Redis/MinIO)..."

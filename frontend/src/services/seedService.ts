@@ -46,7 +46,9 @@ export async function seedDatabaseIfNeeded(): Promise<void> {
 }
 
 async function seedDatabase(): Promise<void> {
-  const currentUserId = localStorage.getItem('filmory_user_id') || 'mock_uid_123';
+  const currentUserId = localStorage.getItem('filmory_user_id');
+  if (!currentUserId) return;
+
   const existingCameras = await db.cameras.toArray();
   const cameraCount = existingCameras.filter(camera => camera.userId === currentUserId || !camera.userId).length;
   if (cameraCount > 0) {
@@ -212,7 +214,7 @@ async function seedDatabase(): Promise<void> {
     { id: crypto.randomUUID(), userId: currentUserId, name: '废片 (Failed)', color: '#ef4444' }
   ];
   for (const tag of defaultTags) {
-    const existingTag = await db.tagConfigs.where('name').equals(tag.name).first();
+    const existingTag = await db.tagConfigs.where('[userId+name]').equals([currentUserId, tag.name]).first();
     if (!existingTag) {
       await db.tagConfigs.add(tag);
     }
