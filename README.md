@@ -1,58 +1,85 @@
-# Filmory Web - 前后端分离影像管理系统
+# Filmory Web
 
-本项目采用工业标准的 **TypeScript 统一栈** 前后端分离架构，旨在提供高性能、低耗、易读的胶片/数码影像管理系统。
+Filmory Web is a local-first film photography workspace for managing rolls, cameras, lenses, film stock, albums, finance records, and shooting notes.
 
----
+The app runs primarily in the browser with IndexedDB/Dexie for fast offline-first data access. Supabase migrations, Auth, RLS, private Storage, and sync code are kept in the repo for local integration testing and future cloud deployment.
 
-## 📁 目录结构说明
+## Tech Stack
 
-```
+- React 19 + TypeScript + Vite
+- Dexie / IndexedDB local-first data layer
+- Supabase for Auth, Postgres, Storage, RLS, and sync readiness
+- Vitest + Testing Library for unit tests
+- Playwright for E2E tests
+
+## Project Structure
+
+```text
 Filmory-Web/
-├── frontend/                 # 前端 Single Page Application (React + Vite + TS)
-│   ├── src/                  # 页面与组件 (时间流、对比工作台、分析面板等)
-│   ├── public/               # 公共静态资源
-│   ├── package.json          # 前端依赖配置
-│   └── vite.config.ts        # Vite 构建配置
-│
-├── backend/                  # 后端 API 服务 (Node.js + Express + TS)
-│   ├── src/
-│   │   ├── controllers/      # 接口控制器 (Auth, Cameras, Lenses, Rolls)
-│   │   ├── middleware/       # 中间件 (JWT 校验、限流)
-│   │   ├── services/         # 核心业务服务 (EXIF 解析、sharp 缩略图生成)
-│   │   └── index.ts          # Express 服务入口
-│   ├── package.json          # 后端依赖配置
-│   └── tsconfig.json         # TypeScript 编译配置
-│
-├── docs/                     # 项目文档与基准规范 (WEB_ARCHITECTURE.md 等)
-└── docker-compose.yml        # 本地开发用基础设施 (PostgreSQL + Redis)
+├── frontend/      # React app, tests, catalog data, and browser data layer
+├── supabase/      # Local Supabase config and migrations
+├── docs/          # Roadmap, schema, architecture, and product notes
+├── scripts/       # Helper scripts
+└── filmory.sh     # Local development control script
 ```
 
----
+## Getting Started
 
-## 🛠️ 本地运行指南
+Install dependencies:
 
-### 1. 启动本地基础依赖 (Docker)
-若您本地需要使用 PostgreSQL 与 Redis 进行功能演进与限流学习，可在根目录下通过 Docker 一键拉起：
-```bash
-docker-compose up -d
-```
-
-### 2. 运行后端服务 (Node.js Backend)
-进入 `backend/` 目录，安装依赖并启动热重载开发服务器：
-```bash
-cd backend
-npm install
-npm run dev
-```
-* **运行端口**：`http://localhost:8080`
-* **功能说明**：支持 JWT 鉴权路由、相机/镜头/卷的 CRUD Mock 数据交互、以及基于 `sharp` 的照片 EXIF 抓取和缩略图动态转换接口。
-
-### 3. 运行前端应用 (React Frontend)
-在新终端进入 `frontend/` 目录，安装依赖并启动 Vite 调试服务：
 ```bash
 cd frontend
 npm install
+```
+
+Start the frontend:
+
+```bash
 npm run dev
 ```
-* **调试端口**：`http://localhost:5173` (根据控制台输出为准)
-* **核心交互**：侧边折叠工作栏、双指/滑块无极缩放 Timeline、双通道对比工作台（Side-by-side、滑尺对比）、我的数据仪表盘。
+
+Or use the root helper script for the local development menu:
+
+```bash
+./filmory.sh
+```
+
+If local Supabase is started, Mailpit is available at `http://127.0.0.1:54324` for auth emails such as signup confirmation and password reset.
+
+## Environment
+
+Use `frontend/.env.example` as the template for local environment variables.
+
+Local secrets and machine-specific files should stay in ignored files such as:
+
+```text
+frontend/.env.local
+.env.local
+supabase/.env.local
+```
+
+## Common Commands
+
+Run from `frontend/`:
+
+```bash
+npm run dev
+npm run lint
+npm run test
+npm run build
+npm run e2e
+```
+
+## Documentation
+
+- Roadmap and active tasks: [docs/ROADMAP_TODO.md](docs/ROADMAP_TODO.md)
+- Database model: [docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)
+- Supabase contract: [docs/Detailed-Specs/API_CONTRACT.md](docs/Detailed-Specs/API_CONTRACT.md)
+- Architecture notes: [docs/Detailed-Specs/WEB_ARCHITECTURE.md](docs/Detailed-Specs/WEB_ARCHITECTURE.md)
+- Agent and project rules: [.agents/AGENTS.md](.agents/AGENTS.md)
+
+## Development Notes
+
+- Keep user data writes local-first through Dexie unless a task explicitly targets Supabase integration.
+- Keep schema changes in `supabase/migrations/` and update docs when the data model changes.
+- Do not commit local credentials, generated build output, test artifacts, or one-off debugging screenshots.
