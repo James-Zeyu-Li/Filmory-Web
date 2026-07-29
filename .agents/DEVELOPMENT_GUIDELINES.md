@@ -34,16 +34,16 @@
 
 ### 1. 面向对象设计 (OOD) 与领域划分
 * **高内聚，低耦合 (High Cohesion, Low Coupling)**：每一个模块/组件只负责它自身领域的业务。例如，`cameras` 的逻辑不要混入 `filmStocks`，通过关系键（如 `cameraId`）在业务层关联。
-* **职责明确 (Single Point of Truth)**：确保数据源的唯一性。本地数据库（如 PostgreSQL/SQLite）或 S3 存储是真理之源，前端 React 状态只作临时 UI 呈现。
+* **职责明确 (Single Point of Truth)**：确保数据源边界清晰。前端即时读写以 Dexie/IndexedDB 为准；跨设备同步和安全边界以 Supabase Postgres/RLS/private Storage 为准；React state 只作临时 UI 呈现。
 * **领域实体封装 (Domain Entity)**：保持实体接口（如 `Camera`, `Lens`, `Roll` 等）的纯净性。UI 层不直接污染实体核心定义，如需 UI 状态（如 `isExpanded`），使用扩展接口或 UI 专属状态包装。
 
 ### 2. SOLID 设计原则落地
 * **单一职责原则 (SRP)**：一个类、组件或函数应当仅有一个引起它变化的原因。
-  - *实践*：React 中，`exifService.ts` 只管解析 EXIF，不参与数据库存取；后端中，Controller 只做路由分发与入参校验，业务逻辑沉淀在 Service/Service 接口。
+  - *实践*：React 中，`exifService.ts` 只管解析 EXIF，不参与数据库存取；`storageService.ts` 只管照片上传、signed URL 与删除；业务组件不直接散落 Supabase 表写入。
 * **开闭原则 (OCP)**：软件实体应当对扩展开放，对修改关闭。
   - *实践*：增加新胶卷类型或新相机类型时，应当通过数据配置或扩展子类实现，而不是在主判断逻辑中写死大量的 `switch-case`。
 * **里氏替换原则 (LSP)**：子类应当可以无缝替换掉它们的基类（父类）而不破坏程序的正确性。
-  - *实践*：定义接口（如存储 `IStorageService`）时，无论是 `LocalDiskStorageService` 还是 `S3StorageService`，都必须严格符合接口定义的输入输出契约。
+  - *实践*：定义服务契约时，调用方依赖稳定函数语义。例如照片展示依赖 `storageKey -> signed URL -> fallback thumbnail`，而不是依赖 public URL。
 * **接口隔离原则 (ISP)**：不应强迫客户端依赖它们不使用的方法。
   - *实践*：不要设计庞大臃肿的通用接口（例如把 Stats, Photo, Gear 全部塞进一个 Service）。应当按领域拆分为细粒度的 Service/Repository 接口。
 * **依赖倒置原则 (DIP)**：高层模块不应依赖低层模块，二者都应当依赖其抽象。
@@ -56,33 +56,22 @@
 为了保证项目具备商用交付规格与高性能稳定性，开发必须遵守以下**工业级标准**：
 
 ### 1. 前后端强类型契约 (Type Safety)
-* **标准**：绝不允许在前端使用 `any` 接收后端数据，也不允许在后端直接使用无结构的 JSON 传参。后端使用强类型的 DTO (Data Transfer Object) 进行入参校验，前后端共享或同步 interface 声明。
+* **标准**：业务实体必须使用明确 TypeScript interface；Dexie camelCase 字段与 Supabase snake_case 字段必须由同步层负责映射。禁止在 UI 层混用云端字段名或使用无结构对象绕过类型契约。
 
 ### 2. 异常处理与统一响应 (Unified Response)
-* **标准**：后端必须实现**全局错误处理中间件 (Global Error Middleware)**，捕获所有异常并格式化为标准的 JSON 响应，禁止暴露原始代码的 Stack Trace：
-  ```json
-  {
-    "success": false,
-    "error": {
-      "code": "BAD_REQUEST",
-      "message": "错误信息描述",
-      "details": []
-    }
-  }
-  ```
-  前端通过拦截器拦截非 2xx 响应并进行全局友好 UI 提示。
+* **标准**：前端所有用户可见失败必须进入统一反馈或错误边界；Supabase/storage/RPC 错误不得直接裸露 stack trace。危险操作必须走 `ConfirmContext`，普通结果提示走全局反馈。
 
 ### 3. 数据一致性与数据库事务安全 (Database Transactions)
-* **标准**：凡是涉及多表联动修改的操作（例如：**新建 Roll 并扣减库存**，或者 **删除 Photo 关联删除 Exif/Tag**），必须在事务（Transaction）中运行，确保原子性。所有的数据库变更必须编写可追溯的迁移脚本（如 Prisma Migrations）。
+* **标准**：凡是涉及多表联动修改的操作（例如：新建 Roll 并扣减库存、删除用户并级联清理数据），必须保证原子性或具备明确补偿策略。所有云端结构变更必须写入 `supabase/migrations`，不得只手工改 Dashboard。
 
 ### 4. 极致的安全性设计 (Security)
-* **标准**：使用双令牌机制 (Access Token + Refresh Token)；后端必须严格校验操作数据的 `user_id` 与 JWT 中的身份是否一致（防止平行越权）；对上传的图片文件在保存前验证 Magic Number 头部二进制，防止上传脚本木马。
+* **标准**：使用 Supabase Auth session；云端 RLS 必须校验 `auth.uid() = user_id`；Storage bucket 必须 private；照片读取必须通过 signed URL；账号删除 RPC 只允许 `authenticated` 调用。
 
 ### 5. 图像处理与非阻塞边缘计算 (Edge Compute Optimization)
 * **标准**：凡是能利用客户端（浏览器）算力解决的密集型任务，**坚决不发给服务器**。
   - 大图转换、尺寸压缩：必须在上传前利用 HTML5 Canvas 强制在浏览器端压缩为 WebP。
   - EXIF 解析：必须在浏览器端直接异步读取二进制 File Blob 提取。
-  - 只有在必须由后端处理的重计算场景（如 AI 智能打标），才允许通过微服务队列 (RabbitMQ) 交由后端 Python worker 异步计算。
+  - 只有在必须由云端处理的重计算场景，才考虑 Supabase Edge Function 或独立 worker，并必须先进入 Roadmap。
 
 ---
 
@@ -100,14 +89,14 @@
 ### 2. 单功能循环 (Single-Feature Cycle)
 * **流程**：开发过程中，每次只能进行**一个独立功能**的实现。严禁跨功能、多特性混合编写。
   1. 从 `ROADMAP_TODO.md` 中选取当前最高优先级的单个功能。
-  2. 实现其业务代码（后端控制器、业务逻辑、前端页面），保证代码编译无误。
-  3. **立即中断当前步骤**，向用户报告业务代码已实现完毕，等待反馈。
+  2. 实现其业务代码、Supabase migration 或前端页面，保证代码编译无误。
+  3. 按任务性质运行对应验证；若用户明确要求完整测试，则执行 `lint` / `unit` / `build` / `e2e`。
 
 ### 2. 写测分离与极速隔离测试 (Separation of Code & Tests)
-* **流程**：**禁止**在同一轮动作中同时编写业务代码和测试代码。
-  1. 业务代码写完后，AI 必须向用户询问：“当前功能已实现，下一步是否编写对应的完整测试用例进行校验？”
-  2. 获得用户明确授权后，开始基于 **Vitest + RTL + jsdom (前端组件)** 或 **Jest (后端)** 编写功能联调测试。
-  3. **Playwright 端到端黑盒测试 (E2E)**：对于核心的业务链路（如鉴权拦截、VIP 限流拦截），必须编写并执行完整的基于 Python Playwright 的 E2E 测试。
+* **流程**：业务代码和测试可以按用户指令分步推进；如果用户要求“完整测试”，同轮需要补齐必要测试并执行验证。
+  1. 默认测试栈为 **Vitest + RTL + jsdom**。
+  2. Supabase 权限、安全和存储可使用显式开启的 live integration tests。
+  3. **Playwright 端到端黑盒测试 (E2E)**：对于核心 UI 链路、鉴权、导入导出和危险操作，必须编写并执行 E2E。
   4. **隔离防污染原则**：测试时**严禁**修改真实的本地 IndexedDB 存储（Dexie），必须使用 `fake-indexeddb` 在内存中生成幽灵沙盒，验证完立马销毁，确保边界条件得到 100% 覆盖且绝不产生脏数据！
   5. 测试编写完毕并全部通过后，请求用户验收，完成该功能的完整生命周期，再进入下一个功能的选取。
 
@@ -140,4 +129,4 @@
   - 对所有用户输入执行类型与范围检查，使用 schema 验证（如 Zod、Joi）。
   - 对文件/网络操作加入超时、重试与错误捕获，返回统一错误结构。
   - 在关键业务流程前后添加断言或状态检查，确保不出现不可恢复的错误。
-  - 对外部依赖（如 Redis、S3）在初始化阶段进行健康检查，若不可用则快速降级或提示用户。
+  - 对外部依赖（如 Supabase Auth/Postgres/Storage）在初始化或调用阶段进行错误捕获，若不可用则快速降级或提示用户。
