@@ -31,11 +31,11 @@ test.describe('Filmory UI smoke flows', () => {
   });
 
   test('logs in with dev bypass and opens core navigation targets', async ({ page }) => {
-    await page.getByRole('button', { name: /器材库/ }).click();
+    await page.getByRole('link', { name: /器材库/ }).click();
     await expect(page.getByRole('heading', { name: /相机/ })).toBeVisible();
 
-    await page.getByRole('link', { name: /拍摄卷/ }).click();
-    await expect(page.getByRole('heading', { name: /项目集|所有拍摄卷|未整理散卷/ })).toBeVisible();
+    await page.getByRole('link', { name: /胶卷记录/ }).click();
+    await expect(page.getByRole('heading', { name: /项目集|全部胶卷记录|散卷/ })).toBeVisible();
   });
 
   test('creates a camera and shows the unified duplicate confirmation', async ({ page }) => {
@@ -58,9 +58,9 @@ test.describe('Filmory UI smoke flows', () => {
   test('creates a roll through the current roll modal', async ({ page }) => {
     await page.goto('/rolls', { waitUntil: 'domcontentloaded' });
 
-    await page.getByRole('button', { name: /所有拍摄卷/ }).click();
-    await page.getByRole('button', { name: /新建独立拍摄卷/ }).click();
-    const rollModal = page.locator('.modal-content').filter({ hasText: '新建拍摄卷' });
+    await page.getByRole('button', { name: /全部胶卷记录/ }).click();
+    await page.getByRole('button', { name: /新建单卷记录/ }).click();
+    const rollModal = page.locator('.modal-content').filter({ hasText: '新建胶卷记录' });
 
     await page.getByPlaceholder('例如: 2026春日踏青').fill('E2E Smoke Roll');
     await rollModal.locator('div').filter({ hasText: /^Minolta X-700$/ }).first().click();
@@ -70,16 +70,46 @@ test.describe('Filmory UI smoke flows', () => {
     await expect(page.getByText('E2E Smoke Roll')).toBeVisible();
   });
 
+  test('quick-add film opens above the roll modal and fills the selected film', async ({ page }) => {
+    await page.goto('/rolls', { waitUntil: 'domcontentloaded' });
+
+    await page.getByRole('button', { name: /全部胶卷记录/ }).click();
+    await page.getByRole('button', { name: /新建单卷记录/ }).click();
+    const rollModal = page.locator('.modal-content').filter({ hasText: '新建胶卷记录' });
+
+    await rollModal.getByPlaceholder('例如: 2026春日踏青').fill('E2E Quick Film Roll');
+    await rollModal.locator('div').filter({ hasText: /^Minolta X-700$/ }).first().click();
+    await rollModal.locator('.form-group').filter({ hasText: '使用胶卷' }).getByRole('button', { name: /快捷添加/ }).click();
+
+    const quickFilmModal = page.locator('.modal-content').filter({ hasText: '快捷添加胶卷' });
+    await expect(quickFilmModal).toBeVisible();
+    await expect(quickFilmModal).toContainText('画幅会按已选相机预设');
+    await expect(quickFilmModal.getByRole('button', { name: '135', exact: true })).toHaveClass(/active/);
+
+    const quickOverlayZIndex = await quickFilmModal.evaluate((element) => {
+      return getComputedStyle(element.closest('.modal-overlay') as Element).zIndex;
+    });
+    expect(Number(quickOverlayZIndex)).toBeGreaterThan(9999);
+
+    await quickFilmModal.getByPlaceholder('例如: Kodak').fill('E2E Quick');
+    await quickFilmModal.getByPlaceholder('例如: Gold 200').fill('Chrome 100');
+    await quickFilmModal.getByRole('button', { name: '添加并选中' }).click();
+
+    await expect(rollModal.getByPlaceholder(/搜索胶卷库/)).toHaveValue('E2E Quick Chrome 100');
+    await rollModal.getByRole('button', { name: '开始记录' }).click();
+    await expect(page.getByText('E2E Quick Film Roll')).toBeVisible();
+  });
+
   test('downloads Excel template and imports an Excel workbook', async ({ page }) => {
     await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: /批量导入/ }).click();
-    await expect(page.getByRole('heading', { name: '批量导入资产与记录' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '批量导入器材与拍摄记录' })).toBeVisible();
 
     const downloadPromise = page.waitForEvent('download');
-    await page.getByRole('button', { name: '获取模版文件' }).click();
+    await page.getByRole('button', { name: '下载模板' }).click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toBe('Filmory_Import_Template.xlsx');
-    await expect(page.getByText('下载已完成，请注意')).toBeVisible();
+    await expect(page.getByText('模板已下载，请留意：')).toBeVisible();
 
     const tempFilePath = 'mock_import.xlsx';
     createMockExcel(tempFilePath);
@@ -91,11 +121,11 @@ test.describe('Filmory UI smoke flows', () => {
     });
 
     const fileChooserPromise = page.waitForEvent('filechooser');
-    await page.getByRole('button', { name: '选择并上传表格' }).click();
+    await page.getByRole('button', { name: '选择表格并导入' }).click();
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles(tempFilePath);
 
-    await expect(page.getByRole('heading', { name: '批量导入资产与记录' })).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: '批量导入器材与拍摄记录' })).not.toBeVisible();
 
     if (fs.existsSync(tempFilePath)) {
       fs.unlinkSync(tempFilePath);

@@ -1,183 +1,138 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+import { resetBrowserData } from './helpers';
 
-test.describe.skip('VIP Limits UI Tests', () => {
-  // Clear indexedDB before each test and login
-  test.beforeEach(async ({ page }) => {
-    // Navigate first to let the app initialize IndexedDB via Dexie
-    await page.goto('/');
-    await expect(page.locator('text=Filmory')).toBeVisible();
-    
-    // Give Dexie a moment to create stores
-    await page.waitForTimeout(1000);
+const DEV_USER_ID = 'mock_uid_123';
 
-    // Evaluate script to wipe and populate IndexedDB with fake data
-    await page.evaluate(async () => {
-      const dbName = 'FilmoryDatabase';
-      
-      const openDb = () => new Promise<IDBDatabase>((resolve, reject) => {
-        const req = indexedDB.open(dbName);
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-      });
+async function loginIntoDigitalWorkspace(page: Page) {
+  await resetBrowserData(page);
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  await page.evaluate(() => {
+    localStorage.setItem('filmory_enable_film_mode', 'false');
+  });
+  await page.getByRole('button', { name: /本机测试登录/ }).click();
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: /控制中心/ })).toBeVisible();
+}
 
-      const db = await openDb();
-      
-      const writeData = (storeName: string, data: any[]) => new Promise<void>((resolve, reject) => {
-        const tx = db.transaction(storeName, 'readwrite');
-        const store = tx.objectStore(storeName);
-        store.clear();
-        data.forEach(item => store.add(item));
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-      });
+async function seedRollLimitScenario(page: Page, tier: 'regular' | 'vip') {
+  await page.evaluate(async ({ tier, devUserId }) => {
+    const dbName = 'FilmoryDatabase';
 
-      // Insert 5 rolls for mock_uid_123
-      const rolls = Array.from({ length: 5 }).map((_, i) => ({
-        id: `roll-${i}`,
-        userId: 'mock_uid_123',
-        name: `Roll ${i}`,
-        cameraId: 'cam-1',
-        filmStockId: 'digital',
-        status: 'active',
-        startDate: Date.now()
-      }));
-
-      const cameras = [{
-        id: 'cam-1',
-        userId: 'mock_uid_123',
-        name: 'Test Camera',
-        type: 'film',
-        format: '135',
-        addedAt: Date.now()
-      }];
-
-      await writeData('rolls', rolls);
-      await writeData('cameras', cameras);
-      // userProfile will be injected inside the test dynamically
-      
-      localStorage.setItem('filmory_enable_film_mode', 'false');
+    const openDb = () => new Promise<IDBDatabase>((resolve, reject) => {
+      const req = indexedDB.open(dbName);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
     });
+
+    const writeData = (db: IDBDatabase, storeName: string, data: any[]) => new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
+      store.clear();
+      data.forEach(item => store.add(item));
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+
+    const db = await openDb();
+    const now = Date.now();
+
+    const cameras = [{
+      id: 'cam-1',
+      userId: devUserId,
+      name: 'Test Camera',
+      type: 'film',
+      format: '135',
+      addedAt: now
+    }];
+
+    const rolls = Array.from({ length: 5 }).map((_, i) => ({
+      id: `roll-${i}`,
+      userId: devUserId,
+      name: `Roll ${i}`,
+      cameraIds: ['cam-1'],
+      filmStockId: 'digital-placeholder',
+      status: 'active',
+      startDate: now - i * 1000
+    }));
+
+    const profiles = [{
+      id: devUserId,
+      userId: devUserId,
+      tier,
+      role: 'admin',
+      highResQuotaUsed: 0,
+      updatedAt: now
+    }];
+
+    await writeData(db, 'cameras', cameras);
+    await writeData(db, 'rolls', rolls);
+    await writeData(db, 'userProfiles', profiles);
+  }, { tier, devUserId: DEV_USER_ID });
+}
+
+async function getRollCount(page: Page) {
+  return page.evaluate(async () => {
+    const dbName = 'FilmoryDatabase';
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const req = indexedDB.open(dbName);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+
+    return await new Promise<number>((resolve, reject) => {
+      const tx = db.transaction('rolls', 'readonly');
+      const store = tx.objectStore('rolls');
+      const req = store.count();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  });
+}
+
+test.describe('VIP Limits UI Tests', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginIntoDigitalWorkspace(page);
   });
 
   test('Regular user is blocked from creating 6th roll', async ({ page }) => {
-    await page.evaluate(async () => {
-      const dbName = 'FilmoryDatabase';
-      const req = indexedDB.open(dbName);
-      req.onsuccess = () => {
-        const db = req.result;
-        const tx = db.transaction('userProfiles', 'readwrite');
-        tx.objectStore('userProfiles').clear();
-        tx.objectStore('userProfiles').add({
-          id: 'mock_uid_123',
-          email: 'test@filmory.com',
-          tier: 'regular',
-          highResQuotaUsed: 0,
-          createdAt: Date.now(),
-          updatedAt: Date.now()
-        });
-      };
-    });
+    await page.goto('/rolls', { waitUntil: 'domcontentloaded' });
+    await seedRollLimitScenario(page, 'regular');
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect.poll(() => getRollCount(page)).toBe(5);
 
-    await page.reload();
+    await page.getByRole('button', { name: '新建单卷记录' }).click();
+    const rollModal = page.locator('.modal-content').filter({ hasText: '新建胶卷记录' });
 
-    // Login if on login page
-    try {
-      await page.waitForSelector('text=绕过验证 (Mock Admin 模式)', { timeout: 3000 });
-      await page.click('text=绕过验证 (Mock Admin 模式)');
-    } catch (e) {
-      // Already logged in
-    }
+    await rollModal.getByPlaceholder('例如: 2026春日踏青').fill('6th Roll Regular');
+    await expect(rollModal.getByText('Test Camera')).toBeVisible();
+    await rollModal.getByText('Test Camera').click();
+    await expect(rollModal.getByRole('button', { name: '开始记录' })).toBeEnabled();
+    await rollModal.getByRole('button', { name: '开始记录' }).click();
 
-    // Go to Rolls page
-    await page.click('nav >> text=拍摄卷 (Rolls)');
-
-    // Wait for data load (rolls)
-    await expect(page.locator('text=进行中 (5)')).toBeVisible({ timeout: 10000 });
-    
-    // Give Dexie a moment to resolve useUserProfile live query
-    await page.waitForTimeout(1000);
-
-    // Open Modal
-    await page.click('button:has-text("开始拍摄 (New Roll)")');
-
-    await page.fill('input[placeholder*="春日踏青"]', '6th Roll');
-    
-    // Select camera
-    await page.selectOption('select', { index: 1 }); // first valid option
-
-    // Intercept Alert Dialog
-    let dialogAppeared = false;
-    page.once('dialog', async dialog => {
-      expect(dialog.message()).toContain('【VIP 专享限制】');
-      await dialog.accept();
-      dialogAppeared = true;
-    });
-
-    // Submit (this will trigger the alert, which blocks until the handler accepts it)
-    await page.click('button:has-text("开始记录")');
-
-    expect(dialogAppeared).toBe(true);
-
-    // Verify modal didn't close (because it was blocked)
-    await expect(page.locator('h3:has-text("新建拍摄卷")')).toBeVisible();
+    const upgradeModal = page.locator('.upgrade-modal');
+    await expect(upgradeModal.getByRole('heading', { name: '已达到免费版上限' })).toBeVisible();
+    await expect(upgradeModal.getByText(/5 个进行中的胶卷记录/)).toBeVisible();
+    expect(await getRollCount(page)).toBe(5);
   });
 
   test('VIP user successfully creates 6th roll', async ({ page }) => {
-    await page.evaluate(async () => {
-      const dbName = 'FilmoryDatabase';
-      const req = indexedDB.open(dbName);
-      req.onsuccess = () => {
-        const db = req.result;
-        const tx = db.transaction('userProfiles', 'readwrite');
-        tx.objectStore('userProfiles').clear();
-        tx.objectStore('userProfiles').add({
-          id: 'mock_uid_123',
-          email: 'vip@filmory.com',
-          tier: 'vip',
-          highResQuotaUsed: 0,
-          createdAt: Date.now(),
-          updatedAt: Date.now()
-        });
-      };
-    });
+    await page.goto('/rolls', { waitUntil: 'domcontentloaded' });
+    await seedRollLimitScenario(page, 'vip');
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect.poll(() => getRollCount(page)).toBe(5);
 
-    await page.reload();
+    await page.getByRole('button', { name: '新建单卷记录' }).click();
+    const rollModal = page.locator('.modal-content').filter({ hasText: '新建胶卷记录' });
 
-    // Login if on login page
-    try {
-      await page.waitForSelector('text=绕过验证 (Mock Admin 模式)', { timeout: 3000 });
-      await page.click('text=绕过验证 (Mock Admin 模式)');
-    } catch (e) {
-      // Already logged in
-    }
+    await rollModal.getByPlaceholder('例如: 2026春日踏青').fill('6th Roll VIP');
+    await expect(rollModal.getByText('Test Camera')).toBeVisible();
+    await rollModal.getByText('Test Camera').click();
+    await expect(rollModal.getByRole('button', { name: '开始记录' })).toBeEnabled();
+    await rollModal.getByRole('button', { name: '开始记录' }).click();
 
-    // Go to Rolls page
-    await page.click('nav >> text=拍摄卷 (Rolls)');
-
-    // Wait for data load
-    await expect(page.locator('text=进行中 (5)')).toBeVisible({ timeout: 10000 });
-
-    // Give Dexie a moment to resolve useUserProfile live query
-    await page.waitForTimeout(1000);
-
-    // Open Modal
-    await page.click('button:has-text("开始拍摄 (New Roll)")');
-
-    await page.fill('input[placeholder*="春日踏青"]', '6th Roll VIP');
-    
-    // Select camera
-    await page.selectOption('select', { index: 1 });
-
-    // Ensure NO dialog appears
-    page.on('dialog', dialog => {
-      throw new Error(`Unexpected dialog appeared: ${dialog.message()}`);
-    });
-
-    // Submit
-    await page.click('button:has-text("开始记录")');
-
-    // Wait for modal to disappear and list to update
-    await expect(page.locator('h3:has-text("新建拍摄卷")')).not.toBeVisible();
-    await expect(page.locator('text=进行中 (6)')).toBeVisible();
+    await expect(page.locator('.modal-content').filter({ hasText: '新建胶卷记录' })).not.toBeVisible();
+    await expect.poll(() => getRollCount(page)).toBe(6);
+    await page.getByRole('button', { name: '全部胶卷记录' }).click();
+    await expect(page.getByText('6th Roll VIP')).toBeVisible();
   });
 });

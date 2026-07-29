@@ -32,6 +32,32 @@ export default defineConfig({
       }
     })
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('xlsx')) {
+              return 'vendor-excel';
+            }
+            if (id.includes('recharts') || id.includes('d3')) {
+              return 'vendor-charts';
+            }
+            if (id.includes('framer-motion')) {
+              return 'vendor-motion';
+            }
+            if (id.includes('@supabase')) {
+              return 'vendor-supabase';
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
+            return 'vendor-core';
+          }
+        }
+      }
+    }
+  },
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/setupTests.ts'],
