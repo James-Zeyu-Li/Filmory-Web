@@ -72,6 +72,7 @@ describe('Auth frontend closure', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: '立即注册' }));
+    fireEvent.change(screen.getByLabelText('显示名称'), { target: { value: 'Analog James' } });
     fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'new@filmory.app' } });
     fireEvent.change(screen.getByLabelText('密码'), { target: { value: 'Strongpass1' } });
     fireEvent.change(screen.getByLabelText('确认密码'), { target: { value: 'Strongpass1' } });
@@ -82,6 +83,9 @@ describe('Auth frontend closure', () => {
         email: 'new@filmory.app',
         password: 'Strongpass1',
         options: {
+          data: {
+            display_name: 'Analog James',
+          },
           emailRedirectTo: buildSignupEmailRedirectUrl(),
         },
       });
@@ -103,6 +107,7 @@ describe('Auth frontend closure', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: '立即注册' }));
+    fireEvent.change(screen.getByLabelText('显示名称'), { target: { value: 'Weak Case' } });
     fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'weak@filmory.app' } });
     fireEvent.change(screen.getByLabelText('密码'), { target: { value: 'weakpass' } });
     fireEvent.change(screen.getByLabelText('确认密码'), { target: { value: 'weakpass' } });
@@ -110,6 +115,29 @@ describe('Auth frontend closure', () => {
 
     await waitFor(() => {
       expect(screen.getByText('密码至少 8 位，且必须包含大写字母、小写字母和数字。')).toBeInTheDocument();
+    });
+
+    expect(mockedAuth.signUp).not.toHaveBeenCalled();
+  });
+
+  it('blocks empty display name during register before calling Supabase signup', async () => {
+    render(
+      <MemoryRouter initialEntries={[AUTH_ROUTES.login]}>
+        <Routes>
+          <Route path={AUTH_ROUTES.login} element={<LoginView />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '立即注册' }));
+    fireEvent.change(screen.getByLabelText('显示名称'), { target: { value: '   ' } });
+    fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'empty-name@filmory.app' } });
+    fireEvent.change(screen.getByLabelText('密码'), { target: { value: 'Strongpass1' } });
+    fireEvent.change(screen.getByLabelText('确认密码'), { target: { value: 'Strongpass1' } });
+    fireEvent.click(screen.getByRole('button', { name: '创建账号' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('请填写一个显示名称，用来标记这是谁的 Filmory 工作区。')).toBeInTheDocument();
     });
 
     expect(mockedAuth.signUp).not.toHaveBeenCalled();

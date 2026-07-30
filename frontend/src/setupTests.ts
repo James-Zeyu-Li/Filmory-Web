@@ -52,6 +52,23 @@ vi.mock('./contexts/useTrialGate', () => ({
   })
 }));
 
+vi.mock('./contexts/useLanguage', async () => {
+  const { DEFAULT_LANGUAGE, translations } = await vi.importActual<typeof import('./i18n/translations')>('./i18n/translations');
+
+  return {
+    useLanguage: () => ({
+      language: DEFAULT_LANGUAGE,
+      setLanguage: vi.fn(),
+      t: (key: keyof typeof translations[typeof DEFAULT_LANGUAGE], values: Record<string, string | number> = {}) => {
+        const template = translations[DEFAULT_LANGUAGE][key] ?? key;
+        return template.replace(/\{\{(\w+)\}\}/g, (_, valueKey: string) => (
+          values[valueKey] === undefined ? '' : String(values[valueKey])
+        ));
+      },
+    }),
+  };
+});
+
 // Mock Supabase globally to prevent "supabaseUrl is required" error during vitest runs
 vi.mock('./services/supabaseClient', () => ({
   supabase: {

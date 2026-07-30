@@ -6,17 +6,20 @@ import { supabase } from '../../services/supabaseClient';
 import {
   AUTH_ROUTES,
   getAuthErrorMessage,
+  getAuthErrorTranslationKey,
   getPasswordValidationMessage,
   PASSWORD_POLICY,
 } from '../../services/authFlow';
 import { AuthShell } from './AuthShell';
 import { AuthPasswordField } from './AuthPasswordField';
 import { PasswordPolicyHint } from './PasswordPolicyHint';
+import { useLanguage } from '../../contexts/useLanguage';
 import './LoginView.css';
 
 export const ResetPasswordView: React.FC = () => {
   const navigate = useNavigate();
   const { session, user, logout } = useAuth();
+  const { t } = useLanguage();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -32,14 +35,14 @@ export const ResetPasswordView: React.FC = () => {
     setErrorMsg('');
     setSuccessMsg('');
 
-    const passwordValidationMessage = getPasswordValidationMessage(password);
+    const passwordValidationMessage = getPasswordValidationMessage(password, t);
     if (passwordValidationMessage) {
-      setErrorMsg(passwordValidationMessage);
+      setErrorMsg(t('auth.passwordPolicyError', { min: PASSWORD_POLICY.minLength }));
       return;
     }
 
     if (password !== confirmPassword) {
-      setErrorMsg('两次输入的新密码不一致，请重新确认。');
+      setErrorMsg(t('auth.newPasswordMismatch'));
       return;
     }
 
@@ -49,9 +52,10 @@ export const ResetPasswordView: React.FC = () => {
       if (error) throw error;
 
       await logout();
-      setSuccessMsg('密码已更新。请使用新密码重新登录。');
+      setSuccessMsg(t('auth.resetSuccess'));
     } catch (error) {
-      setErrorMsg(getAuthErrorMessage(error, 'reset-password', '重设密码失败，请重新打开邮件中的链接后再试。'));
+      const key = getAuthErrorTranslationKey(error, 'reset-password');
+      setErrorMsg(key ? t(key, { min: PASSWORD_POLICY.minLength }) : getAuthErrorMessage(error, 'reset-password', t('auth.resetFallbackError'), t));
     } finally {
       setLoading(false);
     }
@@ -59,17 +63,17 @@ export const ResetPasswordView: React.FC = () => {
 
   return (
     <AuthShell
-      title="重设密码"
-      subtitle="为你的 Filmory 账号设置一个新的登录密码。"
+      title={t('auth.resetTitle')}
+      subtitle={t('auth.resetSubtitle')}
       backTo={AUTH_ROUTES.login}
-      backLabel="返回登录"
+      backLabel={t('auth.backToLogin')}
       footer={successMsg ? (
         <button
           type="button"
           className="primary login-btn"
           onClick={() => navigate(AUTH_ROUTES.login, { replace: true })}
         >
-          返回登录
+          {t('auth.backToLogin')}
         </button>
       ) : undefined}
     >
@@ -89,20 +93,20 @@ export const ResetPasswordView: React.FC = () => {
 
       {!canResetPassword && !successMsg ? (
         <div className="auth-state-panel">
-          <h3>链接已失效或不可用</h3>
-          <p>当前页面没有可用的重设密码会话。请重新请求一封重设密码邮件，再通过邮件里的链接返回。</p>
+          <h3>{t('auth.resetInvalidTitle')}</h3>
+          <p>{t('auth.resetInvalidDesc')}</p>
           <Link to={AUTH_ROUTES.forgotPassword} className="primary auth-state-cta">
-            重新获取重设密码邮件
+            {t('auth.resetRequestAgain')}
           </Link>
         </div>
       ) : !successMsg ? (
         <form className="login-form" onSubmit={handleSubmit}>
           <AuthPasswordField
             id="reset-password"
-            label="新密码"
+            label={t('auth.newPasswordLabel')}
             value={password}
             onChange={setPassword}
-            placeholder="至少 8 位，包含大小写字母和数字"
+            placeholder={t('auth.newPasswordPlaceholder')}
             visible={showPassword}
             onToggleVisibility={() => setShowPassword(current => !current)}
             minLength={PASSWORD_POLICY.minLength}
@@ -110,10 +114,10 @@ export const ResetPasswordView: React.FC = () => {
 
           <AuthPasswordField
             id="reset-password-confirm"
-            label="确认新密码"
+            label={t('auth.confirmNewPasswordLabel')}
             value={confirmPassword}
             onChange={setConfirmPassword}
-            placeholder="请再次输入新密码"
+            placeholder={t('auth.confirmNewPasswordPlaceholder')}
             visible={showConfirmPassword}
             onToggleVisibility={() => setShowConfirmPassword(current => !current)}
             minLength={PASSWORD_POLICY.minLength}
@@ -123,7 +127,7 @@ export const ResetPasswordView: React.FC = () => {
 
           <button type="submit" className="btn-primary login-btn" disabled={loading}>
             <KeyRound size={18} />
-            <span>{loading ? '更新中...' : '确认更新密码'}</span>
+            <span>{loading ? t('auth.resetUpdating') : t('auth.resetSubmit')}</span>
           </button>
         </form>
       ) : null}

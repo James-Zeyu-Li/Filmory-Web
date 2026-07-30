@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
 import { FeedbackContext, type FeedbackOptions } from './feedbackContextCore';
+import { useLanguage } from './useLanguage';
 
 interface FeedbackProviderProps {
   children: ReactNode;
@@ -13,6 +14,7 @@ type ActiveFeedback = Required<Pick<FeedbackOptions, 'title' | 'type'>> &
 export const FeedbackProvider: React.FC<FeedbackProviderProps> = ({ children }) => {
   const [activeFeedback, setActiveFeedback] = useState<ActiveFeedback | null>(null);
   const timeoutRef = useRef<number | null>(null);
+  const { t } = useLanguage();
 
   useEffect(() => {
     return () => {
@@ -92,7 +94,7 @@ export const FeedbackProvider: React.FC<FeedbackProviderProps> = ({ children }) 
           </div>
           <button
             type="button"
-            aria-label="关闭提示"
+            aria-label={t('feedback.dismiss')}
             onClick={dismiss}
             style={{
               border: 'none',

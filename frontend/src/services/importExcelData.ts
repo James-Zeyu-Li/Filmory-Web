@@ -1,5 +1,6 @@
 import { db } from '../db/schema';
 import * as XLSX from 'xlsx';
+import type { TranslationKey } from '../i18n/translations';
 
 export interface ImportExcelSummary {
   camerasAdded: number;
@@ -8,6 +9,19 @@ export interface ImportExcelSummary {
   rollsAdded: number;
   errors: string[];
 }
+
+type ImportExcelTranslator = (key: TranslationKey, values?: Record<string, string | number>) => string;
+
+const importText = (
+  t: ImportExcelTranslator | undefined,
+  key: TranslationKey,
+  fallback: string,
+  values?: Record<string, string | number>
+) => (
+  t ? t(key, values) : fallback.replace(/\{\{(\w+)\}\}/g, (_, valueKey: string) => (
+    values?.[valueKey] === undefined ? '' : String(values[valueKey])
+  ))
+);
 
 const findCameraByNameForUser = async (name: string, userId: string) => {
   const matches = await db.cameras.where('name').equals(name).toArray();
@@ -66,9 +80,13 @@ export const downloadExcelTemplate = () => {
   XLSX.writeFile(wb, 'Filmory_Import_Template.xlsx');
 };
 
-export const importExcelDataFromFile = async (file: File, userId: string): Promise<ImportExcelSummary> => {
+export const importExcelDataFromFile = async (
+  file: File,
+  userId: string,
+  t?: ImportExcelTranslator
+): Promise<ImportExcelSummary> => {
   if (!userId) {
-    throw new Error('Excel 导入需要有效用户身份，已阻止跨账号导入。');
+    throw new Error(importText(t, 'excel.serviceMissingUser', 'Excel import needs a valid user identity and blocked cross-account import.'));
   }
 
   return new Promise<ImportExcelSummary>((resolve, reject) => {
@@ -177,7 +195,10 @@ export const importExcelDataFromFile = async (file: File, userId: string): Promi
                     type: 'expense',
                     category: 'film',
                     relatedEntityId: id,
-                    notes: `批量导入库存: ${brand} ${name} (${stockCount}卷)`,
+                    notes: importText(t, 'excel.ledgerStockNote', 'Batch imported stock: {{film}} ({{count}} rolls)', {
+                      film: `${brand} ${name}`,
+                      count: stockCount,
+                    }),
                     addedAt: Date.now()
                   });
                 }
@@ -209,7 +230,10 @@ export const importExcelDataFromFile = async (file: File, userId: string): Promi
                 });
                 camera = await db.cameras.get(newCamId);
                 summary.camerasAdded++;
-                summary.errors.push(`ℹ️ 自动补全: 在解析任务 "${name}" 时为您创建了缺失的相机 "${cameraName}"。`);
+                summary.errors.push(importText(t, 'excel.autoCreatedCamera', 'ℹ️ Auto-filled: created missing camera "{{camera}}" while parsing roll "{{roll}}".', {
+                  roll: name,
+                  camera: cameraName,
+                }));
               }
 
               // Link Film (Optional for digital)
@@ -227,8 +251,8 @@ export const importExcelDataFromFile = async (file: File, userId: string): Promi
                     await db.filmStocks.add({
                       id: newFilmId,
                       userId,
-                      brand: fBrand || '未知品牌',
-                      name: fName || '未知型号',
+                      brand: fBrand || importText(t, 'excel.serviceUnknownBrand', 'Unknown brand'),
+                      name: fName || importText(t, 'excel.serviceUnknownModel', 'Unknown model'),
                       iso: 400,
                       colorType: 'color',
                       format: '135',
@@ -238,7 +262,10 @@ export const importExcelDataFromFile = async (file: File, userId: string): Promi
                     });
                     filmId = newFilmId;
                     summary.filmsAdded++;
-                    summary.errors.push(`ℹ️ 自动补全: 在解析任务 "${name}" 时为您创建了缺失的胶卷 "${fBrand} ${fName}"。`);
+                    summary.errors.push(importText(t, 'excel.autoCreatedFilm', 'ℹ️ Auto-filled: created missing film "{{film}}" while parsing roll "{{roll}}".', {
+                      roll: name,
+                      film: `${fBrand} ${fName}`.trim(),
+                    }));
                   }
                 }
               }
@@ -276,7 +303,7 @@ export const importExcelDataFromFile = async (file: File, userId: string): Promi
                   type: 'expense',
                   category: 'develop',
                   relatedEntityId: id,
-                  notes: `导入任务冲洗花费: ${name}`,
+                  notes: importText(t, 'excel.ledgerDevelopNote', 'Imported roll development cost: {{roll}}', { roll: name }),
                   addedAt: Date.now()
                 });
               }
@@ -287,10 +314,10 @@ export const importExcelDataFromFile = async (file: File, userId: string): Promi
         resolve(summary);
 
       } catch (err: any) {
-        reject(new Error("Excel 解析失败: " + err.message));
+        reject(new Error(importText(t, 'excel.parseError', 'Excel parse failed: {{message}}', { message: err.message })));
       }
     };
-    reader.onerror = () => reject(new Error("文件读取失败"));
+    reader.onerror = () => reject(new Error(importText(t, 'excel.readError', 'File read failed')));
     reader.readAsArrayBuffer(file);
   });
 };

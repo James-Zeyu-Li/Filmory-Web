@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './contexts/AuthContext.tsx'
 import { ThemeProvider } from './contexts/ThemeContext.tsx'
+import { LanguageProvider } from './contexts/LanguageContext.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 import { registerSW } from 'virtual:pwa-register'
 
@@ -19,9 +20,11 @@ createRoot(document.getElementById('root')!).render(
     <ErrorBoundary>
       <BrowserRouter>
         <ThemeProvider>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
+          <LanguageProvider>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </LanguageProvider>
         </ThemeProvider>
       </BrowserRouter>
     </ErrorBoundary>

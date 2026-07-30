@@ -1,3 +1,5 @@
+import type { TranslationKey } from '../i18n/translations';
+
 export const TRIAL_USER_ID = 'trial_local_user';
 export const TRIAL_USER_EMAIL = 'trial@filmory.local';
 export const TRIAL_RESOURCE_LIMIT = 1;
@@ -12,21 +14,27 @@ export type TrialResourceKey =
   | 'albums'
   | 'photos';
 
-export const TRIAL_RESOURCE_LABELS: Record<TrialResourceKey, string> = {
-  cameras: '相机',
-  lenses: '镜头',
-  filmStocks: '胶卷库存',
-  otherEquipments: '其他器材',
-  rolls: '拍摄卷',
-  collections: '项目集',
-  albums: '相册',
-  photos: '照片',
+export const TRIAL_RESOURCE_LABEL_KEYS: Record<TrialResourceKey, TranslationKey> = {
+  cameras: 'trial.resource.cameras',
+  lenses: 'trial.resource.lenses',
+  filmStocks: 'trial.resource.filmStocks',
+  otherEquipments: 'trial.resource.otherEquipments',
+  rolls: 'trial.resource.rolls',
+  collections: 'trial.resource.collections',
+  albums: 'trial.resource.albums',
+  photos: 'trial.resource.photos',
 };
 
 export const canCreateTrialResource = (currentCount: number) => (
   currentCount < TRIAL_RESOURCE_LIMIT
 );
 
-export const getTrialLimitMessage = (resource: TrialResourceKey) => (
-  `试用模式下 ${TRIAL_RESOURCE_LABELS[resource]} 最多可以创建 ${TRIAL_RESOURCE_LIMIT} 个。注册后可以继续完整记录。`
+export const getTrialLimitMessage = (
+  resource: TrialResourceKey,
+  t: (key: TranslationKey, values?: Record<string, string | number>) => string
+) => (
+  t('trial.limitMessage', {
+    resource: t(TRIAL_RESOURCE_LABEL_KEYS[resource]),
+    limit: TRIAL_RESOURCE_LIMIT,
+  })
 );

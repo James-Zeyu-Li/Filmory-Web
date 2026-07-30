@@ -1,5 +1,6 @@
 import React from 'react';
-import { getPasswordPolicyDescription, validatePassword } from '../../services/authFlow';
+import { PASSWORD_POLICY, validatePassword } from '../../services/authFlow';
+import { useLanguage } from '../../contexts/useLanguage';
 
 interface PasswordPolicyHintProps {
   password: string;
@@ -7,15 +8,16 @@ interface PasswordPolicyHintProps {
 
 export const PasswordPolicyHint: React.FC<PasswordPolicyHintProps> = ({ password }) => {
   const validation = validatePassword(password);
+  const { t } = useLanguage();
 
   return (
     <div className="auth-password-panel">
-      <p>{getPasswordPolicyDescription()}</p>
+      <p>{t('auth.passwordPolicyDescription', { min: PASSWORD_POLICY.minLength })}</p>
       <div className="auth-password-rules">
-        <span className={`auth-password-rule ${validation.minLength ? 'passed' : ''}`}>至少 8 位</span>
-        <span className={`auth-password-rule ${validation.hasUppercase ? 'passed' : ''}`}>大写字母</span>
-        <span className={`auth-password-rule ${validation.hasLowercase ? 'passed' : ''}`}>小写字母</span>
-        <span className={`auth-password-rule ${validation.hasNumber ? 'passed' : ''}`}>数字</span>
+        <span className={`auth-password-rule ${validation.minLength ? 'passed' : ''}`}>{t('auth.ruleMinLength', { min: PASSWORD_POLICY.minLength })}</span>
+        <span className={`auth-password-rule ${validation.hasUppercase ? 'passed' : ''}`}>{t('auth.ruleUppercase')}</span>
+        <span className={`auth-password-rule ${validation.hasLowercase ? 'passed' : ''}`}>{t('auth.ruleLowercase')}</span>
+        <span className={`auth-password-rule ${validation.hasNumber ? 'passed' : ''}`}>{t('auth.ruleNumber')}</span>
       </div>
     </div>
   );

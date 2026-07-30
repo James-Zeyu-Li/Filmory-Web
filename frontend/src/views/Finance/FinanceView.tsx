@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/useAuth';
 import { useConfirm } from '../../contexts/useConfirm';
 import { useFeedback } from '../../contexts/useFeedback';
 import { useCurrency } from '../../contexts/useCurrency';
+import { useLanguage } from '../../contexts/useLanguage';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useCameras, useLenses, useRolls } from '../../hooks/useData';
 import { Wallet, TrendingUp, TrendingDown, Plus, Camera as CameraIcon, AlertTriangle } from 'lucide-react';
@@ -28,6 +29,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
   const { confirm } = useConfirm();
   const { notify } = useFeedback();
   const { currencySymbol, formatCurrency } = useCurrency();
+  const { t } = useLanguage();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTx, setNewTx] = useState<Partial<LedgerTransaction>>(createEmptyTransactionDraft);
 
@@ -80,8 +82,8 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
     if (isNaN(amt) || amt <= 0) {
       notify({
         type: 'error',
-        title: '金额无效',
-        message: '请输入大于 0 的有效金额。'
+        title: t('finance.invalidAmountTitle'),
+        message: t('finance.invalidAmountMessage')
       });
       return;
     }
@@ -105,9 +107,9 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
 
   const handleDeleteTx = async (id: string) => {
     const confirmed = await confirm({
-      title: '删除财务记录',
-      message: '确认删除这条收支记录吗？这将重新计算统计结果，且操作不可恢复。',
-      confirmText: '确认删除',
+      title: t('finance.deleteTitle'),
+      message: t('finance.deleteMessage'),
+      confirmText: t('finance.confirmDelete'),
       isDanger: true
     });
     if (confirmed) {
@@ -120,15 +122,15 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
   };
 
   const catLabelMap: Record<string, string> = {
-    camera: '机身',
-    lens: '镜头',
-    film: '胶片',
-    develop: '冲洗费',
-    chemical: '药水耗材',
-    repair: '维修保养',
-    accessory: '配件/周边',
-    service: '劳务收入',
-    other: '其他'
+    camera: t('finance.catCamera'),
+    lens: t('finance.catLens'),
+    film: t('finance.catFilm'),
+    develop: t('finance.catDevelop'),
+    chemical: t('finance.catChemical'),
+    repair: t('finance.catRepair'),
+    accessory: t('finance.catAccessory'),
+    service: t('finance.catService'),
+    other: t('finance.catOther')
   };
 
   const getEntityName = (tx: LedgerTransaction) => {
@@ -143,10 +145,10 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
     <div className={isEmbedded ? "" : "main-content"}>
       {!isEmbedded && (
         <header className="view-header">
-          <h1>摄影账本</h1>
+          <h1>{t('finance.title')}</h1>
           <div className="view-header-actions">
             <button className="primary" onClick={() => setIsModalOpen(true)}>
-              <Plus size={16} /> 记一笔账
+              <Plus size={16} /> {t('finance.addEntry')}
             </button>
           </div>
         </header>
@@ -156,7 +158,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
         {isEmbedded && (
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
             <button className="primary" onClick={() => setIsModalOpen(true)}>
-              <Plus size={16} /> 记一笔账
+              <Plus size={16} /> {t('finance.addEntry')}
             </button>
           </div>
         )}
@@ -165,25 +167,25 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
           <div className="kpi-card" style={{ background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(56, 189, 248, 0.05) 100%)', borderColor: 'rgba(56, 189, 248, 0.2)' }}>
             <div className="kpi-icon" style={{ color: '#38bdf8' }}><CameraIcon size={24} /></div>
             <div className="kpi-content">
-              <h3>器材投入</h3>
+              <h3>{t('finance.gearInvestment')}</h3>
               <div className="kpi-value">{formatCurrency(totalGearAssets)}</div>
-              <span className="kpi-subtext">机身、镜头和配件相关支出</span>
+              <span className="kpi-subtext">{t('finance.gearInvestmentDesc')}</span>
             </div>
           </div>
           <div className="kpi-card" style={{ background: 'linear-gradient(135deg, rgba(248, 113, 113, 0.1) 0%, rgba(248, 113, 113, 0.05) 100%)', borderColor: 'rgba(248, 113, 113, 0.2)' }}>
             <div className="kpi-icon" style={{ color: '#f87171' }}><TrendingDown size={24} /></div>
             <div className="kpi-content">
-              <h3>胶卷与冲洗花费</h3>
+              <h3>{t('finance.filmLabCost')}</h3>
               <div className="kpi-value">{formatCurrency(totalFilmBurned)}</div>
-              <span className="kpi-subtext">胶卷、冲洗和药水相关开销</span>
+              <span className="kpi-subtext">{t('finance.filmLabCostDesc')}</span>
             </div>
           </div>
           <div className="kpi-card" style={{ background: 'linear-gradient(135deg, rgba(52, 211, 153, 0.1) 0%, rgba(52, 211, 153, 0.05) 100%)', borderColor: 'rgba(52, 211, 153, 0.2)' }}>
             <div className="kpi-icon" style={{ color: '#34d399' }}><TrendingUp size={24} /></div>
             <div className="kpi-content">
-              <h3>回款与收入</h3>
+              <h3>{t('finance.income')}</h3>
               <div className="kpi-value">{formatCurrency(totalServiceIncome)}</div>
-              <span className="kpi-subtext">接单、转卖或其他摄影收入</span>
+              <span className="kpi-subtext">{t('finance.incomeDesc')}</span>
             </div>
           </div>
         </div>
@@ -193,23 +195,23 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
           <div className="finance-alert-panel" style={{ background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
             <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f59e0b', marginTop: 0, marginBottom: '12px', fontSize: '15px' }}>
               <AlertTriangle size={18} />
-              有 {totalMissing} 项价格待补充
+              {t('finance.missingPricesTitle', { count: totalMissing })}
             </h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: '0 0 16px 0' }}>
-              补全以下价格后，器材投入和花费统计会更准确。请前往相应页面补录。
+              {t('finance.missingPricesDesc')}
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {missingCameras.map(c => (
-                <span key={c.id} style={{ fontSize: '12px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px' }}>[机身] {c.name}</span>
+                <span key={c.id} style={{ fontSize: '12px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px' }}>[{t('finance.tagCamera')}] {c.name}</span>
               ))}
               {missingLenses.map(l => (
-                <span key={l.id} style={{ fontSize: '12px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px' }}>[镜头] {l.name}</span>
+                <span key={l.id} style={{ fontSize: '12px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px' }}>[{t('finance.tagLens')}] {l.name}</span>
               ))}
               {missingRollsFilm.map(r => (
-                <span key={`f-${r.id}`} style={{ fontSize: '12px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px' }}>[胶片成本] {r.name}</span>
+                <span key={`f-${r.id}`} style={{ fontSize: '12px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px' }}>[{t('finance.tagFilmCost')}] {r.name}</span>
               ))}
               {missingRollsDev.map(r => (
-                <span key={`d-${r.id}`} style={{ fontSize: '12px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px' }}>[冲洗费] {r.name}</span>
+                <span key={`d-${r.id}`} style={{ fontSize: '12px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px' }}>[{t('finance.tagLabCost')}] {r.name}</span>
               ))}
             </div>
           </div>
@@ -218,21 +220,21 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
         {/* Ledger Table */}
         <div className="finance-ledger">
           <div className="ledger-header-row">
-            <h2>收支记录</h2>
-            <span className="ledger-count">共 {transactions.length} 笔记录</span>
+            <h2>{t('finance.ledgerTitle')}</h2>
+            <span className="ledger-count">{t('finance.ledgerCount', { count: transactions.length })}</span>
           </div>
           
           <div className="ledger-table-container">
             <table className="ledger-table">
               <thead>
                 <tr>
-                  <th>日期</th>
-                  <th>收/支</th>
-                  <th>分类</th>
-                  <th>关联实体</th>
-                  <th>备注详情</th>
-                  <th style={{ textAlign: 'right' }}>金额</th>
-                  <th style={{ textAlign: 'right' }}>操作</th>
+                  <th>{t('finance.date')}</th>
+                  <th>{t('finance.flow')}</th>
+                  <th>{t('finance.category')}</th>
+                  <th>{t('finance.entity')}</th>
+                  <th>{t('finance.notes')}</th>
+                  <th style={{ textAlign: 'right' }}>{t('finance.amount')}</th>
+                  <th style={{ textAlign: 'right' }}>{t('finance.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -240,8 +242,8 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
                   <tr>
                     <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
                       <Wallet size={48} style={{ opacity: 0.2, marginBottom: '16px' }} />
-                      <p>暂无财务记录</p>
-                      <p style={{ fontSize: '13px' }}>你可以在这里手动记账，或在新增器材、记录胶卷成本后自动生成。</p>
+                      <p>{t('finance.noRecords')}</p>
+                      <p style={{ fontSize: '13px' }}>{t('finance.noRecordsDesc')}</p>
                     </td>
                   </tr>
                 ) : (
@@ -252,9 +254,9 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
                       </td>
                       <td>
                         {tx.type === 'expense' ? (
-                          <span className="tx-badge expense">支出</span>
+                          <span className="tx-badge expense">{t('finance.expense')}</span>
                         ) : (
-                          <span className="tx-badge income">收入</span>
+                          <span className="tx-badge income">{t('finance.incomeBadge')}</span>
                         )}
                       </td>
                       <td>{catLabelMap[tx.category] || tx.category}</td>
@@ -273,7 +275,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <button className="icon-btn danger" onClick={() => handleDeleteTx(tx.id!)}>
-                          删除
+                          {t('finance.delete')}
                         </button>
                       </td>
                     </tr>
@@ -287,10 +289,10 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
 
       {/* Add Transaction Modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-            <h3>记录收支</h3>
+            <h3>{t('finance.modalTitle')}</h3>
             <form onSubmit={handleAddTx}>
               <div className="form-group">
-                <label>资金流向</label>
+                <label>{t('finance.flowLabel')}</label>
                 <div className="toggle-group" style={{ display: 'flex', gap: '8px' }}>
                   <button 
                     type="button" 
@@ -298,7 +300,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
                     onClick={() => setNewTx({...newTx, type: 'expense'})}
                     style={{ flex: 1, padding: '8px', border: '1px solid var(--border-color)', background: newTx.type === 'expense' ? 'rgba(255,255,255,0.1)' : 'transparent', color: newTx.type === 'expense' ? '#fff' : 'var(--text-secondary)', borderRadius: '6px' }}
                   >
-                    支出
+                    {t('finance.expense')}
                   </button>
                   <button 
                     type="button" 
@@ -306,37 +308,37 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
                     onClick={() => setNewTx({...newTx, type: 'income'})}
                     style={{ flex: 1, padding: '8px', border: '1px solid var(--border-color)', background: newTx.type === 'income' ? 'rgba(52, 211, 153, 0.1)' : 'transparent', color: newTx.type === 'income' ? '#34d399' : 'var(--text-secondary)', borderRadius: '6px' }}
                   >
-                    收入（回款）
+                    {t('finance.incomeOption')}
                   </button>
                 </div>
               </div>
 
               <div className="form-group">
-                <label>分类</label>
+                <label>{t('finance.category')}</label>
                 <select 
                   className="form-control"
                   value={newTx.category}
                   onChange={e => setNewTx({...newTx, category: e.target.value as any})}
                   required
                 >
-                  <option value="repair">器材维修 / 保养</option>
-                  <option value="camera">机身买卖</option>
-                  <option value="lens">镜头买卖</option>
-                  <option value="film">胶片采购 / 出售</option>
-                  <option value="develop">冲洗费</option>
-                  <option value="chemical">药水耗材</option>
-                  <option value="accessory">配件 / 周边</option>
-                  <option value="service">提供冲洗服务</option>
-                  <option value="other">其他</option>
+                  <option value="repair">{t('finance.optionRepair')}</option>
+                  <option value="camera">{t('finance.optionCamera')}</option>
+                  <option value="lens">{t('finance.optionLens')}</option>
+                  <option value="film">{t('finance.optionFilm')}</option>
+                  <option value="develop">{t('finance.optionDevelop')}</option>
+                  <option value="chemical">{t('finance.optionChemical')}</option>
+                  <option value="accessory">{t('finance.optionAccessory')}</option>
+                  <option value="service">{t('finance.optionService')}</option>
+                  <option value="other">{t('finance.optionOther')}</option>
                 </select>
               </div>
 
               <div className="form-group">
-                <label>金额 ({currencySymbol})</label>
+                <label>{t('finance.amountLabel', { symbol: currencySymbol })}</label>
                 <input 
                   type="number" 
                   className="form-control" 
-                  placeholder="例如: 150" 
+                  placeholder={t('finance.amountPlaceholder')}
                   value={newTx.amount as any}
                   onChange={e => setNewTx({...newTx, amount: e.target.value as any})}
                   required 
@@ -344,7 +346,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
               </div>
 
               <div className="form-group">
-                <label>发生日期</label>
+                <label>{t('finance.entryDate')}</label>
                 <input 
                   type="date" 
                   className="form-control" 
@@ -355,19 +357,19 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
               </div>
 
               <div className="form-group">
-                <label>备注 / 详情</label>
+                <label>{t('finance.notesLabel')}</label>
                 <input 
                   type="text" 
                   className="form-control" 
-                  placeholder="例如: 更换 Leica M6 快门帘" 
+                  placeholder={t('finance.notesPlaceholder')}
                   value={newTx.notes}
                   onChange={e => setNewTx({...newTx, notes: e.target.value})}
                 />
               </div>
 
               <div className="modal-actions">
-                <button type="button" onClick={() => setIsModalOpen(false)}>取消</button>
-                <button type="submit" className="primary">保存记录</button>
+                <button type="button" onClick={() => setIsModalOpen(false)}>{t('common.cancel')}</button>
+                <button type="submit" className="primary">{t('finance.saveEntry')}</button>
               </div>
             </form>
       </Modal>

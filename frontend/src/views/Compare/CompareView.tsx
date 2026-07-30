@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Columns, Split, UploadCloud, X, Image as ImageIcon } from 'lucide-react';
+import { useLanguage } from '../../contexts/useLanguage';
 import './CompareView.css';
 
 interface FileDropzoneProps {
@@ -9,9 +10,15 @@ interface FileDropzoneProps {
   onDropFile: (e: React.DragEvent<HTMLDivElement>, target: 'A' | 'B') => void;
   onSelectFile: (e: React.ChangeEvent<HTMLInputElement>, target: 'A' | 'B') => void;
   onClearFile: (target: 'A' | 'B') => void;
+  copy: {
+    dropTitle: string;
+    dropHint: string;
+    clearTitle: string;
+    previewAlt: string;
+  };
 }
 
-const FileDropzone: React.FC<FileDropzoneProps> = ({ target, file, url, onDropFile, onSelectFile, onClearFile }) => (
+const FileDropzone: React.FC<FileDropzoneProps> = ({ target, file, url, onDropFile, onSelectFile, onClearFile, copy }) => (
   <div
     className={`local-dropzone ${file ? 'has-file' : ''}`}
     onDragOver={e => e.preventDefault()}
@@ -19,10 +26,10 @@ const FileDropzone: React.FC<FileDropzoneProps> = ({ target, file, url, onDropFi
   >
     {url ? (
       <div className="dropzone-preview">
-        <img src={url} alt={`Preview ${target}`} />
+        <img src={url} alt={copy.previewAlt} />
         <div className="dropzone-overlay">
           <span>{file?.name}</span>
-          <button className="icon-btn btn-sm" onClick={() => onClearFile(target)}>
+          <button className="icon-btn btn-sm" onClick={() => onClearFile(target)} title={copy.clearTitle}>
             <X size={14} />
           </button>
         </div>
@@ -30,8 +37,8 @@ const FileDropzone: React.FC<FileDropzoneProps> = ({ target, file, url, onDropFi
     ) : (
       <label className="dropzone-empty">
         <UploadCloud size={32} />
-        <h4>把照片拖到这里</h4>
-        <p>或点击选择一张照片（{target}）</p>
+        <h4>{copy.dropTitle}</h4>
+        <p>{copy.dropHint}</p>
         <input
           type="file"
           accept="image/*"
@@ -44,6 +51,7 @@ const FileDropzone: React.FC<FileDropzoneProps> = ({ target, file, url, onDropFi
 );
 
 export const CompareView: React.FC = () => {
+  const { t } = useLanguage();
   const [fileA, setFileA] = useState<File | null>(null);
   const [fileB, setFileB] = useState<File | null>(null);
 
@@ -92,10 +100,17 @@ export const CompareView: React.FC = () => {
     }
   };
 
+  const getDropzoneCopy = (target: 'A' | 'B') => ({
+    dropTitle: t('compare.dropTitle'),
+    dropHint: t('compare.dropHint', { target }),
+    clearTitle: t('compare.clearPhoto', { target }),
+    previewAlt: t('compare.previewAlt', { target }),
+  });
+
   return (
     <div className="main-content">
       <header className="view-header">
-        <h1>照片对照</h1>
+        <h1>{t('compare.title')}</h1>
         <div className="view-header-actions">
           <div className="compare-mode-toggle">
             <button 
@@ -104,7 +119,7 @@ export const CompareView: React.FC = () => {
               disabled={!urlA || !urlB}
             >
               <Columns size={16} />
-              <span>左右双列</span>
+              <span>{t('compare.sideBySide')}</span>
             </button>
             <button 
               className={viewMode === 'split' ? 'primary' : ''}
@@ -112,7 +127,7 @@ export const CompareView: React.FC = () => {
               disabled={!urlA || !urlB}
             >
               <Split size={16} />
-              <span>滑尺对比</span>
+              <span>{t('compare.splitSlider')}</span>
             </button>
           </div>
         </div>
@@ -121,13 +136,13 @@ export const CompareView: React.FC = () => {
       <div className="view-body compare-workspace-body" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         {/* Intro */}
         <p style={{ color: 'var(--text-muted)', marginBottom: '16px', fontSize: '13px' }}>
-          直接把两张照片放进来，对照颗粒、锐度、色偏和构图细节。整个过程都在本机完成，不需要上传。
+          {t('compare.intro')}
         </p>
 
         {/* Uploader Bar */}
         <div className="compare-uploaders-container">
-          <FileDropzone target="A" file={fileA} url={urlA} onDropFile={handleFileDrop} onSelectFile={handleFileSelect} onClearFile={handleClearFile} />
-          <FileDropzone target="B" file={fileB} url={urlB} onDropFile={handleFileDrop} onSelectFile={handleFileSelect} onClearFile={handleClearFile} />
+          <FileDropzone target="A" file={fileA} url={urlA} onDropFile={handleFileDrop} onSelectFile={handleFileSelect} onClearFile={handleClearFile} copy={getDropzoneCopy('A')} />
+          <FileDropzone target="B" file={fileB} url={urlB} onDropFile={handleFileDrop} onSelectFile={handleFileSelect} onClearFile={handleClearFile} copy={getDropzoneCopy('B')} />
         </div>
 
         {/* Viewer */}
@@ -135,21 +150,21 @@ export const CompareView: React.FC = () => {
           {(!urlA || !urlB) ? (
             <div className="empty-state" style={{ height: '100%' }}>
               <ImageIcon size={48} />
-              <h3>等待载入照片</h3>
-              <p>请在上方分别放入需要对比的两张本地照片。</p>
+              <h3>{t('compare.emptyTitle')}</h3>
+              <p>{t('compare.emptyDesc')}</p>
             </div>
           ) : (
             <>
-              {viewMode === 'split' && <ImageSlider imgA={urlA} imgB={urlB} />}
+              {viewMode === 'split' && <ImageSlider imgA={urlA} imgB={urlB} altA={t('compare.imageAlt', { target: 'A' })} altB={t('compare.imageAlt', { target: 'B' })} />}
               {viewMode === 'sideBySide' && (
                 <div style={{ display: 'flex', width: '100%', height: '100%', gap: '4px' }}>
                   <div style={{ flex: 1, position: 'relative', height: '100%' }}>
-                    <img src={urlA} alt="A" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                    <span style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: 600 }}>A路</span>
+                    <img src={urlA} alt={t('compare.imageAlt', { target: 'A' })} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    <span style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: 600 }}>{t('compare.laneA')}</span>
                   </div>
                   <div style={{ flex: 1, position: 'relative', height: '100%' }}>
-                    <img src={urlB} alt="B" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                    <span style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: 600 }}>B路</span>
+                    <img src={urlB} alt={t('compare.imageAlt', { target: 'B' })} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    <span style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: 600 }}>{t('compare.laneB')}</span>
                   </div>
                 </div>
               )}
@@ -165,9 +180,11 @@ export const CompareView: React.FC = () => {
 interface ImageSliderProps {
   imgA: string;
   imgB: string;
+  altA: string;
+  altB: string;
 }
 
-const ImageSlider: React.FC<ImageSliderProps> = ({ imgA, imgB }) => {
+const ImageSlider: React.FC<ImageSliderProps> = ({ imgA, imgB, altA, altB }) => {
   const [sliderPosition, setSliderPosition] = useState(50);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -204,12 +221,12 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ imgA, imgB }) => {
       onTouchMove={handleTouchMove}
       style={{ height: '100%', width: '100%', position: 'relative', cursor: 'ew-resize', touchAction: 'none' }}
     >
-      <img src={imgB} className="image-slider-bg" alt="Image B" draggable={false} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }} />
+      <img src={imgB} className="image-slider-bg" alt={altB} draggable={false} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }} />
       
       <img 
         src={imgA} 
         className="image-slider-fg" 
-        alt="Image A" 
+        alt={altA}
         draggable={false}
         style={{ 
           position: 'absolute', 

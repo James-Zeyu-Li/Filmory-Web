@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Modal } from '../components/Modal';
 import { AlertTriangle, Info } from 'lucide-react';
 import { ConfirmContext, type ConfirmOptions } from './confirmContextCore';
+import { useLanguage } from './useLanguage';
 
 interface ConfirmProviderProps {
   children: ReactNode;
@@ -12,6 +13,7 @@ export const ConfirmProvider: React.FC<ConfirmProviderProps> = ({ children }) =>
   const [isOpen, setIsOpen] = useState(false);
   const [options, setOptions] = useState<ConfirmOptions | null>(null);
   const [resolver, setResolver] = useState<(value: boolean) => void>(() => () => {});
+  const { t } = useLanguage();
 
   const confirm = (opts: ConfirmOptions): Promise<boolean> => {
     setOptions(opts);
@@ -51,13 +53,13 @@ export const ConfirmProvider: React.FC<ConfirmProviderProps> = ({ children }) =>
           </div>
           <div className="modal-footer" style={{ marginTop: '24px' }}>
             <button className="secondary" onClick={handleCancel}>
-              {options.cancelText || '取消'}
+              {options.cancelText || t('common.cancel')}
             </button>
             <button 
               className={options.isDanger ? 'primary danger' : 'primary'} 
               onClick={handleConfirm}
             >
-              {options.confirmText || '确认'}
+              {options.confirmText || t('common.confirm')}
             </button>
           </div>
         </Modal>

@@ -22,6 +22,7 @@ export const createDevBypassUser = () => ({
   },
   user_metadata: {
     authMode: 'dev-bypass',
+    display_name: 'Developer',
   },
 } as User);
 
@@ -36,6 +37,7 @@ export const createTrialUser = () => ({
   },
   user_metadata: {
     authMode: 'trial',
+    display_name: 'Trial User',
   },
 } as User);
 

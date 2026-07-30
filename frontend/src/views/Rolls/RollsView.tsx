@@ -5,6 +5,7 @@ import { useConfirm } from '../../contexts/useConfirm';
 import { useFeedback } from '../../contexts/useFeedback';
 import { useCurrency } from '../../contexts/useCurrency';
 import { useTrialGate } from '../../contexts/useTrialGate';
+import { useLanguage } from '../../contexts/useLanguage';
 import { uploadPhotoToCloud } from '../../services/storageService';
 import { Folder, Search, LayoutGrid, List, Trash2, Film, Plus, Camera, ArrowLeft, CheckCircle, X, Upload, Star, Sparkles, Package, Aperture } from 'lucide-react';
 import { IconButton } from '../../components/ui/IconButton';
@@ -63,6 +64,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   const { notify } = useFeedback();
   const { currencySymbol } = useCurrency();
   const { guardTrialResource, requireRegistration } = useTrialGate();
+  const { t } = useLanguage();
   const location = useLocation();
   const { tier: userTier, isLoading: isUserTierLoading } = useUserTier();
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
@@ -181,7 +183,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   const effectiveFilmBackId = selectedRequiresFilmBack ? selectedFilmBackId : fixed120Back?.id;
 
   const getFilmBackName = (id?: string) => {
-    return filmBacks.find(back => back.id === id)?.name || '未选择后背';
+    return filmBacks.find(back => back.id === id)?.name || t('common.notSelectedBack');
   };
 
   const getCameraSystemName = (id?: string) => {
@@ -194,7 +196,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   };
 
   const getLensName = (id?: string) => {
-    return lenses.find(lens => lens.id === id)?.name || '未知镜头';
+    return lenses.find(lens => lens.id === id)?.name || t('common.unknownLens');
   };
 
   const openRollDrawer = (roll: Roll) => {
@@ -314,8 +316,8 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     if (isUserTierLoading) {
       notify({
         type: 'error',
-        title: '会员状态读取中',
-        message: '请稍候片刻，再尝试创建新的胶卷记录。'
+        title: t('rolls.readingTier'),
+        message: t('rolls.createWaitMessage')
       });
       return;
     }
@@ -330,16 +332,16 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     if (selectedRequiresFilmBack && !selectedFilmBackId) {
       notify({
         type: 'error',
-        title: '请选择后背',
-        message: '120 可换后背相机必须选择一个当前可用的后背/片盒。'
+        title: t('rolls.chooseBackTitle'),
+        message: t('rolls.chooseBackMessage')
       });
       return;
     }
     if (effectiveFilmBackId && loadedFilmBackIds.has(effectiveFilmBackId)) {
       notify({
         type: 'error',
-        title: '后背已装卷',
-        message: '同一个后背同一时间只能装载一卷进行中的胶卷。'
+        title: t('rolls.backLoadedTitle'),
+        message: t('rolls.backLoadedMessage')
       });
       return;
     }
@@ -418,7 +420,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                 type: 'expense',
                 category: 'film',
                 relatedEntityId: newRoll.id,
-                notes: `消耗胶卷: ${film.brand} ${film.name}`,
+                notes: t('rolls.consumeFilmLedgerNote', { film: `${film.brand} ${film.name}` }),
                 addedAt: Date.now()
               });
             }
@@ -518,9 +520,9 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   const handleArchiveRoll = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const confirmed = await confirm({
-      title: '完成胶卷记录',
-      message: '确认冲洗完毕并标记为完成这一卷吗？',
-      confirmText: '确认完成'
+      title: t('rolls.completeRollTitle'),
+      message: t('rolls.completeRollMessage'),
+      confirmText: t('rolls.confirmComplete')
     });
     if (confirmed) {
       await db.rolls.update(id, { status: 'archived', endDate: Date.now() });
@@ -530,9 +532,9 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   const handleDeleteRoll = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const confirmed = await confirm({
-      title: '删除胶卷记录',
-      message: '彻底删除这一卷？相关联的所有照片资产和账单记录将被永久删除。此操作无法撤销。',
-      confirmText: '彻底删除',
+      title: t('rolls.deleteTitle'),
+      message: t('rolls.deleteRollMessage'),
+      confirmText: t('rolls.confirmDeletePermanent'),
       isDanger: true
     });
     if (confirmed) {
@@ -548,9 +550,9 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   const handleRemoveFromCollection = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const confirmed = await confirm({
-      title: '移出项目集',
-      message: '确定要将这条胶卷记录从当前项目中移出吗？\n它会回到散卷列表，照片不会被删除。',
-      confirmText: '移出'
+      title: t('rolls.removeFromCollectionTitle'),
+      message: t('rolls.removeFromCollectionMessage'),
+      confirmText: t('rolls.removeFromCollection')
     });
     if (confirmed) {
       await db.rolls.update(id, { collectionId: undefined });
@@ -587,7 +589,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
               type: 'expense',
               category: 'develop',
               relatedEntityId: selectedRollId,
-              notes: `冲洗费用 (Roll: ${selectedRoll?.name || '未知'})`,
+              notes: t('rolls.developLedgerNote', { name: selectedRoll?.name || t('rolls.unknownRoll') }),
               addedAt: Date.now()
             });
           }
@@ -597,7 +599,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     });
     notify({
       type: 'success',
-      title: '胶卷记录已保存'
+      title: t('rolls.detailsSaved')
     });
     setIsDrawerOpen(false);
   };
@@ -682,10 +684,10 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     if (files.length > 0) await handleCoverUpload(files[0]);
   };
 
-  const getCameraName = (id: string) => cameras.find(c => c.id === id)?.name || '未知相机';
+  const getCameraName = (id: string) => cameras.find(c => c.id === id)?.name || t('common.unknownCamera');
   const getFilmName = (id: string) => {
     const f = filmStocks.find(fs => fs.id === id);
-    return f ? `${f.brand} ${f.name}` : '未知胶卷';
+    return f ? `${f.brand} ${f.name}` : t('common.unknownFilm');
   };
 
   const processedRolls = useMemo(() => {
@@ -790,8 +792,8 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
             
             <div className="roll-card-status" style={{ top: 4, left: 4 }}>
               {roll.status === 'active' 
-                ? <span className="status-badge active">进行中</span> 
-                : <span className="status-badge archived">已完成</span>}
+                ? <span className="status-badge active">{t('rolls.active')}</span>
+                : <span className="status-badge archived">{t('rolls.archived')}</span>}
             </div>
           </div>
 
@@ -806,7 +808,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
 
             <p className="roll-card-meta">
               <Camera size={12} style={{ flexShrink: 0 }} />
-              {(roll.cameraIds || []).map(getCameraName).join(', ') || '未绑定相机'}
+              {(roll.cameraIds || []).map(getCameraName).join(', ') || t('rolls.unboundCamera')}
             </p>
             {roll.filmBackId && (
               <p className="roll-card-meta">
@@ -831,17 +833,17 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
 
           <div className="roll-card-row-actions">
             {collectionActionId && roll.collectionId === collectionActionId && (
-              <button className="action-btn" onClick={(e) => handleRemoveFromCollection(roll.id!, e)} title="移出项目集">
-                <Folder size={12} /> <span>移出</span>
+              <button className="action-btn" onClick={(e) => handleRemoveFromCollection(roll.id!, e)} title={t('rolls.removeFromCollectionTitle')}>
+                <Folder size={12} /> <span>{t('rolls.removeFromCollection')}</span>
               </button>
             )}
             {roll.status === 'active' && (
-              <button className="action-btn success" onClick={(e) => handleArchiveRoll(roll.id!, e)} title="标记为已完成">
-                <CheckCircle size={14} /> <span>完成</span>
+              <button className="action-btn success" onClick={(e) => handleArchiveRoll(roll.id!, e)} title={t('rolls.completeTitle')}>
+                <CheckCircle size={14} /> <span>{t('rolls.complete')}</span>
               </button>
             )}
-            <button className="action-btn danger" onClick={(e) => handleDeleteRoll(roll.id!, e)} title="删除胶卷记录">
-              <Trash2 size={14} /> <span>删除</span>
+            <button className="action-btn danger" onClick={(e) => handleDeleteRoll(roll.id!, e)} title={t('rolls.deleteTitle')}>
+              <Trash2 size={14} /> <span>{t('rolls.delete')}</span>
             </button>
           </div>
         </div>
@@ -863,8 +865,8 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
           
           <div className="roll-card-status">
             {roll.status === 'active' 
-              ? <span className="status-badge active">进行中</span> 
-              : <span className="status-badge archived">已完成</span>}
+              ? <span className="status-badge active">{t('rolls.active')}</span>
+              : <span className="status-badge archived">{t('rolls.archived')}</span>}
           </div>
 
           {collectionName && (
@@ -879,7 +881,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
           <h3>{roll.name}</h3>
           <p className="roll-card-meta">
             <Camera size={12} style={{ flexShrink: 0 }} />
-            {(roll.cameraIds || []).map(getCameraName).join(', ') || '未绑定相机'}
+            {(roll.cameraIds || []).map(getCameraName).join(', ') || t('rolls.unboundCamera')}
           </p>
           {roll.filmBackId && (
             <p className="roll-card-meta">
@@ -899,24 +901,24 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
           )}
           <div className="roll-card-footer">
             <span className="roll-date">
-              起：{new Date(roll.startDate || nowTimestamp).toLocaleDateString()}
-              {roll.endDate && ` / 止：${new Date(roll.endDate).toLocaleDateString()}`}
+              {t('rolls.startDate', { date: new Date(roll.startDate || nowTimestamp).toLocaleDateString() })}
+              {roll.endDate && t('rolls.endDate', { date: new Date(roll.endDate).toLocaleDateString() })}
             </span>
           </div>
           
           <div className="roll-card-actions">
             {activeCollectionId && roll.collectionId === activeCollectionId && (
-              <button className="action-btn" onClick={(e) => handleRemoveFromCollection(roll.id!, e)} title="移出项目集">
-                <Folder size={12} /> <span>移出</span>
+              <button className="action-btn" onClick={(e) => handleRemoveFromCollection(roll.id!, e)} title={t('rolls.removeFromCollectionTitle')}>
+                <Folder size={12} /> <span>{t('rolls.removeFromCollection')}</span>
               </button>
             )}
             {roll.status === 'active' && (
-              <button className="action-btn success" onClick={(e) => handleArchiveRoll(roll.id!, e)} title="标记为已完成">
-                <CheckCircle size={14} /> <span>完成</span>
+              <button className="action-btn success" onClick={(e) => handleArchiveRoll(roll.id!, e)} title={t('rolls.completeTitle')}>
+                <CheckCircle size={14} /> <span>{t('rolls.complete')}</span>
               </button>
             )}
-            <button className="action-btn danger" onClick={(e) => handleDeleteRoll(roll.id!, e)} title="删除胶卷记录">
-              <Trash2 size={14} /> <span>删除</span>
+            <button className="action-btn danger" onClick={(e) => handleDeleteRoll(roll.id!, e)} title={t('rolls.deleteTitle')}>
+              <Trash2 size={14} /> <span>{t('rolls.delete')}</span>
             </button>
           </div>
         </div>
@@ -937,10 +939,10 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
             </div>
             <div className="view-header-text-group">
               <h1>
-                {libraryView === 'collections' ? '项目集' : libraryView === 'loose' ? '散卷' : '全部胶卷记录'}
+                {libraryView === 'collections' ? t('rolls.collections') : libraryView === 'loose' ? t('rolls.loose') : t('rolls.all')}
               </h1>
               <p className="view-header-subtitle">
-                {libraryView === 'collections' ? '把同一组拍摄内容整理到一个项目里。' : libraryView === 'loose' ? '尚未归入项目的单卷记录。' : '查看你手上所有胶卷记录与拍摄进度。'}
+                {libraryView === 'collections' ? t('rolls.collectionsSubtitle') : libraryView === 'loose' ? t('rolls.looseSubtitle') : t('rolls.allSubtitle')}
               </p>
             </div>
           </motion.div>
@@ -949,16 +951,16 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
         <div className="view-header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
            <div className="view-toggle-group">
 	             <button
-	               className={`view-toggle-btn ${viewLayout === 'grid' ? 'active' : ''}`}
+               className={`view-toggle-btn ${viewLayout === 'grid' ? 'active' : ''}`}
                onClick={() => setViewLayout('grid')}
-               title="网格视图"
+               title={t('rolls.gridView')}
              >
                <LayoutGrid size={16} />
              </button>
 	             <button
-	               className={`view-toggle-btn ${viewLayout === 'list' ? 'active' : ''}`}
+               className={`view-toggle-btn ${viewLayout === 'list' ? 'active' : ''}`}
                onClick={() => setViewLayout('list')}
-               title="列表视图"
+               title={t('rolls.listView')}
              >
                <List size={16} />
              </button>
@@ -966,11 +968,11 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
            
            {isCollectionsTabVisible && (
              <button className="secondary" onClick={() => document.dispatchEvent(new CustomEvent('open-new-collection-modal'))}>
-               <Folder size={16} /> 新建项目
+               <Folder size={16} /> {t('rolls.newCollection')}
              </button>
            )}
            <button className="primary" onClick={() => setIsNewRollModalOpen(true)}>
-             <Plus size={16} /> 新建单卷记录
+             <Plus size={16} /> {t('rolls.newRoll')}
            </button>
         </div>
       </header>
@@ -989,27 +991,27 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '24px' }}>
               <IconButton variant="solid" onClick={() => setActiveCollectionId(null)} icon={<ArrowLeft size={20} />} />
               <div>
-                <h2 style={{ margin: 0 }}>{activeCollection?.name || '加载中...'}</h2>
+                <h2 style={{ margin: 0 }}>{activeCollection?.name || t('common.loading')}</h2>
                 <p style={{ margin: '4px 0 0 0', color: 'var(--text-secondary)', fontSize: '14px' }}>
-                  {activeCollection?.description || '无描述'} · {activeCollection?.date ? new Date(activeCollection.date).toLocaleDateString() : ''}
+                  {activeCollection?.description || ''} · {activeCollection?.date ? new Date(activeCollection.date).toLocaleDateString() : ''}
                 </p>
               </div>
             </div>
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3>包含的胶卷记录 ({rolls.filter(r => r.collectionId === activeCollectionId).length})</h3>
+              <h3>{t('rolls.all')} ({rolls.filter(r => r.collectionId === activeCollectionId).length})</h3>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button className="secondary" onClick={() => {
                   setSelectedExistingRollIds([]);
                   setIsAddExistingModalOpen(true);
                 }}>
-                  <Folder size={16} /> 从已有记录中添加
+                  <Folder size={16} /> {t('rolls.addExistingTitle')}
                 </button>
                 <button className="primary" onClick={() => { 
                   setSelectedCollectionId(activeCollectionId);
                   setIsNewRollModalOpen(true); 
                 }}>
-                  <Plus size={16} /> 新建并加入本集
+                  <Plus size={16} /> {t('rolls.newRoll')}
                 </button>
               </div>
             </div>
@@ -1024,7 +1026,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
               >
                 {rolls.filter(r => r.collectionId === activeCollectionId).length === 0 ? (
                    <div style={{ gridColumn: '1 / -1' }}>
-                      <EmptyState icon={Film} title="项目中还没有胶卷记录" description="点击右上角按钮，把胶卷记录加入这个项目。" />
+                      <EmptyState icon={Film} title={t('rolls.noRolls')} description={t('rolls.noRollsDesc')} />
                    </div>
                 ) : (
                   rolls.filter(r => r.collectionId === activeCollectionId).map(renderRollCard)
@@ -1049,7 +1051,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                     className={`rolls-tab-btn ${libraryView === tab ? 'active' : ''}`}
                     onClick={() => setLibraryView(tab)}
                   >
-                    {tab === 'collections' ? '项目集' : tab === 'all' ? '全部胶卷记录' : '散卷'}
+                    {tab === 'collections' ? t('rolls.collections') : tab === 'all' ? t('rolls.all') : t('rolls.loose')}
                   </button>
                 ))}
               </div>
@@ -1069,7 +1071,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                     <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
 	                    <input
 	                      type="text"
-	                      placeholder="搜索记录名称、相机、胶卷..."
+	                      placeholder={t('rolls.searchPlaceholder')}
                       value={searchQuery}
                       onChange={(e) => {
                         setSearchQuery(e.target.value);
@@ -1094,13 +1096,13 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
 	                      className="secondary btn-sm sort-trigger-btn"
                       onClick={() => setIsSortOpen(!isSortOpen)}
                     >
-                      {sortBy === 'date' ? '按时间排序' : '按名称排序'}
+                      {sortBy === 'date' ? t('rolls.sortDate') : sortBy === 'camera' ? t('rolls.sortCamera') : t('rolls.sortName')}
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}><polyline points="6 9 12 15 18 9"></polyline></svg>
                     </button>
                     {isSortOpen && (
                       <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: '140px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '8px', zIndex: 100, boxShadow: '0 4px 20px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <div onClick={() => { setSortBy('date'); setIsSortOpen(false); }} style={{ padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', backgroundColor: sortBy === 'date' ? 'var(--accent-bg)' : 'transparent', color: sortBy === 'date' ? 'var(--accent)' : 'var(--text-primary)', fontSize: '13px' }}>按时间排序</div>
-                        <div onClick={() => { setSortBy('name'); setIsSortOpen(false); }} style={{ padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', backgroundColor: sortBy === 'name' ? 'var(--accent-bg)' : 'transparent', color: sortBy === 'name' ? 'var(--accent)' : 'var(--text-primary)', fontSize: '13px' }}>按名称排序</div>
+                        <div onClick={() => { setSortBy('date'); setIsSortOpen(false); }} style={{ padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', backgroundColor: sortBy === 'date' ? 'var(--accent-bg)' : 'transparent', color: sortBy === 'date' ? 'var(--accent)' : 'var(--text-primary)', fontSize: '13px' }}>{t('rolls.sortDate')}</div>
+                        <div onClick={() => { setSortBy('name'); setIsSortOpen(false); }} style={{ padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', backgroundColor: sortBy === 'name' ? 'var(--accent-bg)' : 'transparent', color: sortBy === 'name' ? 'var(--accent)' : 'var(--text-primary)', fontSize: '13px' }}>{t('rolls.sortName')}</div>
                       </div>
                     )}
                   </div>
@@ -1138,7 +1140,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                     
                       {processedRolls.length === 0 ? (
                         <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
-                          <EmptyState icon={Film} title="未找到匹配的胶卷记录" description="尝试更换搜索关键词。" />
+                          <EmptyState icon={Film} title={t('rolls.noRolls')} description={t('rolls.noRollsDesc')} />
                         </motion.div>
                       ) : viewLayout === 'grid' ? (
                         <motion.div key="grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }} className="rolls-grid">
@@ -1166,7 +1168,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                     
                       {processedRolls.length === 0 ? (
                         <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
-                          <EmptyState icon={Film} title="没有未整理的胶卷记录" description="所有记录都已经放进项目中，或者你还没有开始记录。" />
+                          <EmptyState icon={Film} title={t('rolls.noRolls')} description={t('rolls.noRollsDesc')} />
                         </motion.div>
                       ) : viewLayout === 'grid' ? (
                         <motion.div key="grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }} className="rolls-grid">
@@ -1193,7 +1195,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                {selectedRoll.status === 'active' && (
                 <button className="outline-btn" style={{borderColor: 'var(--success)', color: 'var(--success)', fontSize: '12px', padding: '4px 8px'}} onClick={(e) => { handleArchiveRoll(selectedRoll.id!, e); setIsDrawerOpen(false); }}>
-                  标记为已完成
+                  {t('rolls.markCompleted')}
                 </button>
               )}
               <button className="icon-btn danger" onClick={(e) => { handleDeleteRoll(selectedRoll.id!, e); setIsDrawerOpen(false); }}>
@@ -1208,7 +1210,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
             <div className="drawer-content">
               {/* Cover Upload Section */}
               <div className="drawer-section">
-                <h3>封面照片</h3>
+                <h3>{t('rolls.coverPhoto')}</h3>
                 <div className="cover-upload-container">
                   <div className={`dropzone ${isDragOver ? 'drag-over' : ''} ${isUploading ? 'uploading' : ''}`}
                        onDragOver={(e) => { e.preventDefault(); if (!isUploading) setIsDragOver(true); }}
@@ -1219,13 +1221,13 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                     {getCoverUrl(selectedRoll) && !isUploading ? (
                        <div className="cover-preview" style={{ backgroundImage: `url(${getCoverUrl(selectedRoll)})`, width: '100%', height: '100%' }}>
                           <label className="cover-upload-btn" onClick={e => e.stopPropagation()}>
-                             更换封面
+                             {t('rolls.changeCover')}
                              <input type="file" accept="image/*" onChange={handleFileSelect} hidden />
                           </label>
                        </div>
                     ) : isUploading ? (
                        <div style={{ width: '100%', textAlign: 'center', padding: '0 20px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                          <p style={{ fontWeight: 600 }}>正在上传封面...</p>
+                          <p style={{ fontWeight: 600 }}>{t('rolls.uploadingCover')}</p>
                           <div style={{ width: '100%', maxWidth: '300px', height: '8px', background: 'var(--border-color)', borderRadius: '4px', overflow: 'hidden', margin: '12px auto' }}>
                             <div style={{ width: `${uploadProgress}%`, height: '100%', background: 'var(--accent)', transition: 'width 0.2s ease' }} />
                           </div>
@@ -1233,7 +1235,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                     ) : (
                        <label className="cover-upload-placeholder" style={{ width: '100%', height: '100%' }}>
                          <Upload size={24} />
-                         <span>点击或拖拽上传一张封面照片</span>
+                         <span>{t('rolls.uploadCoverHint')}</span>
                          <input type="file" accept="image/*" onChange={handleFileSelect} hidden />
                        </label>
                     )}
@@ -1242,9 +1244,9 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
               </div>
               
               <div className="drawer-section">
-                <h3>器材与胶卷</h3>
+                <h3>{t('rolls.gearAndFilm')}</h3>
                 <div className="form-group">
-                  <label>相机</label>
+                  <label>{t('rolls.camera')}</label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px', marginBottom: '12px' }}>
                     {cameras.map(c => {
                       const isSelected = (selectedRoll.cameraIds || []).includes(c.id!);
@@ -1267,10 +1269,10 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                     })}
                   </div>
                   
-                  <label>镜头（可选，可多选）</label>
+                  <label>{t('rolls.lensMultiOptional')}</label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px', marginBottom: '12px' }}>
                     {lenses.length === 0 ? (
-                      <div className="roll-form-hint">当前没有镜头记录。可先到器材库添加镜头，或稍后再补。</div>
+                      <div className="roll-form-hint">{t('rolls.noLensHint')}</div>
                     ) : (
                       lenses.map(lens => {
                         const isSelected = (selectedRoll.lensIds || []).includes(lens.id!);
@@ -1296,13 +1298,13 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
 
                   {selectedRoll.filmBackId && (
                     <div className="roll-form-hint" style={{ marginBottom: '12px' }}>
-                      当前后背：{getFilmBackName(selectedRoll.filmBackId)}
+                      {t('rolls.currentBack', { name: getFilmBackName(selectedRoll.filmBackId) })}
                     </div>
                   )}
 
                   {enableFilmMode && (
                     <>
-                      <label>胶卷</label>
+                      <label>{t('rolls.filmStock')}</label>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px', marginBottom: '16px' }}>
                         {visibleFilmStocks.map(f => {
                           const isSelected = selectedRoll.filmStockId === f.id;
@@ -1327,11 +1329,11 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
               </div>
 
               <div className="drawer-section">
-                <h3>拍摄信息</h3>
+                <h3>{t('rolls.shootingInfo')}</h3>
                 
                 <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
                   <div className="form-group" style={{ flex: 1, margin: 0 }}>
-                    <label>开始日期</label>
+                    <label>{t('rolls.startDateLabel')}</label>
                     <input 
                       type="date" 
                       className="form-control"
@@ -1345,7 +1347,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                   </div>
                   {selectedRoll.status === 'archived' && (
                     <div className="form-group" style={{ flex: 1, margin: 0 }}>
-                      <label>完成日期</label>
+                      <label>{t('rolls.completedDateLabel')}</label>
                       <input 
                         type="date" 
                         className="form-control"
@@ -1361,7 +1363,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                 </div>
                 
                 <div className="form-group">
-                  <label>所属项目</label>
+                  <label>{t('rolls.collectionLabel')}</label>
                   <select 
                     className="form-control"
                     value={selectedRoll?.collectionId || ''} 
@@ -1371,7 +1373,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                       }
                     }}
                   >
-                    <option value="">未分类（散卷）</option>
+                    <option value="">{t('rolls.uncategorized')}</option>
                     {collections && collections.map((c: any) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
@@ -1379,12 +1381,12 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                 </div>
                 
                 <div className="form-group">
-                  <label>拍摄位置</label>
-                  <input type="text" className="form-control" placeholder="地点名称" value={rollLocation} onChange={e => setRollLocation(e.target.value)} />
+                  <label>{t('rolls.locationLabel')}</label>
+                  <input type="text" className="form-control" placeholder={t('rolls.locationPlaceholder')} value={rollLocation} onChange={e => setRollLocation(e.target.value)} />
                 </div>
                 
                 <div className="form-group">
-                  <label>总体评分</label>
+                  <label>{t('rolls.ratingLabel')}</label>
                   <div className="star-rating">
                     {[1, 2, 3, 4, 5].map(star => (
                       <Star key={star} size={20} fill={(selectedRoll.rating || 0) >= star ? 'var(--accent)' : 'none'} color={(selectedRoll.rating || 0) >= star ? 'var(--accent)' : 'var(--text-muted)'} onClick={() => handleSetRating(star)} style={{ cursor: 'pointer' }} />
@@ -1393,27 +1395,27 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                 </div>
                 
                 <div className="form-group">
-                  <label>备注 / 想法</label>
-                  <textarea className="form-control" rows={3} placeholder="拍摄心得或镜头表现..." value={rollNotes} onChange={e => setRollNotes(e.target.value)} />
+                  <label>{t('rolls.notesLabel')}</label>
+                  <textarea className="form-control" rows={3} placeholder={t('rolls.notesPlaceholder')} value={rollNotes} onChange={e => setRollNotes(e.target.value)} />
                 </div>
               </div>
               
               <div className="drawer-section">
-                <h3 style={{ color: 'var(--accent)' }}>冲洗记录</h3>
+                <h3 style={{ color: 'var(--accent)' }}>{t('rolls.labRecord')}</h3>
                 <div className="form-group">
-                  <label>冲洗开支 ({currencySymbol})</label>
-                  <input type="number" className="form-control" placeholder="例如: 35 (选填)" value={developPrice} onChange={e => setDevelopPrice(e.target.value ? Number(e.target.value) : '')} />
+                  <label>{t('rolls.developmentCost', { symbol: currencySymbol })}</label>
+                  <input type="number" className="form-control" placeholder={t('rolls.developmentCostPlaceholder')} value={developPrice} onChange={e => setDevelopPrice(e.target.value ? Number(e.target.value) : '')} />
                 </div>
                 <div className="form-group">
-                  <label>药水时间、显影、迫冲</label>
-                  <textarea className="form-control" rows={4} style={{ fontFamily: 'monospace', fontSize: '13px' }} placeholder="例如:&#10;显影剂: D-76 (1:1)&#10;显影时间: 9分30秒" value={developNotes} onChange={e => setDevelopNotes(e.target.value)} />
+                  <label>{t('rolls.labNotes')}</label>
+                  <textarea className="form-control" rows={4} style={{ fontFamily: 'monospace', fontSize: '13px' }} placeholder={t('rolls.labNotesPlaceholder')} value={developNotes} onChange={e => setDevelopNotes(e.target.value)} />
                 </div>
               </div>
             </div>
             
             <div className="drawer-footer">
               <button className="primary full-width" onClick={handleSaveDetails}>
-                保存全部更改
+                {t('rolls.saveAllChanges')}
               </button>
             </div>
           </>
@@ -1422,17 +1424,17 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
 
       {/* --- NEW ROLL MODAL --- */}
       <Modal isOpen={isNewRollModalOpen} onClose={() => setIsNewRollModalOpen(false)}>
-            <h3>新建胶卷记录</h3>
+            <h3>{t('rolls.newRollModalTitle')}</h3>
             <form onSubmit={handleCreateRoll}>
               <div className="form-group">
-                <label>拍摄主题/名称</label>
-                <input type="text" className="form-control" placeholder="例如: 2026春日踏青" value={rollTitle} onChange={e => setRollTitle(e.target.value)} required />
+                <label>{t('rolls.rollName')}</label>
+                <input type="text" className="form-control" placeholder={t('rolls.rollNamePlaceholder')} value={rollTitle} onChange={e => setRollTitle(e.target.value)} required />
               </div>
 
               <div className="form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <label>使用相机 (必选，可多选)</label>
-                  <button type="button" className="text-btn" onClick={() => setQuickAddCameraOpen(true)}>+ 快捷添加</button>
+                  <label>{t('rolls.cameraRequired')}</label>
+                  <button type="button" className="text-btn" onClick={() => setQuickAddCameraOpen(true)}>{t('rolls.quickAddCamera')}</button>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
                   {cameras.map(c => {
@@ -1459,10 +1461,10 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
               </div>
 
               <div className="form-group">
-                <label>使用镜头（可选，可多选）</label>
+                <label>{t('rolls.lensOptional')}</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
                   {lenses.length === 0 ? (
-                    <div className="roll-form-hint">当前没有镜头记录。可先到器材库添加镜头，或稍后再补。</div>
+                    <div className="roll-form-hint">{t('rolls.noLensHint')}</div>
                   ) : (
                     lenses.map(lens => {
                       const isSelected = selectedLensIds.includes(lens.id!);
@@ -1490,11 +1492,11 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
 
               {selectedRequiresFilmBack && (
                 <div className="form-group">
-                  <label>选择后背/片盒（120 可换后背必选）</label>
+                  <label>{t('rolls.filmBackRequired')}</label>
                   <div className="film-back-picker">
                     {compatibleFilmBacks.length === 0 ? (
                       <div className="roll-form-hint">
-                        当前所选 120 相机没有可用后背。请先到器材库为该相机系统添加后背。
+                        {t('rolls.noFilmBackHint')}
                       </div>
                     ) : (
                       compatibleFilmBacks.map(back => {
@@ -1509,7 +1511,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                             onClick={() => setSelectedFilmBackId(back.id!)}
                           >
                             <span>{back.name}</span>
-                            <small>{getCameraSystemName(back.cameraSystemId)}{isLoaded ? ' · 已装卷' : ' · 可用'}</small>
+                            <small>{getCameraSystemName(back.cameraSystemId)} · {isLoaded ? t('rolls.loaded') : t('rolls.available')}</small>
                           </button>
                         );
                       })
@@ -1522,8 +1524,8 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                 <>
                   <div className="form-group">
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <label>使用胶卷 (必填)</label>
-                      <button type="button" className="text-btn" onClick={openQuickAddFilm}>+ 快捷添加</button>
+                      <label>{t('rolls.filmRequired')}</label>
+                      <button type="button" className="text-btn" onClick={openQuickAddFilm}>{t('rolls.quickAdd')}</button>
                     </div>
                     <div style={{ position: 'relative' }}>
                       <div className="search-input-wrapper">
@@ -1531,7 +1533,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                         <input 
                             type="text" 
                             className="form-control premium-search-input" 
-                            placeholder="搜索胶卷库 (如: Kodak Gold 200)..." 
+                            placeholder={t('rolls.filmSearchPlaceholder')}
                             value={filmSearchText} 
                             onFocus={() => setIsFilmDropdownOpen(true)}
                             onBlur={() => setTimeout(() => setIsFilmDropdownOpen(false), 200)}
@@ -1562,16 +1564,16 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                                   setIsFilmDropdownOpen(false);
                               }}>
                                 <div className="dropdown-item-title">{f.brand} {f.name}</div>
-                                <div className="dropdown-item-meta">ISO {f.iso} • 余量 {f.stockCount || 0} 卷</div>
+                                <div className="dropdown-item-meta">{t('rolls.filmStockMeta', { iso: f.iso, count: f.stockCount || 0 })}</div>
                               </li>
                             ))
                           ) : (
-                            <div className="dropdown-empty-state">库存中未找到该胶卷</div>
+                            <div className="dropdown-empty-state">{t('rolls.filmNotFound')}</div>
                           )}
                           {!visibleFilmStocks.some(f => `${f.brand} ${f.name}`.toLowerCase() === filmSearchText.trim().toLowerCase()) && filmSearchText.trim() !== '' && (
                             <li className="custom-dropdown-item create-new-item" onClick={() => setIsFilmDropdownOpen(false)}>
-                              <div className="dropdown-item-title dropdown-item-new"><Sparkles size={14} style={{ display: 'inline-block', verticalAlign: 'text-bottom', marginRight: '4px' }}/> 快速新建：{filmSearchText}</div>
-                              <div className="dropdown-item-meta">回车或点击直接创建，系统会自动补全基础信息</div>
+                              <div className="dropdown-item-title dropdown-item-new"><Sparkles size={14} style={{ display: 'inline-block', verticalAlign: 'text-bottom', marginRight: '4px' }}/> {t('rolls.quickCreateFilm', { name: filmSearchText })}</div>
+                              <div className="dropdown-item-meta">{t('rolls.quickCreateFilmHint')}</div>
                             </li>
                           )}
                         </motion.ul>
@@ -1581,18 +1583,18 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                   </div>
                   
                   <div className="form-group">
-                    <label>本卷胶片成本 ({currencySymbol})</label>
+                    <label>{t('rolls.rollFilmCost', { symbol: currencySymbol })}</label>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                       <button type="button" className="secondary icon-btn" onClick={() => setRollFilmPrice(p => Math.max(0, (Number(p) || 0) - 5))} title="-5">-5</button>
                       <button type="button" className="secondary icon-btn" onClick={() => setRollFilmPrice(p => Math.max(0, (Number(p) || 0) - 1))} title="-1">-1</button>
-                      <input type="number" className="form-control" style={{ textAlign: 'center', margin: 0 }} placeholder="留空或输入" value={rollFilmPrice} onChange={e => setRollFilmPrice(e.target.value ? Number(e.target.value) : '')} />
+                      <input type="number" className="form-control" style={{ textAlign: 'center', margin: 0 }} placeholder={t('rolls.costPlaceholder')} value={rollFilmPrice} onChange={e => setRollFilmPrice(e.target.value ? Number(e.target.value) : '')} />
                       <button type="button" className="secondary icon-btn" onClick={() => setRollFilmPrice(p => (Number(p) || 0) + 1)} title="+1">+1</button>
                       <button type="button" className="secondary icon-btn" onClick={() => setRollFilmPrice(p => (Number(p) || 0) + 5)} title="+5">+5</button>
                     </div>
                     {rollFilmPrice !== '' && (
                       <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px', fontSize: '13px', cursor: 'pointer' }}>
                         <input type="checkbox" checked={generateFilmExpense} onChange={e => setGenerateFilmExpense(e.target.checked)} />
-                        <span>同步记一笔胶卷支出（现买现拍时勾选，消耗库存时不用勾选）</span>
+                        <span>{t('rolls.syncFilmExpense')}</span>
                       </label>
                     )}
                   </div>
@@ -1602,12 +1604,12 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
               <div className="modal-actions" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)' }}>
                   <input type="checkbox" checked={keepModalOpen} onChange={e => setKeepModalOpen(e.target.checked)} />
-                  保存并创建下一卷
+                  {t('rolls.saveAndCreateNext')}
                 </label>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button type="button" onClick={() => { setIsNewRollModalOpen(false); setRollTitle(''); setSelectedCameraIds([]); setSelectedFilmId(''); setFilmSearchText(''); setRollFilmPrice(''); setGenerateFilmExpense(true); }}>取消</button>
+                  <button type="button" onClick={() => { setIsNewRollModalOpen(false); setRollTitle(''); setSelectedCameraIds([]); setSelectedFilmId(''); setFilmSearchText(''); setRollFilmPrice(''); setGenerateFilmExpense(true); }}>{t('common.cancel')}</button>
                   <button type="submit" className="primary" disabled={isUserTierLoading || !rollTitle || selectedCameraIds.length === 0 || (enableFilmMode && !filmSearchText.trim())}>
-                    {isUserTierLoading ? '读取会员状态中...' : '开始记录'}
+                    {isUserTierLoading ? t('rolls.readingTier') : t('rolls.startLogging')}
                   </button>
                 </div>
               </div>
@@ -1616,35 +1618,35 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
 
       {/* --- QUICK ADD CAMERA MODAL --- */}
       <Modal isOpen={quickAddCameraOpen} onClose={() => setQuickAddCameraOpen(false)} overlayStyle={{ zIndex: 10020 }} style={{ maxWidth: '400px' }}>
-            <h3>快捷添加相机</h3>
+            <h3>{t('rolls.quickAddCameraTitle')}</h3>
             <form onSubmit={handleQuickAddCamera}>
-              <p className="modal-helper-text">用于当前胶卷记录里临时补一台 135 胶片机；完整机身信息可之后到器材库编辑。</p>
+              <p className="modal-helper-text">{t('rolls.quickAddCameraHelp')}</p>
               <div className="form-group">
-                <label>相机名称</label>
-                <input type="text" className="form-control" placeholder="例如: Leica M6" value={qaCameraName} onChange={e => setQaCameraName(e.target.value)} required />
+                <label>{t('rolls.cameraName')}</label>
+                <input type="text" className="form-control" placeholder={t('rolls.cameraNamePlaceholder')} value={qaCameraName} onChange={e => setQaCameraName(e.target.value)} required />
               </div>
               <div className="modal-actions">
-                <button type="button" onClick={() => setQuickAddCameraOpen(false)}>取消</button>
-                <button type="submit" className="primary">添加并选中</button>
+                <button type="button" onClick={() => setQuickAddCameraOpen(false)}>{t('common.cancel')}</button>
+                <button type="submit" className="primary">{t('rolls.addAndSelect')}</button>
               </div>
             </form>
       </Modal>
 
       {/* --- QUICK ADD FILM MODAL --- */}
       <Modal isOpen={quickAddFilmOpen} onClose={() => setQuickAddFilmOpen(false)} overlayStyle={{ zIndex: 10020 }} style={{ maxWidth: '400px' }}>
-            <h3>快捷添加胶卷</h3>
+            <h3>{t('rolls.quickAddFilmTitle')}</h3>
             <form onSubmit={handleQuickAddFilm}>
-              <p className="modal-helper-text">用于当前胶卷记录里快速补一个库存条目；画幅会按已选相机预设，也可手动切换。其他细节可之后到胶卷库编辑。</p>
+              <p className="modal-helper-text">{t('rolls.quickAddFilmHelp')}</p>
               <div className="form-group">
-                <label>品牌/厂商</label>
-                <input type="text" className="form-control" placeholder="例如: Kodak" value={qaFilmBrand} onChange={e => setQaFilmBrand(e.target.value)} required />
+                <label>{t('rolls.filmBrand')}</label>
+                <input type="text" className="form-control" placeholder={t('rolls.filmBrandPlaceholder')} value={qaFilmBrand} onChange={e => setQaFilmBrand(e.target.value)} required />
               </div>
               <div className="form-group">
-                <label>型号名称</label>
-                <input type="text" className="form-control" placeholder="例如: Gold 200" value={qaFilmName} onChange={e => setQaFilmName(e.target.value)} required />
+                <label>{t('rolls.filmModel')}</label>
+                <input type="text" className="form-control" placeholder={t('rolls.filmModelPlaceholder')} value={qaFilmName} onChange={e => setQaFilmName(e.target.value)} required />
               </div>
               <div className="form-group">
-                <label>画幅</label>
+                <label>{t('rolls.format')}</label>
                 <div className="quick-format-toggle">
                   {(['135', '120'] as const).map(format => (
                     <button
@@ -1659,8 +1661,8 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                 </div>
               </div>
               <div className="modal-actions">
-                <button type="button" onClick={() => setQuickAddFilmOpen(false)}>取消</button>
-                <button type="submit" className="primary">添加并选中</button>
+                <button type="button" onClick={() => setQuickAddFilmOpen(false)}>{t('common.cancel')}</button>
+                <button type="submit" className="primary">{t('rolls.addAndSelect')}</button>
               </div>
             </form>
       </Modal>
@@ -1668,16 +1670,16 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
       {/* --- ADD EXISTING ROLLS TO COLLECTION MODAL --- */}
       <Modal isOpen={isAddExistingModalOpen} onClose={() => setIsAddExistingModalOpen(false)} style={{ maxWidth: '500px' }}>
             <div className="modal-header">
-              <h3>从已有记录中添加</h3>
+              <h3>{t('rolls.addExistingTitle')}</h3>
               <button className="icon-btn" onClick={() => setIsAddExistingModalOpen(false)}><X size={20} /></button>
             </div>
             <div className="modal-body" style={{ maxHeight: '60vh', overflowY: 'auto', margin: '16px 0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {rolls.filter(r => r.collectionId !== activeCollectionId).length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-muted)' }}>没有可供添加的胶卷记录。</div>
+                <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-muted)' }}>{t('rolls.noExistingRolls')}</div>
               ) : (
                 rolls.filter(r => r.collectionId !== activeCollectionId).map(roll => {
                    const isSelected = selectedExistingRollIds.includes(roll.id!);
-                   const currentCollection = roll.collectionId ? collections.find(c => c.id === roll.collectionId)?.name : '散卷';
+                   const currentCollection = roll.collectionId ? collections.find(c => c.id === roll.collectionId)?.name : t('rolls.loose');
                    return (
                      <div key={roll.id} 
                           onClick={() => setSelectedExistingRollIds(prev => isSelected ? prev.filter(id => id !== roll.id) : [...prev, roll.id!])}
@@ -1693,9 +1695,9 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
               )}
             </div>
             <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
-              <button className="secondary" onClick={() => setIsAddExistingModalOpen(false)}>取消</button>
+              <button className="secondary" onClick={() => setIsAddExistingModalOpen(false)}>{t('common.cancel')}</button>
               <button className="primary" onClick={handleAddExistingRolls} disabled={selectedExistingRollIds.length === 0}>
-                添加选中卷 ({selectedExistingRollIds.length})
+                {t('rolls.addSelected', { count: selectedExistingRollIds.length })}
               </button>
             </div>
       </Modal>

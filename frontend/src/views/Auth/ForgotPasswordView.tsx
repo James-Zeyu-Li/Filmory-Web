@@ -6,12 +6,13 @@ import {
   AUTH_ROUTES,
   buildPasswordRecoveryRedirectUrl,
   getAuthErrorMessage,
-  getMailpitHint,
 } from '../../services/authFlow';
 import { AuthShell } from './AuthShell';
+import { useLanguage } from '../../contexts/useLanguage';
 import './LoginView.css';
 
 export const ForgotPasswordView: React.FC = () => {
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -30,9 +31,12 @@ export const ForgotPasswordView: React.FC = () => {
       });
       if (error) throw error;
 
-      setSuccessMsg(`重设密码邮件已发送到 ${normalizedEmail}。${getMailpitHint()}`);
+      setSuccessMsg(t('auth.forgotSuccess', {
+        email: normalizedEmail,
+        hint: t('auth.mailpitHint'),
+      }));
     } catch (error) {
-      setErrorMsg(getAuthErrorMessage(error, 'forgot-password', '发送重设密码邮件失败，请稍后再试。'));
+      setErrorMsg(getAuthErrorMessage(error, 'forgot-password', t('auth.forgotFallbackError'), t));
     } finally {
       setLoading(false);
     }
@@ -40,14 +44,14 @@ export const ForgotPasswordView: React.FC = () => {
 
   return (
     <AuthShell
-      title="找回密码"
-      subtitle="输入你的登录邮箱，我们会发送一封重设密码邮件。"
+      title={t('auth.forgotTitle')}
+      subtitle={t('auth.forgotSubtitle')}
       backTo={AUTH_ROUTES.login}
-      backLabel="返回登录"
+      backLabel={t('auth.backToLogin')}
       footer={(
         <div className="toggle-mode auth-centered-footer">
-          <span style={{ color: 'var(--text-muted)' }}>想起密码了？</span>
-          <Link to={AUTH_ROUTES.login} className="auth-inline-link">返回登录</Link>
+          <span style={{ color: 'var(--text-muted)' }}>{t('auth.forgotRemembered')}</span>
+          <Link to={AUTH_ROUTES.login} className="auth-inline-link">{t('auth.backToLogin')}</Link>
         </div>
       )}
     >
@@ -67,12 +71,12 @@ export const ForgotPasswordView: React.FC = () => {
 
       <form className="login-form" onSubmit={handleSubmit}>
         <div className="form-group">
-          <label htmlFor="forgot-email">邮箱</label>
+          <label htmlFor="forgot-email">{t('auth.emailLabel')}</label>
           <input
             id="forgot-email"
             type="email"
             className="form-control"
-            placeholder="请输入你的登录邮箱"
+            placeholder={t('auth.forgotEmailPlaceholder')}
             value={email}
             onChange={event => setEmail(event.target.value)}
             required
@@ -81,7 +85,7 @@ export const ForgotPasswordView: React.FC = () => {
 
         <button type="submit" className="btn-primary login-btn" disabled={loading}>
           <Send size={18} />
-          <span>{loading ? '发送中...' : '发送重设密码邮件'}</span>
+          <span>{loading ? t('auth.forgotSending') : t('auth.forgotSubmit')}</span>
         </button>
       </form>
     </AuthShell>

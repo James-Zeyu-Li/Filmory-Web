@@ -11,9 +11,10 @@ import {
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { SyncStatusBadge } from './SyncStatusBadge';
+import { useLanguage } from '../contexts/useLanguage';
 import './Sidebar.css';
 
-export type ActiveTab = 'dashboard' | 'photos' | 'rolls' | 'gear' | 'settings' | 'insights';
+export type ActiveTab = 'dashboard' | 'rolls' | 'gear' | 'settings' | 'insights';
 
 interface SidebarProps {
   onOpenSettings: () => void;
@@ -22,6 +23,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, isOpen, onClose }) => {
+  const { t } = useLanguage();
   const [isCollapsed, setIsCollapsed] = useState(window.innerWidth < 1250 && window.innerWidth > 1024);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
   const [isClosing, setIsClosing] = useState(false);
@@ -75,7 +77,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, isOpen, onClos
         <img src="/logo.png" alt="Filmory Logo" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
         <div className="brand-text">
           <h2>Filmory</h2>
-          <span>摄影工作台</span>
+          <span>{t('nav.tagline')}</span>
         </div>
       </div>
 
@@ -86,7 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, isOpen, onClos
           onClick={onClose}
         >
           <LayoutDashboard size={20} />
-          <span>控制中心</span>
+          <span>{t('nav.dashboard')}</span>
         </NavLink>
 
         <NavLink 
@@ -95,7 +97,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, isOpen, onClos
           onClick={onClose}
         >
           <Film size={20} />
-          <span>胶卷记录</span>
+          <span>{t('nav.rolls')}</span>
         </NavLink>
 
         <NavLink 
@@ -104,7 +106,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, isOpen, onClos
           onClick={onClose}
         >
           <Camera size={20} />
-          <span>器材库</span>
+          <span>{t('nav.gear')}</span>
         </NavLink>
 
         <NavLink 
@@ -113,7 +115,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, isOpen, onClos
           onClick={onClose}
         >
           <BarChart2 size={20} />
-          <span>统计与花费</span>
+          <span>{t('nav.insights')}</span>
         </NavLink>
 
         <NavLink 
@@ -122,7 +124,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, isOpen, onClos
           onClick={onClose}
         >
           <Columns size={20} />
-          <span>照片对照</span>
+          <span>{t('nav.compare')}</span>
         </NavLink>
 
       </nav>
@@ -132,10 +134,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, isOpen, onClos
           className="nav-item collapse-btn"
           onClick={() => setIsCollapsed(!isCollapsed)}
           style={{ background: 'transparent', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', outline: 'none' }}
-          title={isCollapsed ? "展开侧边栏" : "收起侧边栏"}
+          title={isCollapsed ? t('nav.expandTitle') : t('nav.collapseTitle')}
         >
           {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-          <span>收起侧边栏</span>
+          <span>{t('nav.collapse')}</span>
         </button>
         <div className="nav-spacer" style={{ height: '8px' }} />
 
@@ -145,7 +147,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, isOpen, onClos
           style={{ background: 'transparent', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', outline: 'none' }}
         >
           <Settings size={20} />
-          <span>偏好设置</span>
+          <span>{t('nav.preferences')}</span>
         </button>
         <div className="nav-spacer" style={{ height: '16px' }} />
         <div className="footer-status">

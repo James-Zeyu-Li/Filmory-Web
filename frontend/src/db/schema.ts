@@ -33,6 +33,7 @@ export interface UserProfile {
   userId: string;
   tier: 'regular' | 'vip';
   role?: 'user' | 'admin';
+  displayName?: string;
   highResQuotaUsed: number;
   membershipRequestStatus?: 'pending';
   membershipRequestedAt?: number;
@@ -543,6 +544,25 @@ export class FilmoryDatabase extends Dexie {
       syncQueue: '++id, userId, tableName, action, recordId, timestamp',
       ledgerTransactions: 'id, userId, amount, date, type, category, relatedEntityId, addedAt',
       userProfiles: 'id, userId, tier, membershipRequestStatus, membershipRequestedAt',
+      collections: 'id, userId, name, date, addedAt'
+    });
+
+    // Version 22: Persist optional display names on user profiles
+    this.version(22).stores({
+      cameras: 'id, userId, name, type, format, cameraSystemId, backType, avatarUrl, addedAt',
+      cameraSystems: 'id, userId, name, mountKey, addedAt',
+      filmBacks: 'id, userId, cameraSystemId, name, format, status, addedAt',
+      lenses: 'id, userId, name, focalLength, maxAperture, type, mountKey, addedAt',
+      filmStocks: 'id, userId, brand, name, iso, colorType, format, isSystem, systemKey, addedAt',
+      rolls: 'id, userId, name, *cameraIds, *lensIds, filmBackId, filmStockId, status, startDate, endDate, rating, location, developNotes, collectionId',
+      photoAssets: 'id, userId, rollId, originalFileName, fileSize, thumbnailUrl, previewUrl, storageKey, addedAt, isPinned, rating, tags, orderIndex',
+      otherEquipments: 'id, userId, name, type, notes, purchaseDate, expiryDate, addedAt',
+      albums: 'id, userId, name, description, coverPhotoId, addedAt',
+      albumPhotos: 'id, userId, albumId, photoId, addedAt',
+      tagConfigs: 'id, userId, &[userId+name], color',
+      syncQueue: '++id, userId, tableName, action, recordId, timestamp',
+      ledgerTransactions: 'id, userId, amount, date, type, category, relatedEntityId, addedAt',
+      userProfiles: 'id, userId, tier, displayName, membershipRequestStatus, membershipRequestedAt',
       collections: 'id, userId, name, date, addedAt'
     });
 

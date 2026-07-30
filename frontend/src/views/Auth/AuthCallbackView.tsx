@@ -6,14 +6,17 @@ import {
   AUTH_ROUTES,
   buildLoginUrl,
   getAuthErrorMessage,
+  getAuthErrorTranslationKey,
   getAuthSuccessRedirectPath,
   readAuthCallbackParams,
 } from '../../services/authFlow';
 import { AuthShell } from './AuthShell';
+import { useLanguage } from '../../contexts/useLanguage';
 import './LoginView.css';
 
 export const AuthCallbackView: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
@@ -24,7 +27,8 @@ export const AuthCallbackView: React.FC = () => {
 
       if (errorDescription) {
         if (!cancelled) {
-          setErrorMsg(getAuthErrorMessage(errorDescription, 'callback', '认证回跳失败，请重新发起登录或密码重设流程。'));
+          const key = getAuthErrorTranslationKey(errorDescription, 'callback');
+          setErrorMsg(key ? t(key) : getAuthErrorMessage(errorDescription, 'callback', t('auth.callbackFallbackError'), t));
         }
         return;
       }
@@ -40,7 +44,8 @@ export const AuthCallbackView: React.FC = () => {
         }
       } catch (error) {
         if (!cancelled) {
-          setErrorMsg(getAuthErrorMessage(error, 'callback', '认证回跳失败，请重新发起登录或密码重设流程。'));
+          const key = getAuthErrorTranslationKey(error, 'callback');
+          setErrorMsg(key ? t(key) : getAuthErrorMessage(error, 'callback', t('auth.callbackFallbackError'), t));
         }
       }
     };
@@ -50,14 +55,14 @@ export const AuthCallbackView: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [navigate]);
+  }, [navigate, t]);
 
   return (
     <AuthShell
-      title="正在完成认证"
-      subtitle="请稍候，我们正在校验你的登录状态并跳转到下一步。"
+      title={t('auth.callbackTitle')}
+      subtitle={t('auth.callbackSubtitle')}
       backTo={AUTH_ROUTES.login}
-      backLabel="返回登录"
+      backLabel={t('auth.backToLogin')}
     >
       {errorMsg ? (
         <div className="auth-state-panel">
@@ -66,13 +71,13 @@ export const AuthCallbackView: React.FC = () => {
             <span>{errorMsg}</span>
           </div>
           <Link to={buildLoginUrl()} className="primary auth-state-cta">
-            返回登录页
+            {t('auth.backToLoginPage')}
           </Link>
         </div>
       ) : (
         <div className="auth-state-panel auth-processing-panel">
           <LoaderCircle size={24} className="auth-spinner" />
-          <p>正在处理认证回调，请不要关闭当前页面。</p>
+          <p>{t('auth.callbackProcessing')}</p>
         </div>
       )}
     </AuthShell>

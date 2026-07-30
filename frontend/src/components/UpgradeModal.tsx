@@ -5,6 +5,7 @@ import { db } from '../db/schema';
 import type { UserProfile } from '../db/schema';
 import { useAuth } from '../contexts/useAuth';
 import { useFeedback } from '../contexts/useFeedback';
+import { useLanguage } from '../contexts/useLanguage';
 import { useUserProfile } from '../hooks/useData';
 import {
   buildMembershipMailtoHref,
@@ -12,10 +13,10 @@ import {
   buildPendingMembershipProfile,
   copyTextToClipboard,
   formatMembershipRequestTime,
-  MEMBERSHIP_RESPONSE_EXPECTATION,
+  type MembershipRequestCopy,
   MEMBERSHIP_SUPPORT_EMAIL,
 } from '../services/membershipUpgrade';
-import { FREE_ACTIVE_ROLL_LIMIT, getActiveRollLimitLabel } from '../services/membershipPolicy';
+import { FREE_ACTIVE_ROLL_LIMIT } from '../services/membershipPolicy';
 import './UpgradeModal.css';
 
 interface UpgradeModalProps {
@@ -25,60 +26,6 @@ interface UpgradeModalProps {
   trigger?: 'roll-limit' | 'generic';
 }
 
-const FEATURES = [
-  {
-    label: '进行中胶卷记录',
-    free: getActiveRollLimitLabel('regular'),
-    vip: getActiveRollLimitLabel('vip'),
-    freeIcon: <Lock size={14} />,
-    vipIcon: <InfinityIcon size={14} />,
-    highlight: true,
-  },
-  {
-    label: '器材库',
-    free: '不限量',
-    vip: '不限量',
-    freeIcon: <Check size={14} />,
-    vipIcon: <Check size={14} />,
-  },
-  {
-    label: '财务记录 & 统计',
-    free: '完整',
-    vip: '完整',
-    freeIcon: <Check size={14} />,
-    vipIcon: <Check size={14} />,
-  },
-  {
-    label: 'Excel 导出',
-    free: '✓',
-    vip: '✓',
-    freeIcon: <Check size={14} />,
-    vipIcon: <Check size={14} />,
-  },
-  {
-    label: '数据云同步（多设备）',
-    free: '—',
-    vip: '可用',
-    freeIcon: <Lock size={14} />,
-    vipIcon: <RefreshCw size={14} />,
-    highlight: true,
-  },
-  {
-    label: '胶卷库存记录',
-    free: '不限量',
-    vip: '不限量',
-    freeIcon: <Check size={14} />,
-    vipIcon: <Check size={14} />,
-  },
-  {
-    label: '本地离线使用',
-    free: '✓',
-    vip: '✓',
-    freeIcon: <Check size={14} />,
-    vipIcon: <Check size={14} />,
-  },
-];
-
 export const UpgradeModal: React.FC<UpgradeModalProps> = ({
   isOpen,
   onClose,
@@ -86,6 +33,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
 }) => {
   const { user } = useAuth();
   const { notify } = useFeedback();
+  const { t, language } = useLanguage();
   const userProfile = useUserProfile();
 
   if (!isOpen) return null;
@@ -98,6 +46,8 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
       user={user}
       userProfile={userProfile}
       notify={notify}
+      t={t}
+      language={language}
     />
   );
 };
@@ -108,6 +58,8 @@ interface UpgradeModalContentProps {
   user: User | null;
   userProfile?: UserProfile;
   notify: ReturnType<typeof useFeedback>['notify'];
+  t: ReturnType<typeof useLanguage>['t'];
+  language: ReturnType<typeof useLanguage>['language'];
 }
 
 const UpgradeModalContent: React.FC<UpgradeModalContentProps> = ({
@@ -116,21 +68,93 @@ const UpgradeModalContent: React.FC<UpgradeModalContentProps> = ({
   user,
   userProfile,
   notify,
+  t,
+  language,
 }) => {
   const [contactEmail, setContactEmail] = useState(userProfile?.membershipContactEmail || user?.email || '');
   const [requestNote, setRequestNote] = useState(userProfile?.membershipRequestNote || '');
   const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
 
   const isRequestPending = userProfile?.membershipRequestStatus === 'pending';
-  const requestTimestampLabel = formatMembershipRequestTime(userProfile?.membershipRequestedAt);
+  const requestTimestampLabel = formatMembershipRequestTime(userProfile?.membershipRequestedAt, language);
+  const responseExpectation = t('upgrade.responseExpectation');
+  const membershipRequestCopy: MembershipRequestCopy = {
+    subject: t('upgrade.mailSubject'),
+    greeting: t('upgrade.mailGreeting'),
+    accountEmail: t('upgrade.mailAccountEmail'),
+    contactEmail: t('upgrade.mailContactEmail'),
+    userId: t('upgrade.mailUserId'),
+    trigger: t('upgrade.mailTrigger'),
+    note: t('upgrade.mailNote'),
+    noValue: t('upgrade.mailNoValue'),
+    notProvided: t('upgrade.mailNotProvided'),
+    rollLimitTrigger: t('upgrade.mailRollLimitTrigger'),
+    genericTrigger: t('upgrade.mailGenericTrigger'),
+    closing: t('upgrade.mailClosing'),
+  };
+  const features = [
+    {
+      label: t('upgrade.featureActiveRolls'),
+      free: t('upgrade.limitRegular', { limit: FREE_ACTIVE_ROLL_LIMIT }),
+      vip: t('upgrade.unlimited'),
+      freeIcon: <Lock size={14} />,
+      vipIcon: <InfinityIcon size={14} />,
+      highlight: true,
+      freeLocked: true,
+    },
+    {
+      label: t('upgrade.featureGear'),
+      free: t('upgrade.unlimited'),
+      vip: t('upgrade.unlimited'),
+      freeIcon: <Check size={14} />,
+      vipIcon: <Check size={14} />,
+    },
+    {
+      label: t('upgrade.featureFinanceStats'),
+      free: t('upgrade.complete'),
+      vip: t('upgrade.complete'),
+      freeIcon: <Check size={14} />,
+      vipIcon: <Check size={14} />,
+    },
+    {
+      label: t('upgrade.featureExcelExport'),
+      free: '✓',
+      vip: '✓',
+      freeIcon: <Check size={14} />,
+      vipIcon: <Check size={14} />,
+    },
+    {
+      label: t('upgrade.featureCloudSync'),
+      free: '—',
+      vip: t('upgrade.available'),
+      freeIcon: <Lock size={14} />,
+      vipIcon: <RefreshCw size={14} />,
+      highlight: true,
+      freeLocked: true,
+    },
+    {
+      label: t('upgrade.featureFilmStock'),
+      free: t('upgrade.unlimited'),
+      vip: t('upgrade.unlimited'),
+      freeIcon: <Check size={14} />,
+      vipIcon: <Check size={14} />,
+    },
+    {
+      label: t('upgrade.featureOffline'),
+      free: '✓',
+      vip: '✓',
+      freeIcon: <Check size={14} />,
+      vipIcon: <Check size={14} />,
+    },
+  ];
 
   const validateContactEmail = () => {
     const normalizedEmail = contactEmail.trim();
     if (!normalizedEmail || !normalizedEmail.includes('@')) {
       notify({
         type: 'error',
-        title: '请填写联系邮箱',
-        message: '用于人工开通确认的邮箱地址不能为空，并且需要包含 @。',
+        title: t('upgrade.emailRequiredTitle'),
+        message: t('upgrade.emailRequiredMessage'),
       });
       return null;
     }
@@ -141,8 +165,8 @@ const UpgradeModalContent: React.FC<UpgradeModalContentProps> = ({
     if (!user) {
       notify({
         type: 'error',
-        title: '账号信息不可用',
-        message: '当前无法读取登录用户信息，请重新登录后再试。',
+        title: t('upgrade.accountUnavailableTitle'),
+        message: t('upgrade.accountUnavailableMessage'),
       });
       return;
     }
@@ -150,7 +174,7 @@ const UpgradeModalContent: React.FC<UpgradeModalContentProps> = ({
     const normalizedEmail = validateContactEmail();
     if (!normalizedEmail) return;
 
-    const requestedAt = Date.now();
+    const requestedAt = new Date().getTime();
     const nextProfile = buildPendingMembershipProfile({
       existingProfile: userProfile,
       userId: user.id,
@@ -159,13 +183,16 @@ const UpgradeModalContent: React.FC<UpgradeModalContentProps> = ({
       trigger,
       requestedAt,
     });
-    const mailtoHref = buildMembershipMailtoHref({
-      userId: user.id,
-      accountEmail: user.email,
-      contactEmail: normalizedEmail,
-      note: requestNote,
-      trigger,
-    });
+    const mailtoHref = buildMembershipMailtoHref(
+      {
+        userId: user.id,
+        accountEmail: user.email,
+        contactEmail: normalizedEmail,
+        note: requestNote,
+        trigger,
+      },
+      membershipRequestCopy
+    );
 
     try {
       setIsSubmittingRequest(true);
@@ -173,14 +200,14 @@ const UpgradeModalContent: React.FC<UpgradeModalContentProps> = ({
       await db.userProfiles.put(nextProfile);
       notify({
         type: 'success',
-        title: '升级申请已记录',
-        message: `本机已保存你的升级申请状态，并尝试打开邮件草稿。我们通常会在 ${MEMBERSHIP_RESPONSE_EXPECTATION} 内人工确认。`,
+        title: t('upgrade.requestStoredTitle'),
+        message: t('upgrade.requestStoredMessage', { time: responseExpectation }),
       });
     } catch (error) {
       notify({
         type: 'error',
-        title: '记录申请失败',
-        message: error instanceof Error ? error.message : '请稍后重试。',
+        title: t('upgrade.requestFailedTitle'),
+        message: error instanceof Error ? error.message : t('upgrade.retryLater'),
       });
     } finally {
       setIsSubmittingRequest(false);
@@ -191,8 +218,8 @@ const UpgradeModalContent: React.FC<UpgradeModalContentProps> = ({
     if (!user) {
       notify({
         type: 'error',
-        title: '账号信息不可用',
-        message: '当前无法读取登录用户信息，请重新登录后再试。',
+        title: t('upgrade.accountUnavailableTitle'),
+        message: t('upgrade.accountUnavailableMessage'),
       });
       return;
     }
@@ -201,23 +228,26 @@ const UpgradeModalContent: React.FC<UpgradeModalContentProps> = ({
     if (!normalizedEmail) return;
 
     try {
-      await copyTextToClipboard(buildMembershipRequestMessage({
-        userId: user.id,
-        accountEmail: user.email,
-        contactEmail: normalizedEmail,
-        note: requestNote,
-        trigger,
-      }));
+      await copyTextToClipboard(buildMembershipRequestMessage(
+        {
+          userId: user.id,
+          accountEmail: user.email,
+          contactEmail: normalizedEmail,
+          note: requestNote,
+          trigger,
+        },
+        membershipRequestCopy
+      ));
       notify({
         type: 'success',
-        title: '申请内容已复制',
-        message: `你现在可以把申请内容发送到 ${MEMBERSHIP_SUPPORT_EMAIL}。`,
+        title: t('upgrade.copySuccessTitle'),
+        message: t('upgrade.copySuccessMessage', { email: MEMBERSHIP_SUPPORT_EMAIL }),
       });
     } catch (error) {
       notify({
         type: 'error',
-        title: '复制失败',
-        message: error instanceof Error ? error.message : '请手动复制后重试。',
+        title: t('upgrade.copyFailedTitle'),
+        message: error instanceof Error ? error.message : t('upgrade.copyRetryMessage'),
       });
     }
   };
@@ -238,13 +268,13 @@ const UpgradeModalContent: React.FC<UpgradeModalContentProps> = ({
           </div>
 	          {trigger === 'roll-limit' ? (
 	            <>
-	              <h2>已达到免费版上限</h2>
-	              <p>你已有 {FREE_ACTIVE_ROLL_LIMIT} 个进行中的胶卷记录。归档旧记录可释放名额，或升级 VIP 无限使用。</p>
+	              <h2>{t('upgrade.limitReachedTitle')}</h2>
+	              <p>{t('upgrade.limitReachedDesc', { limit: FREE_ACTIVE_ROLL_LIMIT })}</p>
 	            </>
 	          ) : (
 	            <>
-	              <h2>升级 Filmory VIP</h2>
-	              <p>解锁无限进行中胶卷记录，以及后续多设备云同步和云端图片能力。</p>
+	              <h2>{t('upgrade.genericTitle')}</h2>
+	              <p>{t('upgrade.genericDesc')}</p>
 	            </>
 	          )}
         </div>
@@ -252,35 +282,35 @@ const UpgradeModalContent: React.FC<UpgradeModalContentProps> = ({
         {/* Pricing */}
         <div className="upgrade-pricing-row">
           <div className="upgrade-plan free">
-            <span className="plan-name">免费版</span>
+            <span className="plan-name">{t('upgrade.freePlan')}</span>
             <span className="plan-price">¥0</span>
-            <span className="plan-cycle">永久</span>
+            <span className="plan-cycle">{t('upgrade.forever')}</span>
           </div>
           <div className="upgrade-plan vip">
-            <div className="plan-badge">推荐</div>
+            <div className="plan-badge">{t('upgrade.recommended')}</div>
             <span className="plan-name">VIP</span>
             <div className="plan-price-group">
               <span className="plan-price">¥68</span>
-              <span className="plan-cycle">/ 年</span>
+              <span className="plan-cycle">{t('upgrade.yearlyCycle')}</span>
             </div>
-            <span className="plan-unit">约 ¥5.7 / 月</span>
+            <span className="plan-unit">{t('upgrade.monthlyApprox')}</span>
           </div>
         </div>
 
         {/* Feature Table */}
         <div className="upgrade-feature-table">
           <div className="upgrade-feature-header">
-            <span>功能</span>
-            <span>免费</span>
+            <span>{t('upgrade.featureColumn')}</span>
+            <span>{t('upgrade.freeColumn')}</span>
             <span>VIP</span>
           </div>
-          {FEATURES.map(feature => (
+          {features.map(feature => (
             <div
               key={feature.label}
               className={`upgrade-feature-row ${feature.highlight ? 'highlight' : ''}`}
             >
               <span className="feature-label">{feature.label}</span>
-              <span className={`feature-cell free ${feature.highlight && feature.free !== '✓' && feature.free !== '完整' && feature.free !== '无限' ? 'locked' : ''}`}>
+              <span className={`feature-cell free ${feature.freeLocked ? 'locked' : ''}`}>
                 {feature.freeIcon}
                 {feature.free}
               </span>
@@ -294,30 +324,30 @@ const UpgradeModalContent: React.FC<UpgradeModalContentProps> = ({
 
         <div className="upgrade-request-panel">
           <div className="upgrade-request-header">
-            <h3>人工开通申请</h3>
+            <h3>{t('upgrade.manualRequestTitle')}</h3>
             <p>
-              当前版本尚未接入在线支付。你可以直接生成邮件草稿，我们会通过
+              {t('upgrade.manualRequestBeforeEmail')}
               {' '}
               <a href={`mailto:${MEMBERSHIP_SUPPORT_EMAIL}`}>{MEMBERSHIP_SUPPORT_EMAIL}</a>
               {' '}
-              在 {MEMBERSHIP_RESPONSE_EXPECTATION} 内人工确认。
+              {t('upgrade.manualRequestAfterEmail', { time: responseExpectation })}
             </p>
           </div>
 
           {isRequestPending && (
             <div className="upgrade-request-status">
-              <strong>当前设备已记录为申请中</strong>
+              <strong>{t('upgrade.pendingTitle')}</strong>
               <p>
-                {requestTimestampLabel ? `最近一次记录时间：${requestTimestampLabel}。` : ''}
-                {userProfile?.membershipContactEmail ? ` 联系邮箱：${userProfile.membershipContactEmail}。` : ''}
-                正式会员开通仍以人工确认结果为准。
+                {requestTimestampLabel ? t('upgrade.pendingTime', { time: requestTimestampLabel }) : ''}
+                {userProfile?.membershipContactEmail ? t('upgrade.pendingContact', { email: userProfile.membershipContactEmail }) : ''}
+                {t('upgrade.pendingDisclaimer')}
               </p>
             </div>
           )}
 
           <div className="upgrade-request-fields">
             <label className="upgrade-request-field">
-              <span>联系邮箱</span>
+              <span>{t('upgrade.contactEmail')}</span>
               <input
                 className="form-control"
                 type="email"
@@ -327,13 +357,13 @@ const UpgradeModalContent: React.FC<UpgradeModalContentProps> = ({
               />
             </label>
             <label className="upgrade-request-field">
-              <span>补充说明（可选）</span>
+              <span>{t('upgrade.noteLabel')}</span>
               <textarea
                 className="form-control upgrade-request-textarea"
                 rows={3}
                 value={requestNote}
                 onChange={event => setRequestNote(event.target.value)}
-                placeholder="例如：希望本周开通，用于整理当前进行中的拍摄项目。"
+                placeholder={t('upgrade.notePlaceholder')}
               />
             </label>
           </div>
@@ -347,7 +377,7 @@ const UpgradeModalContent: React.FC<UpgradeModalContentProps> = ({
             disabled={isSubmittingRequest}
           >
             <Zap size={16} />
-            {isRequestPending ? '重新打开申请邮件' : '打开邮件申请'}
+            {isRequestPending ? t('upgrade.reopenRequestEmail') : t('upgrade.openRequestEmail')}
           </button>
           <button
             className="secondary upgrade-secondary-btn"
@@ -355,10 +385,10 @@ const UpgradeModalContent: React.FC<UpgradeModalContentProps> = ({
             disabled={isSubmittingRequest}
           >
             <Check size={16} />
-            复制申请内容
+            {t('upgrade.copyRequest')}
           </button>
           <p className="upgrade-cta-note">
-            当前“申请中”状态只保存在这个浏览器里，用于避免重复填写；真正的会员开通仍以人工确认邮件为准。
+            {t('upgrade.localPendingNote')}
           </p>
         </div>
 

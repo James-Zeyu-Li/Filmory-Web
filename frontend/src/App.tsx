@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { DashboardView } from './views/Dashboard/DashboardView';
-import { PhotosView } from './views/Photos/PhotosView';
 import { RollsView } from './views/Rolls/RollsView';
 import { GearView } from './views/Gear/GearView';
 import { CompareView } from './views/Compare/CompareView';
@@ -158,7 +157,6 @@ function AppContent() {
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
             <Route path="/dashboard" element={<PageTransition disableMotion={disablePageTransition}><DashboardView enableFilmMode={enableFilmMode} onNavigate={(path, options) => navigate(`/${path}`, { state: options?.skipPageTransition ? { skipPageTransition: true } : undefined })} /></PageTransition>} />
-            <Route path="/photos" element={<PageTransition disableMotion={disablePageTransition}><PhotosView enableFilmMode={enableFilmMode} /></PageTransition>} />
             <Route path="/rolls" element={<PageTransition disableMotion={disablePageTransition}><RollsView enableFilmMode={enableFilmMode} /></PageTransition>} />
             <Route path="/gear" element={<PageTransition disableMotion={disablePageTransition}><GearView enableFilmMode={enableFilmMode} /></PageTransition>} />
             <Route path="/insights" element={<PageTransition disableMotion={disablePageTransition}><InsightsView enableFilmMode={enableFilmMode} /></PageTransition>} />

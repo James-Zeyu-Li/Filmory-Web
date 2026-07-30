@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useLanguage } from '../../contexts/useLanguage';
 
 interface AuthShellProps {
   title: string;
@@ -17,14 +18,16 @@ export const AuthShell: React.FC<AuthShellProps> = ({
   children,
   footer,
   backTo = '/',
-  backLabel = '主页',
+  backLabel,
 }) => {
+  const { t } = useLanguage();
+
   return (
     <div className="login-container">
       <div className="login-glass-card auth-glass-card">
         <Link to={backTo} className="auth-back-link">
           <ArrowLeft size={16} />
-          {backLabel}
+          {backLabel || t('auth.home')}
         </Link>
 
         <div className="login-header auth-header">

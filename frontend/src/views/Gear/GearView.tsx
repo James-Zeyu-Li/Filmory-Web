@@ -17,6 +17,7 @@ import { useConfirm } from '../../contexts/useConfirm';
 import { useFeedback } from '../../contexts/useFeedback';
 import { useCurrency } from '../../contexts/useCurrency';
 import { useTrialGate } from '../../contexts/useTrialGate';
+import { useLanguage } from '../../contexts/useLanguage';
 import { useCameraSystems, useCameras, useFilmBacks, useLenses, useFilmStocks, useOtherEquipments } from '../../hooks/useData';
 import { EmptyState } from '../../components/EmptyState';
 import { Modal } from '../../components/Modal';
@@ -75,6 +76,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
   const { notify } = useFeedback();
   const { currencySymbol } = useCurrency();
   const { guardTrialResource } = useTrialGate();
+  const { t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
   const initialSearchParams = new URLSearchParams(location.search);
@@ -230,8 +232,8 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
       console.error(err);
       notify({
         type: 'error',
-        title: '头像处理失败',
-        message: err instanceof Error ? err.message : '请稍后重试。'
+        title: t('gear.avatarProcessFailedTitle'),
+        message: err instanceof Error ? err.message : t('gear.retryLater')
       });
     } finally {
       setUploadingEntityId(null);
@@ -245,9 +247,9 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     label: string
   ) => {
     const confirmed = await confirm({
-      title: '移除器材封面',
-      message: `确认移除「${label}」的封面吗？这只会清空封面图片，不会删除器材记录。`,
-      confirmText: '移除封面'
+      title: t('gear.removeCoverTitle'),
+      message: t('gear.removeCoverConfirm', { name: label }),
+      confirmText: t('gear.removeCover')
     });
     if (!confirmed) return;
 
@@ -256,14 +258,14 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
       updateEditingAvatarState(id, type, null);
       notify({
         type: 'success',
-        title: '封面已移除',
-        message: '器材记录已恢复为默认占位图。'
+        title: t('gear.coverRemovedTitle'),
+        message: t('gear.coverRemovedMessage')
       });
     } catch (err) {
       notify({
         type: 'error',
-        title: '移除封面失败',
-        message: err instanceof Error ? err.message : '请稍后重试。'
+        title: t('gear.removeCoverFailedTitle'),
+        message: err instanceof Error ? err.message : t('gear.retryLater')
       });
     }
   };
@@ -327,7 +329,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
   const displayEquipments = filterAndSort(otherEquipments);
 
   const getCameraSystemName = (systemId?: string) => {
-    return cameraSystems.find(system => system.id === systemId)?.name || '未分配系统';
+    return cameraSystems.find(system => system.id === systemId)?.name || t('gear.unknownSystem');
   };
 
   const getFilmBacksForCamera = (camera: Camera) => {
@@ -345,15 +347,15 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     ? filmBacks.filter(back => back.cameraSystemId === activeCameraSystemId && back.status !== 'archived')
     : [];
 
-  const cameraTypeLabel = newCamera.type === 'digital' ? '数码相机' : '胶片相机';
+  const cameraTypeLabel = newCamera.type === 'digital' ? t('gear.digitalCamera') : t('gear.filmCamera');
   const availableCameraFormats = newCamera.type === 'digital'
     ? ['digital']
     : ['135', '120', 'largeFormat'];
   const cameraFormatLabels: Record<string, string> = {
     '135': '135',
     '120': '120',
-    digital: '数码',
-    largeFormat: '大画幅',
+    digital: t('gear.digital'),
+    largeFormat: t('gear.largeFormat'),
   };
   const cameraBrandOptions = Array.from(new Set(
     COMMON_CAMERAS
@@ -533,8 +535,8 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     ) {
       notify({
         type: 'error',
-        title: '请选择相机系统',
-        message: '使用已有 120 系统时，需要先选择一个系统来共享后背。'
+        title: t('gear.chooseCameraSystemTitle'),
+        message: t('gear.chooseCameraSystemMessage')
       });
       return;
     }
@@ -543,9 +545,9 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
       const exists = allCameras.find(camera => camera.name === newCamera.name);
       if (exists) {
         const confirmed = await confirm({
-          title: '相机已存在',
-          message: `仓库中已存在名为 "${newCamera.name}" 的相机。是否继续创建第二台？`,
-          confirmText: '继续创建'
+          title: t('gear.duplicateCameraTitle'),
+          message: t('gear.duplicateCameraMessage', { name: newCamera.name }),
+          confirmText: t('gear.continueCreate')
         });
         if (!confirmed) {
           return;
@@ -611,8 +613,9 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
         if (newCamera.purchasePrice && Number(newCamera.purchasePrice) > 0) {
           const amt = -Number(newCamera.purchasePrice);
+          const notes = t('gear.ledgerPurchaseCamera', { name: newCamera.name! });
           if (existingTx && existingTx.id) {
-            await db.ledgerTransactions.update(existingTx.id, { amount: amt, notes: `购入机身: ${newCamera.name}` });
+            await db.ledgerTransactions.update(existingTx.id, { amount: amt, notes });
           } else {
             await db.ledgerTransactions.add({
               id: crypto.randomUUID(),
@@ -622,7 +625,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
               type: 'expense',
               category: 'camera',
               relatedEntityId: editingCameraId,
-              notes: `购入机身: ${newCamera.name}`,
+              notes,
               addedAt: Date.now()
             });
           }
@@ -676,7 +679,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
             type: 'expense',
             category: 'camera',
             relatedEntityId: id,
-            notes: `购入机身: ${newCamera.name}`,
+            notes: t('gear.ledgerPurchaseCamera', { name: newCamera.name! }),
             addedAt: Date.now()
           });
         }
@@ -711,9 +714,9 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
       const exists = allLenses.find(lens => lens.name === newLens.name);
       if (exists) {
         const confirmed = await confirm({
-          title: '镜头已存在',
-          message: `仓库中已存在名为 "${newLens.name}" 的镜头。是否继续创建第二支？`,
-          confirmText: '继续创建'
+          title: t('gear.duplicateLensTitle'),
+          message: t('gear.duplicateLensMessage', { name: newLens.name }),
+          confirmText: t('gear.continueCreate')
         });
         if (!confirmed) {
           return;
@@ -742,8 +745,9 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
         if (newLens.purchasePrice && Number(newLens.purchasePrice) > 0) {
           const amt = -Number(newLens.purchasePrice);
+          const notes = t('gear.ledgerPurchaseLens', { name: newLens.name! });
           if (existingTx && existingTx.id) {
-            await db.ledgerTransactions.update(existingTx.id, { amount: amt, notes: `购入镜头: ${newLens.name}` });
+            await db.ledgerTransactions.update(existingTx.id, { amount: amt, notes });
           } else {
             await db.ledgerTransactions.add({
               id: crypto.randomUUID(),
@@ -753,7 +757,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
               type: 'expense',
               category: 'lens',
               relatedEntityId: editingLensId,
-              notes: `购入镜头: ${newLens.name}`,
+              notes,
               addedAt: Date.now()
             });
           }
@@ -783,7 +787,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
             type: 'expense',
             category: 'lens',
             relatedEntityId: id,
-            notes: `购入镜头: ${newLens.name}`,
+            notes: t('gear.ledgerPurchaseLens', { name: newLens.name! }),
             addedAt: Date.now()
           });
         }
@@ -817,9 +821,9 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
       const exists = filmStocks.find(film => film.brand === newFilm.brand && film.name === newFilm.name);
       if (exists) {
         const confirmed = await confirm({
-          title: '胶卷已存在',
-          message: `仓库中已存在型号为 "${newFilm.brand} ${newFilm.name}" 的胶卷。是否继续创建新的条目？\n\n提示：如果您只是想补充库存，可以直接在已有胶卷上点击"库存变动"来增加数量。`,
-          confirmText: '继续创建'
+          title: t('gear.duplicateFilmTitle'),
+          message: t('gear.duplicateFilmMessage', { name: `${newFilm.brand} ${newFilm.name}` }),
+          confirmText: t('gear.continueCreate')
         });
         if (!confirmed) {
           return;
@@ -852,8 +856,9 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
         if (stockCount > 0 && pricePerRoll && pricePerRoll > 0) {
           const amt = -(stockCount * pricePerRoll);
+          const notes = t('gear.ledgerPurchaseFilm', { name: `${newFilm.brand} ${newFilm.name}`, count: stockCount });
           if (existingTx && existingTx.id) {
-            await db.ledgerTransactions.update(existingTx.id, { amount: amt, notes: `购入胶片: ${newFilm.brand} ${newFilm.name} x${stockCount}` });
+            await db.ledgerTransactions.update(existingTx.id, { amount: amt, notes });
           } else {
             await db.ledgerTransactions.add({
               id: crypto.randomUUID(),
@@ -863,7 +868,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
               type: 'expense',
               category: 'film',
               relatedEntityId: editingFilmId,
-              notes: `购入胶片: ${newFilm.brand} ${newFilm.name} x${stockCount}`,
+              notes,
               addedAt: Date.now()
             });
           }
@@ -895,7 +900,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
             type: 'expense',
             category: 'film',
             relatedEntityId: id,
-            notes: `购入胶片: ${newFilm.brand} ${newFilm.name} x${stockCount}`,
+            notes: t('gear.ledgerPurchaseFilm', { name: `${newFilm.brand} ${newFilm.name}`, count: stockCount }),
             addedAt: Date.now()
           });
         }
@@ -927,9 +932,9 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
       const exists = otherEquipments.find(equipment => equipment.name === newEquipment.name);
       if (exists) {
         const confirmed = await confirm({
-          title: '器材已存在',
-          message: `仓库中已存在名为 "${newEquipment.name}" 的器材。是否继续创建新的条目？`,
-          confirmText: '继续创建'
+          title: t('gear.duplicateGearTitle'),
+          message: t('gear.duplicateGearMessage', { name: newEquipment.name }),
+          confirmText: t('gear.continueCreate')
         });
         if (!confirmed) {
           return;
@@ -963,11 +968,12 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
         if (newEquipment.purchasePrice && Number(newEquipment.purchasePrice) > 0) {
           const amt = -Number(newEquipment.purchasePrice);
+          const notes = t('gear.ledgerPurchaseAccessory', { name: newEquipment.name! });
           if (existingTx && existingTx.id) {
             await db.ledgerTransactions.update(existingTx.id, {
               amount: amt,
               category: catMap[newEquipment.type!] || 'other',
-              notes: `购入耗材/配件: ${newEquipment.name}`
+              notes
             });
           } else {
             await db.ledgerTransactions.add({
@@ -978,7 +984,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
               type: 'expense',
               category: catMap[newEquipment.type!] || 'other',
               relatedEntityId: editingEquipmentId,
-              notes: `购入耗材/配件: ${newEquipment.name}`,
+              notes,
               addedAt: Date.now()
             });
           }
@@ -1008,7 +1014,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
             type: 'expense',
             category: catMap[newEquipment.type!] || 'other',
             relatedEntityId: id,
-            notes: `购入耗材/配件: ${newEquipment.name}`,
+            notes: t('gear.ledgerPurchaseAccessory', { name: newEquipment.name! }),
             addedAt: Date.now()
           });
         }
@@ -1022,9 +1028,9 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
   const handleDeleteCamera = async (id: string) => {
     const confirmed = await confirm({
-      title: '删除相机',
-      message: '确认彻底删除这台相机吗？收支记录可能会受影响。\n提示：如果是卖出器材，建议使用归档功能。',
-      confirmText: '确认删除',
+      title: t('gear.deleteCameraTitle'),
+      message: t('gear.deleteCameraMessage'),
+      confirmText: t('gear.confirmDelete'),
       isDanger: true
     });
     if (confirmed) {
@@ -1034,9 +1040,9 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
   const handleDeleteLens = async (id: string) => {
     const confirmed = await confirm({
-      title: '删除镜头',
-      message: '确认彻底删除这支镜头吗？收支记录可能会受影响。',
-      confirmText: '确认删除',
+      title: t('gear.deleteLensTitle'),
+      message: t('gear.deleteLensMessage'),
+      confirmText: t('gear.confirmDelete'),
       isDanger: true
     });
     if (confirmed) {
@@ -1067,7 +1073,9 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
           type: 'income',
           category: type === 'camera' ? 'camera' : 'lens',
           relatedEntityId: id,
-          notes: `售出 ${type === 'camera' ? '机身' : '镜头'}: ${name}`,
+          notes: type === 'camera'
+            ? t('gear.ledgerSoldCamera', { name })
+            : t('gear.ledgerSoldLens', { name }),
           addedAt: Date.now()
         });
       }
@@ -1079,9 +1087,9 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
   const handleDeleteFilm = async (id: string) => {
     const confirmed = await confirm({
-      title: '删除胶卷',
-      message: '确认彻底删除这款胶卷吗？收支记录可能会受影响。',
-      confirmText: '确认删除',
+      title: t('gear.deleteFilmTitle'),
+      message: t('gear.deleteFilmMessage'),
+      confirmText: t('gear.confirmDelete'),
       isDanger: true
     });
     if (confirmed) {
@@ -1096,9 +1104,9 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
   const handleDeleteEquipment = async (id: string) => {
     const confirmed = await confirm({
-      title: '删除器材',
-      message: '确认彻底删除这个器材吗？收支记录可能会受影响。',
-      confirmText: '确认删除',
+      title: t('gear.deleteGearTitle'),
+      message: t('gear.deleteGearMessage'),
+      confirmText: t('gear.confirmDelete'),
       isDanger: true
     });
     if (confirmed) {
@@ -1159,15 +1167,15 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
       <div className="edit-avatar-panel">
         <div className="edit-avatar-preview" onClick={() => avatarFullUrl && setPreviewAvatarUrl(avatarFullUrl)}>
           {avatarFullUrl ? (
-            <img src={avatarFullUrl} alt={`${label} 封面`} />
+            <img src={avatarFullUrl} alt={label} />
           ) : (
             <div className="edit-avatar-placeholder">{placeholder}</div>
           )}
         </div>
         <div className="edit-avatar-content">
           <div>
-            <h4>器材封面</h4>
-            <p>{avatarFullUrl ? '当前记录已有自定义封面。' : '当前记录使用默认占位图。'}</p>
+            <h4>{t('gear.coverTitle')}</h4>
+            <p>{avatarFullUrl ? t('gear.coverCustom') : t('gear.coverDefault')}</p>
           </div>
           <div className="edit-avatar-actions">
             <button
@@ -1176,7 +1184,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
               onClick={() => triggerAvatarUpload(id, type)}
               disabled={uploadingEntityId === id}
             >
-              {uploadingEntityId === id ? '处理中...' : '更换封面'}
+              {uploadingEntityId === id ? t('common.loading') : t('gear.changeCover')}
             </button>
             {avatarFullUrl && (
               <button
@@ -1184,7 +1192,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                 className="danger"
                 onClick={() => handleRemoveAvatar(id, type, label)}
               >
-                移除封面
+                {t('gear.removeCover')}
               </button>
             )}
           </div>
@@ -1203,10 +1211,10 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
             </div>
             <div className="view-header-text-group">
               <h1>
-                {subTab === 'cameras' ? '相机设备' : subTab === 'lenses' ? '镜头' : subTab === 'filmStocks' ? '胶卷库存' : '其他器材'}
+                {subTab === 'cameras' ? t('gear.camerasTitle') : subTab === 'lenses' ? t('gear.lensesTitle') : subTab === 'filmStocks' ? t('gear.filmStocksTitle') : t('gear.otherTitle')}
               </h1>
               <p className="view-header-subtitle">
-                {subTab === 'cameras' ? '整理你正在使用和收藏的相机机身。' : subTab === 'lenses' ? '整理镜头焦段、光圈和使用情况。' : subTab === 'filmStocks' ? '查看手上还有哪些胶卷可拍。' : '整理三脚架、闪光灯和冲洗用品等辅助器材。'}
+                {subTab === 'cameras' ? t('gear.camerasSubtitle') : subTab === 'lenses' ? t('gear.lensesSubtitle') : subTab === 'filmStocks' ? t('gear.filmStocksSubtitle') : t('gear.otherSubtitle')}
               </p>
             </div>
           </motion.div>
@@ -1228,7 +1236,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
               setCameraModelSearch('');
               setIsCameraModalOpen(true);
             }}>
-              <Plus size={16} /> <span>添加相机</span>
+              <Plus size={16} /> <span>{t('gear.addCamera')}</span>
             </button>
           )}
           {subTab === 'lenses' && (
@@ -1246,7 +1254,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
               setLensModelSearch('');
               setIsLensModalOpen(true);
             }}>
-              <Plus size={16} /> <span>添加镜头</span>
+              <Plus size={16} /> <span>{t('gear.addLens')}</span>
             </button>
           )}
           {subTab === 'filmStocks' && enableFilmMode && (
@@ -1262,7 +1270,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
               setShowManualFilmForm(false);
               setIsFilmModalOpen(true);
             }}>
-              <Plus size={16} /> <span>添加胶卷</span>
+              <Plus size={16} /> <span>{t('gear.addFilmStock')}</span>
             </button>
           )}
           {subTab === 'otherEquipments' && (
@@ -1271,7 +1279,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
               setNewEquipment({ name: '', type: 'chemical', notes: '', purchaseDate: undefined, expiryDate: undefined });
               setIsEquipmentModalOpen(true);
             }}>
-              <Plus size={16} /> <span>添加器材</span>
+              <Plus size={16} /> <span>{t('gear.addGear')}</span>
             </button>
           )}
         </div>
@@ -1285,27 +1293,27 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
               onClick={() => setSubTab('cameras')}
               style={{ whiteSpace: 'nowrap', flex: '0 0 auto' }}
             >
-              <CameraIcon size={16} /> 相机库 ({cameras.length})
+              <CameraIcon size={16} /> {t('gear.camerasTab')} ({cameras.length})
             </button>
             <button
               className={`tab-btn ${subTab === 'lenses' ? 'active' : ''}`}
               onClick={() => setSubTab('lenses')}
             >
-              <Aperture size={16} /> 镜头库 ({lenses.length})
+              <Aperture size={16} /> {t('gear.lensesTab')} ({lenses.length})
             </button>
             {enableFilmMode && (
               <button
                 className={`tab-btn ${subTab === 'filmStocks' ? 'active' : ''}`}
                 onClick={() => setSubTab('filmStocks')}
               >
-                <Film size={16} /> 胶卷库 ({filmStocks.length})
+                <Film size={16} /> {t('gear.filmStocksTab')} ({filmStocks.length})
               </button>
             )}
             <button
               className={`tab-btn ${subTab === 'otherEquipments' ? 'active' : ''}`}
               onClick={() => setSubTab('otherEquipments')}
             >
-              <Package size={16} /> 附件耗材 ({otherEquipments.length})
+              <Package size={16} /> {t('gear.otherTab')} ({otherEquipments.length})
             </button>
           </div>
           <div className="rolls-toolbar-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center', flex: '1 1 auto', maxWidth: '100%', minWidth: '240px', justifyContent: 'flex-end' }}>
@@ -1323,7 +1331,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
               <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
               <input
                 type="text"
-                placeholder="全局搜索..."
+                placeholder={t('gear.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
@@ -1344,13 +1352,13 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                 onClick={() => setIsSortOpen(!isSortOpen)}
                 style={{ height: '36px', padding: '0 12px', display: 'flex', gap: '6px', alignItems: 'center', backgroundColor: 'transparent', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)' }}
               >
-                {sortBy === 'date' ? '按时间排序' : '按名称排序'}
+                {sortBy === 'date' ? t('gear.sortDate') : t('gear.sortName')}
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}><polyline points="6 9 12 15 18 9"></polyline></svg>
               </button>
               {isSortOpen && (
                 <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: '140px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '8px', zIndex: 100, boxShadow: '0 4px 20px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <div onClick={() => { setSortBy('date'); setIsSortOpen(false); }} style={{ padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', backgroundColor: sortBy === 'date' ? 'var(--accent-bg)' : 'transparent', color: sortBy === 'date' ? 'var(--accent)' : 'var(--text-primary)', fontSize: '13px' }}>按时间排序</div>
-                  <div onClick={() => { setSortBy('name'); setIsSortOpen(false); }} style={{ padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', backgroundColor: sortBy === 'name' ? 'var(--accent-bg)' : 'transparent', color: sortBy === 'name' ? 'var(--accent)' : 'var(--text-primary)', fontSize: '13px' }}>按名称排序</div>
+                  <div onClick={() => { setSortBy('date'); setIsSortOpen(false); }} style={{ padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', backgroundColor: sortBy === 'date' ? 'var(--accent-bg)' : 'transparent', color: sortBy === 'date' ? 'var(--accent)' : 'var(--text-primary)', fontSize: '13px' }}>{t('gear.sortDate')}</div>
+                  <div onClick={() => { setSortBy('name'); setIsSortOpen(false); }} style={{ padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', backgroundColor: sortBy === 'name' ? 'var(--accent-bg)' : 'transparent', color: sortBy === 'name' ? 'var(--accent)' : 'var(--text-primary)', fontSize: '13px' }}>{t('gear.sortName')}</div>
                 </div>
               )}
             </div>
@@ -1371,8 +1379,8 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
               <div style={{ height: '50vh', gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
                 <EmptyState
                   icon={CameraIcon}
-                  title="记录您的专属测光伙伴"
-                  description="工欲善其事，必先利其器。把你心爱的主力机身录入进来，开启属于你的光影之旅。"
+                  title={t('gear.noCameraTitle')}
+                  description={t('gear.noCameraDesc')}
                   action={<button className="primary" onClick={() => {
                     setEditingCameraId(null);
                     setNewCamera({ name: '', type: 'film', format: '135', purchasePrice: undefined });
@@ -1386,15 +1394,15 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                     setCameraBrandSearch('');
                     setCameraModelSearch('');
                     setIsCameraModalOpen(true);
-                  }}><Plus size={16} /> 添加相机</button>}
+                  }}><Plus size={16} /> {t('gear.addCamera')}</button>}
                 />
               </div>
             ) : displayCameras.length === 0 ? (
               <div style={{ height: '50vh', gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
                 <EmptyState
                   icon={CameraIcon}
-                  title="未找到匹配的相机"
-                  description="尝试清除搜索条件或换个关键词试试。"
+                  title={t('gear.noCameraMatch')}
+                  description={t('gear.noMatchDesc')}
                 />
               </div>
             ) : (
@@ -1410,7 +1418,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                           alt={camera.name}
                           className="camera-avatar-img"
                           onClick={(e) => { e.stopPropagation(); setPreviewAvatarUrl(avatarFullUrl); }}
-                          title="点击预览大图"
+                          title={t('gear.previewCover')}
                         />
                       ) : (
                         <div className="camera-avatar-placeholder">
@@ -1424,7 +1432,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                         className="camera-avatar-upload-overlay"
                         onClick={(e) => { e.stopPropagation(); triggerAvatarUpload(camera.id!, 'cameras'); }}
                         disabled={uploadingEntityId === camera.id}
-                        title="上传相机封面"
+                        title={t('gear.uploadCameraCover')}
                       >
                         {uploadingEntityId === camera.id ? (
                           <span className="avatar-loading-spinner" />
@@ -1436,17 +1444,17 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
                     <div className="camera-card-content">
                       <div className="gear-card-header">
-                        <span className={`tag ${camera.type}`}>{camera.type === 'film' ? '胶片' : '数码'}</span>
+                        <span className={`tag ${camera.type}`}>{camera.type === 'film' ? t('gear.film') : t('gear.digital')}</span>
                         <div style={{ display: 'flex', gap: '4px' }}>
-                          <IconButton variant="success" icon={<Archive size={16} />} title="售出/归档" onClick={(e) => { e.stopPropagation(); setArchiveTarget({ id: camera.id!, type: 'camera', name: camera.name }); }} />
-                          <IconButton variant="danger" icon={<Trash2 size={16} />} title="彻底删除" onClick={(e) => { e.stopPropagation(); handleDeleteCamera(camera.id!); }} />
+                          <IconButton variant="success" icon={<Archive size={16} />} title={t('gear.sellArchive')} onClick={(e) => { e.stopPropagation(); setArchiveTarget({ id: camera.id!, type: 'camera', name: camera.name }); }} />
+                          <IconButton variant="danger" icon={<Trash2 size={16} />} title={t('gear.deletePermanently')} onClick={(e) => { e.stopPropagation(); handleDeleteCamera(camera.id!); }} />
                         </div>
                       </div>
                       <h3>{camera.name}</h3>
                       <div className="gear-details">
-                        <div><strong>画幅：</strong>{camera.format}</div>
+                        <div><strong>{t('gear.format')}:</strong> {camera.format}</div>
                         {camera.format === '120' && (
-                          <div><strong>后背：</strong>{camera.backType === 'interchangeable' ? `${getFilmBacksForCamera(camera).length} 个 · ${getCameraSystemName(camera.cameraSystemId)}` : '固定后背'}</div>
+                          <div><strong>{t('gear.back')}:</strong> {camera.backType === 'interchangeable' ? `${getFilmBacksForCamera(camera).length} ${t('common.backUnit')} · ${getCameraSystemName(camera.cameraSystemId)}` : t('gear.fixedBack')}</div>
                         )}
                       </div>
                     </div>
@@ -1464,8 +1472,8 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
               <div style={{ height: '50vh', gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
                 <EmptyState
                   icon={SlidersHorizontal}
-                  title="不同的视角，不同的世界"
-                  description="无论是 35mm 的街头纪实还是 85mm 的人像特写，在这里建立您的专属镜头矩阵。"
+                  title={t('gear.noLensTitle')}
+                  description={t('gear.noLensDesc')}
                   action={<button className="primary" onClick={() => {
                     setEditingLensId(null);
                     setNewLens({ name: '', focalLength: 50, maxAperture: 'f/1.8', type: 'prime' });
@@ -1479,15 +1487,15 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                     setLensBrandSearch('');
                     setLensModelSearch('');
                     setIsLensModalOpen(true);
-                  }}><Plus size={16} /> 添加镜头</button>}
+                  }}><Plus size={16} /> {t('gear.addLens')}</button>}
                 />
               </div>
             ) : displayLenses.length === 0 ? (
               <div style={{ height: '50vh', gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
                 <EmptyState
                   icon={SlidersHorizontal}
-                  title="未找到匹配的镜头"
-                  description="尝试清除搜索条件或换个关键词试试。"
+                  title={t('gear.noLensMatch')}
+                  description={t('gear.noMatchDesc')}
                 />
               </div>
             ) : (
@@ -1500,7 +1508,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                         alt={lens.name}
                         className="camera-avatar-img"
                         onClick={(e) => { e.stopPropagation(); setPreviewAvatarUrl(getAvatarFullUrl(lens.avatarUrl)!); }}
-                        title="点击预览大图"
+                        title={t('gear.previewCover')}
                         style={{ objectFit: 'cover' }}
                       />
                     ) : (
@@ -1514,7 +1522,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                       className="camera-avatar-upload-overlay"
                       onClick={(e) => { e.stopPropagation(); triggerAvatarUpload(lens.id!, 'lenses'); }}
                       disabled={uploadingEntityId === lens.id}
-                      title="上传镜头封面"
+                      title={t('gear.uploadLensCover')}
                     >
                       {uploadingEntityId === lens.id ? (
                         <span className="avatar-loading-spinner" />
@@ -1526,17 +1534,17 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                   <div className="lens-card-content">
                     <div className="gear-card-header">
                       <span className={`tag lens-${lens.type || 'prime'}`}>
-                        {lens.type === 'prime' ? '定焦' : '变焦'}
+                        {lens.type === 'prime' ? t('gear.prime') : t('gear.zoom')}
                       </span>
                       <div style={{ display: 'flex', gap: '4px' }}>
-                        <IconButton variant="success" icon={<Archive size={16} />} title="售出/归档" onClick={(e) => { e.stopPropagation(); setArchiveTarget({ id: lens.id!, type: 'lens', name: lens.name }); }} />
-                        <IconButton variant="danger" icon={<Trash2 size={16} />} title="彻底删除" onClick={(e) => { e.stopPropagation(); handleDeleteLens(lens.id!); }} />
+                        <IconButton variant="success" icon={<Archive size={16} />} title={t('gear.sellArchive')} onClick={(e) => { e.stopPropagation(); setArchiveTarget({ id: lens.id!, type: 'lens', name: lens.name }); }} />
+                        <IconButton variant="danger" icon={<Trash2 size={16} />} title={t('gear.deletePermanently')} onClick={(e) => { e.stopPropagation(); handleDeleteLens(lens.id!); }} />
                       </div>
                     </div>
                     <h3>{lens.name}</h3>
                     <div className="gear-details">
-                      <div><strong>焦段：</strong>{lens.focalLength}mm</div>
-                      <div><strong>最大光圈：</strong>{lens.maxAperture}</div>
+                      <div><strong>{t('gear.focalLength')}:</strong> {lens.focalLength}mm</div>
+                      <div><strong>{t('gear.maxAperture')}:</strong> {lens.maxAperture}</div>
                     </div>
                   </div>
                 </div>
@@ -1552,8 +1560,8 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
               <div style={{ height: '50vh', gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
                 <EmptyState
                   icon={Film}
-                  title="记录您的每一卷胶片"
-                  description="将您购买的胶片录入库存，Filmory 会为您追踪库存数量与消耗情况。"
+                  title={t('gear.noFilmTitle')}
+                  description={t('gear.noFilmDesc')}
                   action={<button className="primary" onClick={() => {
                     setEditingFilmId(null);
                     setNewFilm({ brand: '', name: '', iso: 400, colorType: 'color', format: '135', stockCount: 0 });
@@ -1565,15 +1573,15 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                     setFilmModelSearch('');
                     setShowManualFilmForm(false);
                     setIsFilmModalOpen(true);
-                  }}><Plus size={16} /> 添加胶卷</button>}
+                  }}><Plus size={16} /> {t('gear.addFilmStock')}</button>}
                 />
               </div>
             ) : displayFilms.length === 0 ? (
               <div style={{ height: '50vh', gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
                 <EmptyState
                   icon={Film}
-                  title="未找到匹配的胶卷"
-                  description="尝试清除搜索条件或换个关键词试试。"
+                  title={t('gear.noFilmMatch')}
+                  description={t('gear.noMatchDesc')}
                 />
               </div>
             ) : (
@@ -1586,7 +1594,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                         alt={film.name}
                         className="camera-avatar-img"
                         onClick={(e) => { e.stopPropagation(); setPreviewAvatarUrl(getAvatarFullUrl(film.avatarUrl)!); }}
-                        title="点击预览大图"
+                        title={t('gear.previewCover')}
                         style={{ objectFit: 'cover' }}
                       />
                     ) : (
@@ -1600,7 +1608,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                       className="camera-avatar-upload-overlay"
                       onClick={(e) => { e.stopPropagation(); triggerAvatarUpload(film.id!, 'filmStocks'); }}
                       disabled={uploadingEntityId === film.id}
-                      title="上传胶卷封面"
+                      title={t('gear.uploadFilmCover')}
                     >
                       {uploadingEntityId === film.id ? (
                         <span className="avatar-loading-spinner" />
@@ -1612,27 +1620,27 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                   <div className="lens-card-content">
                     <div className="gear-card-header">
                       <span className={`tag ${film.colorType === 'color' ? 'color' : 'bw'}`}>
-                        {film.colorType === 'color' ? '彩色' : '黑白'}
+                        {film.colorType === 'color' ? t('gear.color') : t('gear.bw')}
                       </span>
                       <div style={{ display: 'flex', gap: '4px' }}>
-                        <IconButton variant="danger" icon={<Trash2 size={16} />} title="彻底删除" onClick={(e) => { e.stopPropagation(); handleDeleteFilm(film.id!); }} />
+                        <IconButton variant="danger" icon={<Trash2 size={16} />} title={t('gear.deletePermanently')} onClick={(e) => { e.stopPropagation(); handleDeleteFilm(film.id!); }} />
                       </div>
                     </div>
                     <h3 style={{ margin: '4px 0' }}>{film.brand} {film.name}</h3>
                     <div className="gear-details" style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderTop: 'none', paddingTop: '0', marginTop: '0' }}>
                       <div style={{ display: 'flex', gap: '16px', fontSize: '12px' }}>
                         <div><strong>ISO：</strong>{film.iso}</div>
-                        <div><strong>画幅：</strong>{film.format}</div>
+                        <div><strong>{t('gear.format')}:</strong> {film.format}</div>
                       </div>
                       <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                         <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                          <strong>库存数量：</strong>{film.stockCount || 0} 卷
+                          <strong>{t('gear.stockCount')}:</strong> {t('gear.rollsInStock', { count: film.stockCount || 0 })}
                         </span>
                         <div style={{ display: 'flex', gap: '6px' }}>
                           <button
                             className="secondary"
                             style={{ padding: '2px 8px', fontSize: '11px', minWidth: '22px', height: '22px', width: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            title="减少库存"
+                            title={t('gear.decreaseStock')}
                             onClick={() => handleUpdateStock(film.id!, film.stockCount || 0, -1)}
                           >
                             -
@@ -1640,7 +1648,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                           <button
                             className="secondary"
                             style={{ padding: '2px 8px', fontSize: '11px', minWidth: '22px', height: '22px', width: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            title="增加库存"
+                            title={t('gear.increaseStock')}
                             onClick={() => handleUpdateStock(film.id!, film.stockCount || 0, 1)}
                           >
                             +
@@ -1659,24 +1667,24 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
         {subTab === 'otherEquipments' && (
           <>
             <div className="gear-context-note">
-              120 后背/片盒属于相机系统，会影响正在进行的卷和装片统计；请在相机库的 120 可换后背机身中管理。这里仅记录药水、三脚架、清洁工具等附件耗材。
+              {t('gear.otherContextNote')}
             </div>
             <div className="grid-layout">
               {otherEquipments.length === 0 ? (
                 <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
                   <EmptyState
                     icon={SlidersHorizontal}
-                    title="整理摄影附件周边"
-                    description="从暗房药水到三脚架，全面管理您的摄影耗材。120 后背请在相机系统中管理。"
-                    action={<button className="primary" onClick={() => { setEditingEquipmentId(null); setIsEquipmentModalOpen(true); }}><Plus size={16} /> 登记附件</button>}
+                    title={t('gear.noOtherTitle')}
+                    description={t('gear.noOtherDesc')}
+                    action={<button className="primary" onClick={() => { setEditingEquipmentId(null); setIsEquipmentModalOpen(true); }}><Plus size={16} /> {t('gear.registerAccessory')}</button>}
                   />
                 </div>
               ) : displayEquipments.length === 0 ? (
                 <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
                   <EmptyState
                     icon={SlidersHorizontal}
-                    title="未找到匹配的附件"
-                    description="尝试清除搜索条件或换个关键词试试。"
+                    title={t('gear.noOtherMatch')}
+                    description={t('gear.noMatchDesc')}
                   />
                 </div>
               ) : (
@@ -1686,26 +1694,26 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                     <div key={eq.id} className={`gear-card equipment-card ${isExpired ? 'expired-alert' : ''}`} onClick={() => openEditEquipment(eq)} style={{ cursor: 'pointer' }}>
                       <div className="gear-card-header">
                         <span className={`tag eq-${eq.type}`}>
-                          {eq.type === 'chemical' ? '药水' :
-                           eq.type === 'tripod' ? '三脚架' :
-                           eq.type === 'cleaner' ? '清洁工具' : '其它'}
+                          {eq.type === 'chemical' ? t('gear.chemical') :
+                           eq.type === 'tripod' ? t('gear.tripod') :
+                           eq.type === 'cleaner' ? t('gear.cleaner') : t('gear.otherType')}
                         </span>
-                        {isExpired && <span className="tag expired-tag">已过期</span>}
+                        {isExpired && <span className="tag expired-tag">{t('gear.expired')}</span>}
                         <div style={{ display: 'flex', gap: '4px' }}>
-                          <IconButton variant="danger" icon={<Trash2 size={16} />} title="彻底删除" onClick={(e) => { e.stopPropagation(); handleDeleteEquipment(eq.id!); }} />
+                          <IconButton variant="danger" icon={<Trash2 size={16} />} title={t('gear.deletePermanently')} onClick={(e) => { e.stopPropagation(); handleDeleteEquipment(eq.id!); }} />
                         </div>
                       </div>
                       <h3>{eq.name}</h3>
                       <div className="gear-details">
                         {eq.purchaseDate && (
-                          <div><strong>购买日期：</strong>{new Date(eq.purchaseDate).toLocaleDateString()}</div>
+                          <div><strong>{t('gear.purchaseDate')}:</strong> {new Date(eq.purchaseDate).toLocaleDateString()}</div>
                         )}
                         {eq.type === 'chemical' && eq.expiryDate && (
                           <div className={isExpired ? 'expired-text' : ''}>
-                            <strong>过期日期：</strong>{new Date(eq.expiryDate).toLocaleDateString()}
+                            <strong>{t('gear.expiryDate')}:</strong> {new Date(eq.expiryDate).toLocaleDateString()}
                           </div>
                         )}
-                        {eq.notes && <div><strong>备注：</strong>{eq.notes}</div>}
+                        {eq.notes && <div><strong>{t('gear.notes')}:</strong> {eq.notes}</div>}
                       </div>
                     </div>
                   );
@@ -1720,14 +1728,14 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
       {/* --- MODALS --- */}
       <Modal isOpen={isCameraModalOpen} onClose={() => setIsCameraModalOpen(false)}>
-        <h3>{editingCameraId ? '编辑相机' : '添加相机'}</h3>
+        <h3>{editingCameraId ? t('gear.editCamera') : t('gear.addCamera')}</h3>
         <form className="gear-modal-form" onSubmit={handleSaveCamera}>
           {!editingCameraId && (
             <div className="gear-preset-panel camera-builder-panel">
               <div className="builder-panel-heading">
                 <div>
-                  <strong>快速添加相机</strong>
-                  <p>先选类型和画幅，再选品牌与型号；名称会自动填入，下方仍可继续补版本、颜色或昵称。</p>
+                  <strong>{t('gear.quickAddCameraTitle')}</strong>
+                  <p>{t('gear.quickAddCameraHelp')}</p>
                 </div>
                 <span className="builder-status-pill">{cameraTypeLabel} · {cameraFormatLabels[newCamera.format || '135'] || newCamera.format}</span>
               </div>
@@ -1746,17 +1754,17 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                       setCameraModelSearch('');
                     }}
                   >
-                    重新选择相机
+                    {t('gear.reselectCamera')}
                   </button>
                 </div>
               ) : (
                 <>
                   <div className="builder-step">
-                    <div className="builder-step-label">1. 相机类型</div>
+                    <div className="builder-step-label">1. {t('gear.cameraType')}</div>
                     <div className="preset-chip-grid">
                       {[
-                        { value: 'film' as const, label: '胶片相机' },
-                        { value: 'digital' as const, label: '数码相机' },
+                        { value: 'film' as const, label: t('gear.filmCamera') },
+                        { value: 'digital' as const, label: t('gear.digitalCamera') },
                       ].map(option => (
                         <button
                           key={option.value}
@@ -1785,7 +1793,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                   </div>
 
                   <div className="builder-step">
-                    <div className="builder-step-label">2. 画幅格式</div>
+                    <div className="builder-step-label">2. {t('gear.formatStep')}</div>
                     <div className="preset-chip-grid">
                       {availableCameraFormats.map(format => (
                         <button
@@ -1813,7 +1821,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                   </div>
 
                   <div className="builder-step">
-                    <div className="builder-step-label">3. 推荐品牌 ({cameraBrandOptions.length})</div>
+                    <div className="builder-step-label">3. {t('gear.recommendedBrand', { count: cameraBrandOptions.length })}</div>
                     {selectedCameraBrand ? (
                       <div className="selected-builder-summary">
                         <span>{selectedCameraBrand}</span>
@@ -1827,7 +1835,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                         setCameraModelSearch('');
                       }}
                     >
-                      更换品牌
+                      {t('gear.changeBrand')}
                     </button>
                   </div>
                     ) : (
@@ -1836,7 +1844,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                           <input
                             type="text"
                             className="form-control builder-option-search"
-                            placeholder="搜索品牌，例如 Hasselblad / Nikon"
+                            placeholder={t('gear.searchCameraBrand')}
                             value={cameraBrandSearch}
                             onChange={e => setCameraBrandSearch(e.target.value)}
                           />
@@ -1860,7 +1868,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                         </button>
                           ))}
                           {visibleCameraBrandOptions.length === 0 && (
-                            <span className="gear-preset-empty">没有匹配品牌。可以直接在下方手动输入。</span>
+                            <span className="gear-preset-empty">{t('gear.noBrandMatch')}</span>
                           )}
                         </div>
                       </>
@@ -1869,12 +1877,12 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
 	                  {selectedCameraBrand && (
 	                    <div className="builder-step">
-	                      <div className="builder-step-label">4. 选择推荐型号 ({cameraModelOptions.length})</div>
+	                      <div className="builder-step-label">4. {t('gear.selectRecommendedModel', { count: cameraModelOptions.length })}</div>
 	                      {cameraModelOptions.length > 8 && (
 	                        <input
 	                          type="text"
 	                          className="form-control builder-option-search"
-	                          placeholder={`筛选 ${selectedCameraBrand} 推荐型号，不会保存输入`}
+	                          placeholder={t('gear.searchCameraModel', { brand: selectedCameraBrand })}
 	                          value={cameraModelSearch}
 	                          onChange={e => setCameraModelSearch(e.target.value)}
 	                        />
@@ -1888,16 +1896,16 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                             onClick={() => applyCameraPreset(preset)}
                           >
                             {preset.model}
-                            {preset.backType === 'interchangeable' ? ' · 可换后背' : ''}
+                            {preset.backType === 'interchangeable' ? ` · ${t('gear.interchangeableBack')}` : ''}
                           </button>
 	                        ))}
 	                        {visibleCameraModelOptions.length === 0 && (
-	                          <span className="gear-preset-empty">没有匹配型号。请在下方“相机名称”填写。</span>
+	                          <span className="gear-preset-empty">{t('gear.noCameraModelMatch')}</span>
 	                        )}
 	                      </div>
 	                    </div>
 	                  )}
-	                  <div className="film-back-empty">推荐型号只是快速填入；没有对应型号时，直接在下方填写相机名称。</div>
+	                  <div className="film-back-empty">{t('gear.cameraPresetHelp')}</div>
                 </>
               )}
             </div>
@@ -1906,15 +1914,15 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
             editingCameraId,
             'cameras',
             newCamera.avatarUrl,
-            newCamera.name || '相机',
+            newCamera.name || t('gear.addCamera'),
             getPlaceholderText(newCamera.name || 'Camera')
           )}
           <div className="form-group">
-            <label>相机名称</label>
+            <label>{t('gear.cameraName')}</label>
             <input
               type="text"
               className="form-control"
-              placeholder="例如: Minolta X-700"
+              placeholder={t('gear.cameraNamePlaceholder')}
               value={newCamera.name}
               onChange={e => {
                 setNewCamera({...newCamera, name: e.target.value});
@@ -1928,7 +1936,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
           {editingCameraId && (
             <>
               <div className="form-group">
-                <label>相机类型</label>
+                <label>{t('gear.cameraType')}</label>
                 <select
                   className="form-control"
                   value={newCamera.type}
@@ -1945,12 +1953,12 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                   }}
                   onKeyDown={handleKeyDown}
                 >
-                  <option value="film">胶片相机</option>
-                  <option value="digital">数码相机</option>
+                  <option value="film">{t('gear.filmCamera')}</option>
+                  <option value="digital">{t('gear.digitalCamera')}</option>
                 </select>
               </div>
               <div className="form-group">
-                <label>画幅格式</label>
+                <label>{t('gear.formatStep')}</label>
                 <select
                   className="form-control"
                   value={newCamera.format}
@@ -1967,10 +1975,10 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                   }}
                   onKeyDown={handleKeyDown}
                 >
-                  <option value="135">135 画幅</option>
-                  <option value="120">120 画幅</option>
-                  <option value="largeFormat">大画幅</option>
-                  <option value="digital">数码全画幅/残幅</option>
+                  <option value="135">{t('gear.format135')}</option>
+                  <option value="120">{t('gear.format120')}</option>
+                  <option value="largeFormat">{t('gear.largeFormat')}</option>
+                  <option value="digital">{t('gear.digitalFormat')}</option>
                 </select>
               </div>
             </>
@@ -1978,7 +1986,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
           {newCamera.format === '120' && (
             <div className="form-group">
-              <label>120 后背模式</label>
+              <label>{t('gear.backMode')}</label>
               <select
                 className="form-control"
                 value={newCamera.backType || 'fixed'}
@@ -1987,8 +1995,8 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                   backType: e.target.value as 'fixed' | 'interchangeable'
                 })}
               >
-                <option value="fixed">固定/非可换后背</option>
-                <option value="interchangeable">可换后背/片盒</option>
+                <option value="fixed">{t('gear.fixedBackOption')}</option>
+                <option value="interchangeable">{t('gear.interchangeableBackOption')}</option>
               </select>
             </div>
           )}
@@ -1996,11 +2004,11 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
           {newCamera.format === '120' && newCamera.backType === 'interchangeable' && (
             <div className="form-group">
               <div className="camera-system-guide">
-                <strong>可换后背怎么记录？</strong>
-                <p>同一套 120 系统下的多台机身会共享后背。新系统用于第一台机身；如果已经有同系统机身，就从已拥有系统中选择。</p>
+                <strong>{t('gear.backGuideTitle')}</strong>
+                <p>{t('gear.backGuideDesc')}</p>
               </div>
 
-              <label>1. 选择相机系统</label>
+              <label>{t('gear.chooseCameraSystem')}</label>
               {!editingCameraId && cameraSystems.length > 0 && (
                 <div className="camera-system-mode-toggle">
                   <button
@@ -2012,7 +2020,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                       setCameraBackNames(prev => prev.length > 0 ? prev : ['Back 1']);
                     }}
                   >
-                    新建一套系统
+                    {t('gear.newSystem')}
                   </button>
                   <button
                     type="button"
@@ -2022,7 +2030,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                       setCameraBackNames([]);
                     }}
                   >
-                    从已拥有系统中选择
+                    {t('gear.existingSystem')}
                   </button>
                 </div>
               )}
@@ -2046,7 +2054,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="例如: Hasselblad V / Mamiya RB67"
+                    placeholder={t('gear.cameraSystemPlaceholder')}
                     value={cameraSystemName}
                     onChange={e => setCameraSystemName(e.target.value)}
                     disabled={Boolean(editingCameraId && newCamera.cameraSystemId)}
@@ -2058,7 +2066,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                   value={selectedExistingCameraSystemId}
                   onChange={e => setSelectedExistingCameraSystemId(e.target.value)}
                 >
-                  <option value="">选择已有系统</option>
+                  <option value="">{t('gear.selectExistingSystem')}</option>
                   {cameraSystems.map(system => (
                     <option key={system.id} value={system.id}>
                       {system.name}
@@ -2072,18 +2080,18 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                   {cameraSystemMode === 'existing' && selectedExistingCameraSystemId && (
                     <div className="film-back-list">
                       {activeSystemFilmBacks.length === 0 ? (
-                        <div className="film-back-empty">这个系统还没有后背。</div>
+                        <div className="film-back-empty">{t('gear.noBacksInSystem')}</div>
                       ) : (
                         activeSystemFilmBacks.map(back => (
                           <div key={back.id} className="film-back-row">
                             <span>{back.name}</span>
-                            <small>已存在</small>
+                            <small>{t('gear.existing')}</small>
                           </div>
                         ))
                       )}
                     </div>
                   )}
-                  <label>2. 后背/片盒</label>
+                  <label>{t('gear.filmBackStep')}</label>
                   {cameraSystemMode === 'new' && (
                     <div className="preset-chip-grid">
                       {COMMON_FILM_BACK_NAMES.map(name => (
@@ -2103,7 +2111,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                       <div key={`${name}-${index}`} className="film-back-row">
                         <span>{name}</span>
                         <button type="button" className="secondary btn-sm" onClick={() => handleRemoveDraftFilmBack(index)}>
-                          移除
+                          {t('gear.remove')}
                         </button>
                       </div>
                     ))}
@@ -2112,13 +2120,13 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                     <input
                       type="text"
                       className="form-control"
-                      placeholder="例如: A12 Back"
+                      placeholder={t('gear.filmBackPlaceholder')}
                       value={newFilmBackName}
                       onChange={e => setNewFilmBackName(e.target.value)}
                     />
-                    <button type="button" className="secondary" onClick={handleAddFilmBack}>+ 添加自定义后背</button>
+                    <button type="button" className="secondary" onClick={handleAddFilmBack}>{t('gear.addCustomBack')}</button>
                   </div>
-                  <div className="film-back-empty">不新增也可以；如果使用已有系统，会直接共享该系统现有后背。</div>
+                  <div className="film-back-empty">{t('gear.backShareHint')}</div>
                 </div>
               )}
               {editingCameraId && newCamera.cameraSystemId && (
@@ -2129,7 +2137,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                         <div key={back.id} className="film-back-row">
                           <span>{back.name}</span>
                           <button type="button" className="secondary btn-sm" onClick={() => handleArchiveFilmBack(back.id!)}>
-                            移除
+                            {t('gear.remove')}
                           </button>
                         </div>
                       ))}
@@ -2138,11 +2146,11 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                     <input
                       type="text"
                       className="form-control"
-                      placeholder="新增后背名称"
+                      placeholder={t('gear.newBackName')}
                       value={newFilmBackName}
                       onChange={e => setNewFilmBackName(e.target.value)}
                     />
-                    <button type="button" className="secondary" onClick={handleAddFilmBack}>+ 添加后背</button>
+                    <button type="button" className="secondary" onClick={handleAddFilmBack}>{t('gear.addBack')}</button>
                   </div>
                 </div>
               )}
@@ -2150,11 +2158,11 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
           )}
 
           <div className="form-group">
-            <label>购入价格 ({currencySymbol})</label>
+            <label>{t('gear.purchasePrice', { symbol: currencySymbol })}</label>
             <input
               type="number"
               className="form-control"
-              placeholder="例如: 3500 (选填)"
+              placeholder={t('gear.purchasePriceCameraPlaceholder')}
               value={newCamera.purchasePrice || ''}
               onChange={e => setNewCamera({...newCamera, purchasePrice: e.target.value ? Number(e.target.value) : undefined})}
               onKeyDown={handleKeyDown}
@@ -2164,32 +2172,32 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
           <div className="modal-actions" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)' }}>
               <input type="checkbox" checked={keepModalOpen} onChange={e => setKeepModalOpen(e.target.checked)} />
-              保存后继续添加
+              {t('gear.saveAndAddNext')}
             </label>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button type="button" onClick={() => setIsCameraModalOpen(false)}>取消</button>
-              <button type="submit" className="primary">{editingCameraId ? '保存更改' : '添加'}</button>
+              <button type="button" onClick={() => setIsCameraModalOpen(false)}>{t('common.cancel')}</button>
+              <button type="submit" className="primary">{editingCameraId ? t('gear.saveChanges') : t('gear.add')}</button>
             </div>
           </div>
         </form>
       </Modal>
 
       <Modal isOpen={isLensModalOpen} onClose={() => setIsLensModalOpen(false)}>
-        <h3>{editingLensId ? '编辑镜头' : '添加镜头'}</h3>
+        <h3>{editingLensId ? t('gear.editLens') : t('gear.addLens')}</h3>
         <form className="gear-modal-form" onSubmit={handleSaveLens}>
           {!editingLensId && (
             <div className="gear-preset-panel">
               <div className="builder-panel-heading">
                 <div>
-                  <strong>快速添加镜头</strong>
-                  <p>先缩小类型和卡口，再选品牌与型号；也可直接搜索焦段或型号。</p>
+                  <strong>{t('gear.quickAddLensTitle')}</strong>
+                  <p>{t('gear.quickAddLensHelp')}</p>
                 </div>
                 {newLens.name && <span className="builder-status-pill">{newLens.name}</span>}
               </div>
               {selectedLensModel && newLens.name ? (
                 <div className="selected-builder-summary selected-gear-summary builder-collapsed-summary lens-builder-collapsed">
                   <span>{newLens.name}</span>
-                  <small>{newLens.focalLength}mm · {newLens.maxAperture} · {newLens.mountKey || '未指定卡口'}</small>
+                  <small>{newLens.focalLength}mm · {newLens.maxAperture} · {newLens.mountKey || t('gear.noMount')}</small>
                   <button
                     type="button"
                     className="secondary btn-sm"
@@ -2202,17 +2210,17 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                       setLensDictSearch('');
                     }}
                   >
-                    重新选择镜头
+                    {t('gear.reselectLens')}
                   </button>
                 </div>
               ) : (
                 <>
                   <div className="builder-step">
-                    <div className="builder-step-label">1. 镜头类型</div>
+                    <div className="builder-step-label">1. {t('gear.lensType')}</div>
                     <div className="preset-chip-grid">
                       {[
-                        { value: 'prime' as const, label: '定焦' },
-                        { value: 'zoom' as const, label: '变焦' },
+                        { value: 'prime' as const, label: t('gear.prime') },
+                        { value: 'zoom' as const, label: t('gear.zoom') },
                       ].map(option => (
                     <button
                       key={option.value}
@@ -2232,7 +2240,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                     </div>
                   </div>
                   <div className="builder-step">
-                    <div className="builder-step-label">2. 卡口/系统</div>
+                    <div className="builder-step-label">2. {t('gear.mountSystem')}</div>
 	                    {lensMountFilter !== 'all' ? (
 	                      <div className="selected-builder-summary">
 	                        <span>{lensMountFilter}</span>
@@ -2248,7 +2256,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 	                            setLensModelSearch('');
                           }}
                         >
-                          更换卡口
+                          {t('gear.changeMount')}
                         </button>
 	                      </div>
 	                    ) : (
@@ -2257,7 +2265,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 	                          <input
 	                            type="text"
 	                            className="form-control builder-option-search"
-	                            placeholder="搜索卡口，例如 Leica M / Micro Four Thirds"
+	                            placeholder={t('gear.searchMount')}
 	                            value={lensMountSearch}
 	                            onChange={e => setLensMountSearch(e.target.value)}
 	                          />
@@ -2280,7 +2288,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 	                            </button>
 	                          ))}
 	                          {visibleLensMountOptions.length === 0 && (
-	                            <span className="gear-preset-empty">没有匹配卡口。可直接填写下方字段。</span>
+	                            <span className="gear-preset-empty">{t('gear.noMountMatch')}</span>
 	                          )}
 	                        </div>
 	                      </>
@@ -2288,7 +2296,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 	                  </div>
 
                   <div className="builder-step">
-                    <div className="builder-step-label">3. 推荐品牌 ({lensBrandOptions.length})</div>
+                    <div className="builder-step-label">3. {t('gear.recommendedBrand', { count: lensBrandOptions.length })}</div>
                     {selectedLensBrand ? (
                       <div className="selected-builder-summary">
                         <span>{selectedLensBrand}</span>
@@ -2302,7 +2310,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                             setLensModelSearch('');
                           }}
                         >
-                          更换品牌
+                          {t('gear.changeBrand')}
                         </button>
                       </div>
                     ) : (
@@ -2311,7 +2319,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                           <input
                             type="text"
                             className="form-control builder-option-search"
-                            placeholder="搜索品牌，例如 Nikon / Leica"
+                            placeholder={t('gear.searchLensBrand')}
                             value={lensBrandSearch}
                             onChange={e => setLensBrandSearch(e.target.value)}
                           />
@@ -2332,7 +2340,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                             </button>
                           ))}
                           {visibleLensBrandOptions.length === 0 && (
-                            <span className="gear-preset-empty">没有匹配品牌。可直接填写下方字段。</span>
+                            <span className="gear-preset-empty">{t('gear.noBrandMatch')}</span>
                           )}
                         </div>
                       </>
@@ -2341,12 +2349,12 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
                   {selectedLensBrand && (
                     <div className="builder-step">
-                      <div className="builder-step-label">4. 推荐型号 ({lensModelOptions.length})</div>
+                      <div className="builder-step-label">4. {t('gear.recommendedModel', { count: lensModelOptions.length })}</div>
                       {lensModelOptions.length > 8 && (
                         <input
                           type="text"
                           className="form-control builder-option-search"
-                          placeholder={`在 ${selectedLensBrand} 中搜索型号、焦段或卡口`}
+                          placeholder={t('gear.searchLensModel', { brand: selectedLensBrand })}
                           value={lensModelSearch}
                           onChange={e => setLensModelSearch(e.target.value)}
                         />
@@ -2363,21 +2371,21 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                           </button>
                         ))}
                         {visibleLensModelOptions.length === 0 && (
-                          <span className="gear-preset-empty">没有匹配型号。可直接填写下方字段。</span>
+                          <span className="gear-preset-empty">{t('gear.noLensModelMatch')}</span>
                         )}
                       </div>
                     </div>
                   )}
 
                   <details className="builder-fallback-search">
-                    <summary>直接搜索镜头</summary>
+                    <summary>{t('gear.directSearchLens')}</summary>
                     <div className="search-input-wrapper" style={{ position: 'relative' }}>
                       <Search className="search-icon" size={16} style={{ position: 'absolute', left: 12, top: 10, color: 'var(--text-muted)' }} />
                       <input
                         type="text"
                         className="form-control"
                         style={{ paddingLeft: 36, backgroundColor: 'var(--bg-secondary)' }}
-                        placeholder="搜索品牌、型号或焦段，例如 50mm / Planar / Summicron"
+                        placeholder={t('gear.searchLensPlaceholder')}
                         value={lensDictSearch}
                         onChange={e => {
                           setLensDictSearch(e.target.value);
@@ -2389,13 +2397,13 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                       {isLensDictDropdownOpen && lensDictSearch && (
                         <ul className="custom-dropdown-menu gear-preset-dropdown">
                           {filteredLensPresets.length === 0 ? (
-                            <li className="gear-preset-empty">没有找到预设。可直接填写下方字段。</li>
+                            <li className="gear-preset-empty">{t('gear.noPresetFound')}</li>
                           ) : (
                             filteredLensPresets.map((preset, idx) => (
                               <li key={`${preset.brand}-${preset.model}-${idx}`} onClick={() => applyLensPreset(preset)}>
                                 <div style={{ fontWeight: 700 }}>{preset.brand} {preset.model}</div>
                                 <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                                  {preset.focalLength}mm · {preset.maxAperture} · {preset.type === 'prime' ? '定焦' : '变焦'} · {preset.mountKey}
+                                  {preset.focalLength}mm · {preset.maxAperture} · {preset.type === 'prime' ? t('gear.prime') : t('gear.zoom')} · {preset.mountKey}
                                 </div>
                               </li>
                             ))
@@ -2406,22 +2414,22 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                   </details>
                 </>
               )}
-              <div className="film-back-empty">预设只填表，保存后才入库。</div>
+              <div className="film-back-empty">{t('gear.presetDraftOnly')}</div>
             </div>
           )}
           {renderAvatarEditor(
             editingLensId,
             'lenses',
             newLens.avatarUrl,
-            newLens.name || '镜头',
+            newLens.name || t('gear.addLens'),
             <LensSvgAvatar focalLength={Number(newLens.focalLength) || 50} type={newLens.type || 'prime'} size={72} />
           )}
           <div className="form-group">
-            <label>镜头型号</label>
+            <label>{t('gear.lensModel')}</label>
             <input
               type="text"
               className="form-control"
-              placeholder="例如: MD 50mm f/1.7"
+              placeholder={t('gear.lensModelPlaceholder')}
               value={newLens.name}
               onChange={e => {
                 setNewLens({...newLens, name: e.target.value});
@@ -2433,7 +2441,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
             />
           </div>
           <div className="form-group">
-            <label>焦段 (mm)</label>
+            <label>{t('gear.focalLength')} (mm)</label>
             <input
               type="number"
               className="form-control"
@@ -2445,11 +2453,11 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
             />
           </div>
           <div className="form-group">
-            <label>最大光圈</label>
+            <label>{t('gear.maxAperture')}</label>
             <input
               type="text"
               className="form-control"
-              placeholder="例如: f/1.4"
+              placeholder={t('gear.aperturePlaceholder')}
               value={newLens.maxAperture}
               onChange={e => setNewLens({...newLens, maxAperture: e.target.value})}
               onKeyDown={handleKeyDown}
@@ -2459,24 +2467,24 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
           </div>
           {editingLensId && (
             <div className="form-group">
-              <label>镜头类型</label>
+              <label>{t('gear.lensType')}</label>
               <select
                 className="form-control"
                 value={newLens.type}
                 onChange={e => setNewLens({...newLens, type: e.target.value})}
                 onKeyDown={handleKeyDown}
               >
-                <option value="prime">定焦镜头 (Prime)</option>
-                <option value="zoom">变焦镜头</option>
+                <option value="prime">{t('gear.prime')}</option>
+                <option value="zoom">{t('gear.zoom')}</option>
               </select>
             </div>
           )}
           <div className="form-group">
-            <label>购入价格 ({currencySymbol})</label>
+            <label>{t('gear.purchasePrice', { symbol: currencySymbol })}</label>
             <input
               type="number"
               className="form-control"
-              placeholder="例如: 800 (选填)"
+              placeholder={t('gear.purchasePriceLensPlaceholder')}
               value={newLens.purchasePrice || ''}
               onChange={e => setNewLens({...newLens, purchasePrice: e.target.value ? Number(e.target.value) : undefined})}
               onKeyDown={handleKeyDown}
@@ -2486,32 +2494,32 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
           <div className="modal-actions" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)' }}>
               <input type="checkbox" checked={keepModalOpen} onChange={e => setKeepModalOpen(e.target.checked)} />
-              保存后继续添加
+              {t('gear.saveAndAddNext')}
             </label>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button type="button" onClick={() => setIsLensModalOpen(false)}>取消</button>
-              <button type="submit" className="primary">{editingLensId ? '保存更改' : '添加'}</button>
+              <button type="button" onClick={() => setIsLensModalOpen(false)}>{t('common.cancel')}</button>
+              <button type="submit" className="primary">{editingLensId ? t('gear.saveChanges') : t('gear.add')}</button>
             </div>
           </div>
         </form>
       </Modal>
 
       <Modal isOpen={isFilmModalOpen} onClose={() => setIsFilmModalOpen(false)}>
-        <h3>{editingFilmId ? '编辑胶卷库存' : '入库胶卷'}</h3>
+        <h3>{editingFilmId ? t('gear.editFilmStock') : t('gear.stockFilm')}</h3>
         <form className="gear-modal-form" onSubmit={handleSaveFilm}>
           {renderAvatarEditor(
             editingFilmId,
             'filmStocks',
             newFilm.avatarUrl,
-            `${newFilm.brand || ''} ${newFilm.name || '胶卷'}`.trim(),
+            `${newFilm.brand || ''} ${newFilm.name || t('common.unknownFilm')}`.trim(),
             <FilmSvgAvatar brand={newFilm.brand || 'Film'} name={newFilm.name || 'Stock'} format={newFilm.format || '135'} size={72} />
           )}
           {!editingFilmId && (
             <div className="gear-preset-panel">
               <div className="builder-panel-heading">
                 <div>
-                  <strong>快速添加胶卷</strong>
-                  <p>先选画幅，再选品牌和型号；命中后收起选择区，继续填库存细节。</p>
+                  <strong>{t('gear.quickAddFilmTitle')}</strong>
+                  <p>{t('gear.quickAddFilmHelp')}</p>
                 </div>
                 {newFilm.brand && newFilm.name && (
                   <span className="builder-status-pill">{newFilm.brand} {newFilm.name}</span>
@@ -2520,7 +2528,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
               {newFilm.brand && newFilm.name ? (
                 <div className="selected-builder-summary selected-gear-summary builder-collapsed-summary">
                   <span>{newFilm.brand} {newFilm.name}</span>
-                  <small>ISO {newFilm.iso} · {newFilm.colorType === 'color' ? '彩色' : '黑白'} · {newFilm.format}</small>
+                  <small>ISO {newFilm.iso} · {newFilm.colorType === 'color' ? t('gear.color') : t('gear.bw')} · {newFilm.format}</small>
                   <button
                     type="button"
                     className="secondary btn-sm"
@@ -2532,13 +2540,13 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                       setShowManualFilmForm(false);
                     }}
                   >
-                    重新选择胶卷
+                    {t('gear.reselectFilm')}
                   </button>
                 </div>
               ) : (
                 <>
                   <div className="builder-step">
-                    <div className="builder-step-label">1. 画幅格式</div>
+                    <div className="builder-step-label">1. {t('gear.formatStep')}</div>
                     <div className="preset-chip-grid">
                       {[
                         { value: '135' as const, label: '135' },
@@ -2567,7 +2575,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                   </div>
 
                   <div className="builder-step">
-                    <div className="builder-step-label">2. 推荐品牌 ({filmBrandOptions.length})</div>
+                    <div className="builder-step-label">2. {t('gear.recommendedBrand', { count: filmBrandOptions.length })}</div>
                     {selectedFilmBrand ? (
                       <div className="selected-builder-summary">
                         <span>{selectedFilmBrand}</span>
@@ -2580,7 +2588,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                             setFilmModelSearch('');
                           }}
                         >
-                          更换品牌
+                          {t('gear.changeBrand')}
                         </button>
                       </div>
                     ) : (
@@ -2589,7 +2597,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                           <input
                             type="text"
                             className="form-control builder-option-search"
-                            placeholder="搜索品牌，例如 Kodak / Ilford"
+                            placeholder={t('gear.searchFilmBrand')}
                             value={filmBrandSearch}
                             onChange={e => setFilmBrandSearch(e.target.value)}
                           />
@@ -2609,7 +2617,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                             </button>
                           ))}
                           {visibleFilmBrandOptions.length === 0 && (
-                            <span className="gear-preset-empty">没有匹配品牌。可直接填写下方字段。</span>
+                            <span className="gear-preset-empty">{t('gear.noBrandMatch')}</span>
                           )}
                         </div>
                       </>
@@ -2618,12 +2626,12 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
                   {selectedFilmBrand && (
                     <div className="builder-step">
-                      <div className="builder-step-label">3. 推荐型号 ({filmModelOptions.length})</div>
+                      <div className="builder-step-label">3. {t('gear.recommendedModel', { count: filmModelOptions.length })}</div>
                       {filmModelOptions.length > 8 && (
                         <input
                           type="text"
                           className="form-control builder-option-search"
-                          placeholder={`在 ${selectedFilmBrand} 中搜索型号或 ISO`}
+                          placeholder={t('gear.searchFilmModel', { brand: selectedFilmBrand })}
                           value={filmModelSearch}
                           onChange={e => setFilmModelSearch(e.target.value)}
                         />
@@ -2640,21 +2648,21 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                           </button>
                         ))}
                         {visibleFilmModelOptions.length === 0 && (
-                          <span className="gear-preset-empty">没有匹配型号。可直接填写下方字段。</span>
+                          <span className="gear-preset-empty">{t('gear.noFilmModelMatch')}</span>
                         )}
                       </div>
                     </div>
                   )}
 
                   <details className="builder-fallback-search">
-                    <summary>直接搜索胶卷</summary>
+                    <summary>{t('gear.directSearchFilm')}</summary>
                     <div className="search-input-wrapper">
                       <Search className="search-icon" size={16} style={{ position: 'absolute', left: 12, top: 10, color: 'var(--text-muted)' }} />
                       <input
                         type="text"
                         className="form-control"
                         style={{ paddingLeft: 36, backgroundColor: 'var(--bg-tertiary)' }}
-                        placeholder="搜索常见胶卷，例如 Gold 200 / HP5"
+                        placeholder={t('gear.searchFilmPlaceholder')}
                         value={filmDictSearch}
                         onChange={e => {
                           setFilmDictSearch(e.target.value);
@@ -2672,7 +2680,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                           .map((f, idx) => (
                             <li key={idx} style={{ padding: '8px 16px', cursor: 'pointer', borderBottom: '1px solid var(--border-color)' }} onClick={() => applyFilmPreset(f)}>
                               <div style={{ fontWeight: 600 }}>{f.brand} {f.name}</div>
-                              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>ISO {f.iso} • {f.colorType === 'color' ? '彩色' : '黑白'} • {f.format}</div>
+                              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>ISO {f.iso} • {f.colorType === 'color' ? t('gear.color') : t('gear.bw')} • {f.format}</div>
                             </li>
                           ))}
                       </ul>
@@ -2685,20 +2693,20 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
           {(!editingFilmId && !showManualFilmForm) ? (
             <div style={{ textAlign: 'center', margin: '8px 0 24px 0' }}>
-              <button type="button" className="text-btn" onClick={() => setShowManualFilmForm(true)}>+ 找不到型号？展开手动填写</button>
+              <button type="button" className="text-btn" onClick={() => setShowManualFilmForm(true)}>{t('gear.manualFilmToggle')}</button>
             </div>
           ) : (
             <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px', marginBottom: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>手动配置参数</span>
-                {!editingFilmId && <button type="button" className="text-btn" style={{ fontSize: '12px' }} onClick={() => setShowManualFilmForm(false)}>收起</button>}
+                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('gear.manualFilmConfig')}</span>
+                {!editingFilmId && <button type="button" className="text-btn" style={{ fontSize: '12px' }} onClick={() => setShowManualFilmForm(false)}>{t('gear.collapse')}</button>}
               </div>
               <div className="form-group">
-                <label>品牌/厂商</label>
+                <label>{t('gear.brandMaker')}</label>
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="例如: Kodak"
+                  placeholder={t('rolls.filmBrandPlaceholder')}
                   value={newFilm.brand}
                   onChange={e => setNewFilm({...newFilm, brand: e.target.value})}
                   onKeyDown={handleKeyDown}
@@ -2707,11 +2715,11 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                 />
               </div>
               <div className="form-group">
-                <label>型号名称</label>
+                <label>{t('gear.modelName')}</label>
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="例如: Gold 200"
+                  placeholder={t('rolls.filmModelPlaceholder')}
                   value={newFilm.name}
                   onChange={e => setNewFilm({...newFilm, name: e.target.value})}
                   onKeyDown={handleKeyDown}
@@ -2720,7 +2728,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                 />
               </div>
               <div className="form-group">
-                <label>ISO 速度</label>
+                <label>{t('gear.isoSpeed')}</label>
                 <input
                   type="number"
                   className="form-control"
@@ -2734,12 +2742,12 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
             </div>
           )}
           <div className="form-group">
-            <label>初始库存数量</label>
+            <label>{t('gear.initialStock')}</label>
             <input
               type="number"
               className="form-control"
               min="0"
-              placeholder="可留空，默认为 0"
+              placeholder={t('gear.initialStockPlaceholder')}
               value={newFilm.stockCount === undefined ? '' : newFilm.stockCount}
               onChange={e => setNewFilm({...newFilm, stockCount: e.target.value === '' ? undefined : parseInt(e.target.value, 10)})}
               onKeyDown={handleKeyDown}
@@ -2747,37 +2755,37 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
             />
           </div>
           <div className="form-group">
-            <label>色彩类别</label>
+            <label>{t('gear.colorType')}</label>
             <select
               className="form-control"
               value={newFilm.colorType}
               onChange={e => setNewFilm({...newFilm, colorType: e.target.value as any})}
               onKeyDown={handleKeyDown}
             >
-              <option value="color">彩色 (Color)</option>
-              <option value="bw">黑白胶片</option>
+              <option value="color">{t('gear.colorFilm')}</option>
+              <option value="bw">{t('gear.bwFilm')}</option>
             </select>
           </div>
           {editingFilmId && (
             <div className="form-group">
-              <label>画幅大小</label>
+                <label>{t('gear.formatSize')}</label>
               <select
                 className="form-control"
                 value={newFilm.format}
                 onChange={e => setNewFilm({...newFilm, format: e.target.value})}
                 onKeyDown={handleKeyDown}
               >
-                <option value="135">135 画幅</option>
-                <option value="120">120 中画幅</option>
+                <option value="135">{t('gear.format135')}</option>
+                <option value="120">{t('gear.format120')}</option>
               </select>
             </div>
           )}
           <div className="form-group">
-            <label>购入均价/卷 ({currencySymbol})</label>
+            <label>{t('gear.averagePricePerRoll', { symbol: currencySymbol })}</label>
             <input
               type="number"
               className="form-control"
-              placeholder="单卷价格, 例如: 85 (选填)"
+              placeholder={t('gear.pricePerRollPlaceholder')}
               value={newFilm.pricePerRoll || ''}
               onChange={e => setNewFilm({...newFilm, pricePerRoll: e.target.value ? Number(e.target.value) : undefined})}
               onKeyDown={handleKeyDown}
@@ -2787,56 +2795,56 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
           <div className="modal-actions" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)' }}>
               <input type="checkbox" checked={keepModalOpen} onChange={e => setKeepModalOpen(e.target.checked)} />
-              保存后继续添加
+              {t('gear.saveAndAddNext')}
             </label>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button type="button" onClick={() => setIsFilmModalOpen(false)}>取消</button>
-              <button type="submit" className="primary">{editingFilmId ? '保存更改' : '添加'}</button>
+              <button type="button" onClick={() => setIsFilmModalOpen(false)}>{t('common.cancel')}</button>
+              <button type="submit" className="primary">{editingFilmId ? t('gear.saveChanges') : t('gear.add')}</button>
             </div>
           </div>
         </form>
       </Modal>
 
       <Modal isOpen={isEquipmentModalOpen} onClose={() => setIsEquipmentModalOpen(false)}>
-        <h3>{editingEquipmentId ? '编辑器材' : '添加新器材'}</h3>
+        <h3>{editingEquipmentId ? t('gear.editGear') : t('gear.otherModalTitle')}</h3>
         <form onSubmit={handleSaveEquipment}>
           <div className="gear-context-note">
-            如果要记录 120 后背或片盒，请回到相机库添加或编辑 120 可换后背机身；不要把它当作普通附件添加，否则装片统计无法关联到胶卷记录。
+            {t('gear.otherModalNote')}
           </div>
           {renderAvatarEditor(
             editingEquipmentId,
             'otherEquipments',
             newEquipment.avatarUrl,
-            newEquipment.name || '器材',
+            newEquipment.name || t('gear.addGear'),
             <Package size={34} />
           )}
           <div className="form-group">
-            <label>器材名称</label>
+            <label>{t('gear.gearName')}</label>
             <input
               type="text"
               className="form-control"
-              placeholder="例如: D-76 显影粉 / 捷信三脚架"
+              placeholder={t('gear.gearNamePlaceholder')}
               value={newEquipment.name}
               onChange={e => setNewEquipment({...newEquipment, name: e.target.value})}
               required
             />
           </div>
           <div className="form-group">
-            <label>器材类型</label>
+            <label>{t('gear.gearType')}</label>
             <select
               className="form-control"
               value={newEquipment.type}
               onChange={e => setNewEquipment({...newEquipment, type: e.target.value as any})}
               required
             >
-              <option value="chemical">药水 / 化学品</option>
-              <option value="tripod">三脚架</option>
-              <option value="cleaner">清洁工具</option>
-              <option value="other">其它</option>
+              <option value="chemical">{t('gear.chemical')}</option>
+              <option value="tripod">{t('gear.tripod')}</option>
+              <option value="cleaner">{t('gear.cleaner')}</option>
+              <option value="other">{t('gear.otherType')}</option>
             </select>
           </div>
           <div className="form-group">
-            <label>购买时间</label>
+            <label>{t('gear.purchaseDate')}</label>
             <input
               type="date"
               className="form-control"
@@ -2846,7 +2854,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
           </div>
           {newEquipment.type === 'chemical' && (
             <div className="form-group">
-              <label>药水保质期 / 过期日期</label>
+              <label>{t('gear.chemicalExpiryDate')}</label>
               <input
                 type="date"
                 className="form-control"
@@ -2857,21 +2865,21 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
             </div>
           )}
           <div className="form-group">
-            <label>购入价格 ({currencySymbol})</label>
+            <label>{t('gear.purchasePrice', { symbol: currencySymbol })}</label>
             <input
               type="number"
               className="form-control"
-              placeholder="例如: 350 (选填)"
+              placeholder={t('gear.purchasePriceGearPlaceholder')}
               value={newEquipment.purchasePrice || ''}
               onChange={e => setNewEquipment({...newEquipment, purchasePrice: e.target.value ? Number(e.target.value) : undefined})}
             />
           </div>
           <div className="form-group">
-            <label>备注 / 说明</label>
+            <label>{t('gear.notesLabel')}</label>
             <textarea
               className="form-control"
               rows={2}
-              placeholder="关于该器材的额外备注..."
+              placeholder={t('gear.notesPlaceholder')}
               value={newEquipment.notes}
               onChange={e => setNewEquipment({...newEquipment, notes: e.target.value})}
             />
@@ -2879,11 +2887,11 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
           <div className="modal-actions" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)' }}>
               <input type="checkbox" checked={keepModalOpen} onChange={e => setKeepModalOpen(e.target.checked)} />
-              保存后继续添加
+              {t('gear.saveAndAddNext')}
             </label>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button type="button" onClick={() => setIsEquipmentModalOpen(false)}>取消</button>
-              <button type="submit" className="primary">{editingEquipmentId ? '保存更改' : '添加'}</button>
+              <button type="button" onClick={() => setIsEquipmentModalOpen(false)}>{t('common.cancel')}</button>
+              <button type="submit" className="primary">{editingEquipmentId ? t('gear.saveChanges') : t('gear.add')}</button>
             </div>
           </div>
         </form>
@@ -2909,25 +2917,25 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
       )}
       {/* --- ARCHIVE / SELL MODAL --- */}
       <Modal isOpen={!!archiveTarget} onClose={() => { setArchiveTarget(null); setArchivePrice(''); }}>
-            <h3>归档或售出 ({archiveTarget?.name})</h3>
+            <h3>{t('gear.archiveSellTitle', { name: archiveTarget?.name || '' })}</h3>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '16px', fontSize: '13px' }}>
-              归档后，此设备会被隐藏，但已关联的胶卷记录仍然可见。
+              {t('gear.archiveSellDesc')}
             </p>
             <form onSubmit={handleArchiveConfirm}>
               <div className="form-group">
-                <label>售出回血价格 ({currencySymbol})</label>
+                <label>{t('gear.sellPrice', { symbol: currencySymbol })}</label>
                 <input
                   type="number"
                   className="form-control"
-                  placeholder="如果售出，可填入回血金额 (选填)"
+                  placeholder={t('gear.sellPricePlaceholder')}
                   value={archivePrice}
                   onChange={e => setArchivePrice(e.target.value ? Number(e.target.value) : '')}
                 />
-                <small style={{ color: 'var(--text-muted)' }}>填入金额后，会在摄影账本里生成一笔收入记录。如果只是损坏后归档，可以留空。</small>
+                <small style={{ color: 'var(--text-muted)' }}>{t('gear.sellPriceHint')}</small>
               </div>
               <div className="modal-actions">
-                <button type="button" onClick={() => { setArchiveTarget(null); setArchivePrice(''); }}>取消</button>
-                <button type="submit" className="warning">确认归档</button>
+                <button type="button" onClick={() => { setArchiveTarget(null); setArchivePrice(''); }}>{t('common.cancel')}</button>
+                <button type="submit" className="warning">{t('gear.confirmArchive')}</button>
               </div>
             </form>
       </Modal>

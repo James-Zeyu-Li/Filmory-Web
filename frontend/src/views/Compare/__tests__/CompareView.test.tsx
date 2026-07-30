@@ -8,11 +8,10 @@ beforeAll(() => {
   global.URL.revokeObjectURL = vi.fn();
 });
 
-describe('CompareView (纯本地极速对比)', () => {
+describe('CompareView', () => {
   it('renders empty state when no local images are dropped', async () => {
     render(<CompareView />);
     
-    // 应当显示空状态
     expect(screen.getByText('等待载入照片')).toBeInTheDocument();
     expect(screen.getByText(/请在上方分别放入需要对比的两张本地照片/)).toBeInTheDocument();
   });
@@ -20,7 +19,6 @@ describe('CompareView (纯本地极速对比)', () => {
   it('renders the dropzones correctly', async () => {
     render(<CompareView />);
 
-    // 应该有两个 dropzone (A路 和 B路)
     const dropzones = screen.getAllByText(/把照片拖到这里/);
     expect(dropzones.length).toBe(2);
   });

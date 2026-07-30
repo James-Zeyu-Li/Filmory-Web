@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { BackupService } from '../../services/backupService';
-import { Shield, Download, X, LogOut, UserX, Sun, Moon, Monitor, Coins, Film, BadgeCheck, ArrowUp, ArrowDown, Folder, Crown, Zap } from 'lucide-react';
+import { Shield, Download, X, LogOut, UserX, Sun, Moon, Monitor, Coins, Film, BadgeCheck, ArrowUp, ArrowDown, Folder, Crown, Zap, Languages, UserRound, Save } from 'lucide-react';
 import { useAuth } from '../../contexts/useAuth';
 import { useTheme } from '../../contexts/useTheme';
 import { supabase } from '../../services/supabaseClient';
 import { Modal } from '../../components/Modal';
 import { useConfirm } from '../../contexts/useConfirm';
 import { useFeedback } from '../../contexts/useFeedback';
+import { db } from '../../db/schema';
 import { useCurrency } from '../../contexts/useCurrency';
 import { CURRENCY_OPTIONS, type CurrencyCode } from '../../contexts/currencyContextCore';
+import { useLanguage } from '../../contexts/useLanguage';
+import { LANGUAGE_OPTIONS, type LanguageCode } from '../../i18n/translations';
 import { convertCurrentUserMoney } from '../../services/currencyConversionService';
 import {
   readRollsCollectionsTabEnabled,
@@ -22,6 +25,11 @@ import { useUserTier } from '../../hooks/useUserTier';
 import { UpgradeModal } from '../../components/UpgradeModal';
 import { formatMembershipRequestTime } from '../../services/membershipUpgrade';
 import { getActiveRollLimitLabel } from '../../services/membershipPolicy';
+import {
+  buildLocalUserProfile,
+  getDisplayNameValidationMessage,
+  normalizeDisplayName,
+} from '../../services/userProfile';
 import './SettingsView.css';
 
 interface SettingsViewProps {
@@ -31,9 +39,10 @@ interface SettingsViewProps {
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setEnableFilmMode, onClose }) => {
-  const { user, logout, accountRole, isDevBypass, isAdmin } = useAuth();
+  const { user, logout, accountRole, isDevBypass, isAdmin, isTrial } = useAuth();
   const { theme, setTheme } = useTheme();
   const { currency, setCurrency, currencySymbol } = useCurrency();
+  const { language, setLanguage, t } = useLanguage();
   const { confirm } = useConfirm();
   const { notify } = useFeedback();
   const { tier: userTier, isLoading: isUserTierLoading, capabilities: membershipCapabilities } = useUserTier();
@@ -52,11 +61,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
   const [conversionRate, setConversionRate] = useState('');
   const [rollsTabOrder, setRollsTabOrder] = useState<RollsTabId[]>(() => readRollsTabOrder());
   const [rollsCollectionsEnabled, setRollsCollectionsEnabled] = useState<boolean>(() => readRollsCollectionsTabEnabled());
+  const [displayNameDraft, setDisplayNameDraft] = useState<string | null>(null);
+  const displayNameInput = displayNameDraft ?? userProfile?.displayName ?? '';
 
   const rollsTabLabels: Record<RollsTabId, string> = {
-    collections: '项目集',
-    all: '全部胶卷记录',
-    loose: '散卷',
+    collections: t('settings.rollTabCollections'),
+    all: t('settings.rollTabAll'),
+    loose: t('settings.rollTabLoose'),
   };
   const isMembershipRequestPending = userTier !== 'vip' && userProfile?.membershipRequestStatus === 'pending';
   const membershipRequestTimeLabel = formatMembershipRequestTime(userProfile?.membershipRequestedAt);
@@ -85,15 +96,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
   const handleLogout = async () => {
     try {
       setIsProcessing(true);
-      setProcessMessage('正在退出当前账号...');
+      setProcessMessage(t('settings.processingLogout'));
       await logout();
       onClose();
     } catch (e) {
       console.error(e);
       notify({
         type: 'error',
-        title: '退出失败',
-        message: e instanceof Error ? e.message : '请稍后重试。'
+        title: t('settings.logoutFailedTitle'),
+        message: e instanceof Error ? e.message : t('settings.retryLater')
       });
     } finally {
       setIsProcessing(false);
@@ -110,15 +121,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
     
     if (deleteConfirmationStep === 1) {
       if (deleteInput !== 'DELETE') {
-        setDeleteError('请输入大写的 DELETE 以确认删除。');
+        setDeleteError(t('settings.deleteInputError'));
         return;
       }
       
       const finalConfirm = await confirm({
-        title: '最终确认注销账号',
-        message: '最后一次警告：你的所有云端数据、相册和收支记录都会永久消失，且无法恢复。\n\n确认继续注销账号吗？',
-        confirmText: '永久销毁账号',
-        cancelText: '取消',
+        title: t('settings.deleteFinalTitle'),
+        message: t('settings.deleteFinalMessage'),
+        confirmText: t('settings.deleteFinalConfirm'),
+        cancelText: t('common.cancel'),
         isDanger: true
       });
       if (!finalConfirm) {
@@ -130,7 +141,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
       
       try {
         setIsProcessing(true);
-        setProcessMessage('正在彻底销毁您的账号数据...');
+        setProcessMessage(t('settings.deletingAccount'));
         
         // Dev bypass is local-only; real Supabase users use the account deletion RPC.
         if (!isDevBypass) {
@@ -141,10 +152,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
         await logout();
         window.location.reload();
       } catch (error) {
-        const message = error instanceof Error ? error.message : '未知错误';
+        const message = error instanceof Error ? error.message : t('settings.unknownError');
         notify({
           type: 'error',
-          title: '账号注销失败',
+          title: t('settings.deleteFailedTitle'),
           message
         });
         setIsProcessing(false);
@@ -156,13 +167,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
   const handleExport = async () => {
     try {
       setIsProcessing(true);
-      setProcessMessage('正在打包您的照片和数据，请勿关闭页面...');
+      setProcessMessage(t('settings.exporting'));
       await BackupService.exportDatabaseToExcel(user?.id);
     } catch (error) {
-      const message = error instanceof Error ? error.message : '未知错误';
+      const message = error instanceof Error ? error.message : t('settings.unknownError');
       notify({
         type: 'error',
-        title: '导出失败',
+        title: t('settings.exportFailedTitle'),
         message
       });
     } finally {
@@ -178,8 +189,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
     if (!Number.isFinite(rate) || rate <= 0) {
       notify({
         type: 'error',
-        title: '汇率无效',
-        message: '请输入大于 0 的手动换算汇率。'
+        title: t('settings.invalidRateTitle'),
+        message: t('settings.invalidRateMessage')
       });
       return;
     }
@@ -187,18 +198,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
     if (targetCurrency === currency) {
       notify({
         type: 'error',
-        title: '目标货币相同',
-        message: '请选择一个不同于当前记账货币的目标货币。'
+        title: t('settings.sameCurrencyTitle'),
+        message: t('settings.sameCurrencyMessage')
       });
       return;
     }
 
     const targetOption = CURRENCY_OPTIONS.find(option => option.code === targetCurrency);
     const confirmed = await confirm({
-      title: '批量换算现有金额',
-      message: `将使用手动汇率 1 ${currency} = ${rate} ${targetCurrency}，批量换算当前账号内所有金额字段，并把全局记账货币切换为 ${targetOption?.label || targetCurrency}。\n\n此操作不会联网查询汇率，也不会保留原币种。建议确认汇率无误后继续。`,
-      confirmText: '确认批量换算',
-      cancelText: '取消',
+      title: t('settings.conversionConfirmTitle'),
+      message: t('settings.conversionConfirmMessage', {
+        from: currency,
+        rate,
+        to: targetCurrency,
+        target: targetOption?.label || targetCurrency,
+      }),
+      confirmText: t('settings.conversionConfirmAction'),
+      cancelText: t('common.cancel'),
       isDanger: true
     });
 
@@ -207,7 +223,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
     const userId = user?.id || 'offline';
     try {
       setIsProcessing(true);
-      setProcessMessage('正在按手动汇率换算现有金额...');
+      setProcessMessage(t('settings.converting'));
       await convertCurrentUserMoney(userId, rate);
 
       setCurrency(targetCurrency);
@@ -215,19 +231,69 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
       setConversionRate('');
       notify({
         type: 'success',
-        title: '货币换算完成',
-        message: `现有金额已按手动汇率换算为 ${targetOption?.label || targetCurrency}。`
+        title: t('settings.conversionDoneTitle'),
+        message: t('settings.conversionDoneMessage', { target: targetOption?.label || targetCurrency })
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : '未知错误';
+      const message = error instanceof Error ? error.message : t('settings.unknownError');
       notify({
         type: 'error',
-        title: '批量换算失败',
+        title: t('settings.conversionFailedTitle'),
         message
       });
     } finally {
       setIsProcessing(false);
       setProcessMessage('');
+    }
+  };
+
+  const handleDisplayNameSave = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!user) return;
+
+    const validationMessage = getDisplayNameValidationMessage(displayNameInput);
+    if (validationMessage) {
+      notify({
+        type: 'error',
+        title: t('settings.displayNameInvalidTitle'),
+        message: validationMessage,
+      });
+      return;
+    }
+
+    const normalizedDisplayName = normalizeDisplayName(displayNameInput);
+    const existingProfile = userProfile || await db.userProfiles.get(user.id);
+
+    try {
+      await db.userProfiles.put(buildLocalUserProfile({
+        userId: user.id,
+        role: accountRole,
+        existingProfile: existingProfile || undefined,
+        displayName: normalizedDisplayName,
+      }));
+      setDisplayNameDraft(null);
+
+      if (!isDevBypass && !isTrial) {
+        const { error } = await supabase.auth.updateUser({
+          data: {
+            display_name: normalizedDisplayName,
+          },
+        });
+        if (error) throw error;
+      }
+
+      notify({
+        type: 'success',
+        title: t('settings.displayNameSavedTitle'),
+        message: t('settings.displayNameSavedMessage'),
+      });
+    } catch (error) {
+      notify({
+        type: 'error',
+        title: t('settings.displayNameSaveFailedTitle'),
+        message: error instanceof Error ? error.message : t('settings.displayNameSaveFailedMessage'),
+      });
     }
   };
 
@@ -244,14 +310,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
             <Shield size={18} />
           </div>
           <div>
-            <h2 className="settings-modal-title">设置与数据保护</h2>
-            <p className="settings-modal-subtitle">{user?.email || (isDevBypass ? '开发者模式' : '未登录')}</p>
+            <h2 className="settings-modal-title">{t('settings.title')}</h2>
+            <p className="settings-modal-subtitle">{user?.email || (isDevBypass ? t('settings.devMode') : t('settings.notLoggedIn'))}</p>
           </div>
         </div>
         <div className="settings-modal-header-right">
           <span className={`account-role-badge ${isAdmin ? 'admin' : ''}`}>
             <BadgeCheck size={12} />
-            {isDevBypass ? '测试管理员' : accountRole === 'admin' ? '管理员' : '普通账号'}
+            {isDevBypass ? t('settings.testAdmin') : accountRole === 'admin' ? t('settings.admin') : t('settings.normalAccount')}
           </span>
           <button className="icon-btn" onClick={onClose}><X size={18} /></button>
         </div>
@@ -261,15 +327,39 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
         {/* UI Preferences Card */}
         <div className="settings-section">
           <div className="section-header">
-            <h3>界面偏好设定</h3>
+            <h3>{t('settings.uiPreferences')}</h3>
           </div>
           <div className="settings-list-group">
+            <div className="settings-list-item">
+              <div className="settings-item-content">
+                <div className="settings-item-icon safe"><Languages size={18} /></div>
+                <div className="settings-item-text">
+                  <h4>{t('settings.language')}</h4>
+                  <p>{t('settings.languageDesc')}</p>
+                </div>
+              </div>
+              <div className="settings-item-action settings-inline-actions">
+                <select
+                  className="form-control"
+                  value={language}
+                  onChange={e => setLanguage(e.target.value as LanguageCode)}
+                  aria-label={t('settings.language')}
+                >
+                  {LANGUAGE_OPTIONS.map(option => (
+                    <option key={option.code} value={option.code}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <div className="settings-list-item settings-list-item-vertical">
               <div className="settings-item-content">
                 <div className="settings-item-icon safe"><Sun size={18} /></div>
                 <div className="settings-item-text">
-                  <h4>色彩主题</h4>
-                  <p>选择工作区外观，或跟随系统偏好自动切换。</p>
+                  <h4>{t('settings.theme')}</h4>
+                  <p>{t('settings.themeDesc')}</p>
                 </div>
               </div>
               <div className="settings-item-action">
@@ -278,19 +368,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
                   className={`theme-segment-btn ${theme === 'light' ? 'active' : ''}`}
                   onClick={() => setTheme('light')}
                 >
-                  <Sun size={16} /> 浅色
+                  <Sun size={16} /> {t('settings.themeLight')}
                 </button>
                 <button
                   className={`theme-segment-btn ${theme === 'dark' ? 'active' : ''}`}
                   onClick={() => setTheme('dark')}
                 >
-                  <Moon size={16} /> 深色
+                  <Moon size={16} /> {t('settings.themeDark')}
                 </button>
                 <button
                   className={`theme-segment-btn ${theme === 'system' ? 'active' : ''}`}
                   onClick={() => setTheme('system')}
                 >
-                  <Monitor size={16} /> 跟随系统
+                  <Monitor size={16} /> {t('settings.themeSystem')}
                 </button>
                 </div>
               </div>
@@ -300,15 +390,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
               <div className="settings-item-content">
                 <div className="settings-item-icon safe"><Film size={18} /></div>
                 <div className="settings-item-text">
-                  <h4>专业胶片模式</h4>
-                  <p>开启胶卷库存和胶片拍摄工作流；关闭后隐藏胶片专用入口。</p>
+                  <h4>{t('settings.filmMode')}</h4>
+                  <p>{t('settings.filmModeDesc')}</p>
                 </div>
               </div>
               <div className="settings-item-action compact-toggle">
                 <input 
                   type="checkbox" 
                   id="filmModeToggle" 
-                  aria-label="专业胶片模式"
+                  aria-label={t('settings.filmMode')}
                   checked={enableFilmMode}
                   onChange={(e) => handleFilmModeChange(e.target.checked)}
                 />
@@ -320,21 +410,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
               <div className="settings-sub-card-header">
                 <div className="settings-item-icon safe"><Folder size={16} /></div>
                 <div className="settings-item-text">
-                  <h4>胶卷记录页签布局</h4>
-                  <p>调整胶卷记录页面的顺序；项目集可单独隐藏，但关闭胶片模式时会强制保留项目集入口。</p>
+                  <h4>{t('settings.rollTabLayout')}</h4>
+                  <p>{t('settings.rollTabLayoutDesc')}</p>
                 </div>
               </div>
               <div className="settings-sub-card-body">
                 <div className="settings-rolls-toggle-row">
                   <div>
-                    <strong>显示项目集页签</strong>
-                    <p>{enableFilmMode ? '关闭后，胶卷记录页不再显示项目集入口。' : '胶片模式关闭时，项目集入口必须保留。'}</p>
+                    <strong>{t('settings.showCollectionsTab')}</strong>
+                    <p>{enableFilmMode ? t('settings.collectionsEnabledDesc') : t('settings.collectionsLockedDesc')}</p>
                   </div>
                   <div className="compact-toggle">
                     <input
                       type="checkbox"
                       id="rollsCollectionsToggle"
-                      aria-label="显示项目集页签"
+                      aria-label={t('settings.showCollectionsTab')}
                       checked={enableFilmMode ? rollsCollectionsEnabled : true}
                       disabled={!enableFilmMode}
                       onChange={(e) => handleRollsCollectionsEnabledChange(e.target.checked)}
@@ -351,8 +441,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
 	                      <div key={tab} className={`settings-rolls-order-item ${collectionsLocked ? 'locked' : ''} ${collectionsHidden ? 'hidden-tab' : ''}`}>
 	                        <div className="settings-rolls-order-copy">
 	                          <span>{rollsTabLabels[tab]}</span>
-	                          {collectionsLocked && <small>胶片模式关闭时强制保留</small>}
-	                          {collectionsHidden && <small>当前已隐藏，重新开启后按此顺序显示</small>}
+	                          {collectionsLocked && <small>{t('settings.collectionsLocked')}</small>}
+	                          {collectionsHidden && <small>{t('settings.collectionsHidden')}</small>}
 	                        </div>
                         <div className="settings-rolls-order-actions">
                           <button
@@ -360,7 +450,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
                             className="secondary btn-sm"
                             onClick={() => moveRollsTab(tab, 'up')}
                             disabled={index === 0}
-                            aria-label={`${rollsTabLabels[tab]} 上移`}
+                            aria-label={t('settings.moveUp', { label: rollsTabLabels[tab] })}
                           >
                             <ArrowUp size={14} />
                           </button>
@@ -369,7 +459,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
                             className="secondary btn-sm"
                             onClick={() => moveRollsTab(tab, 'down')}
                             disabled={index === rollsTabOrder.length - 1}
-                            aria-label={`${rollsTabLabels[tab]} 下移`}
+                            aria-label={t('settings.moveDown', { label: rollsTabLabels[tab] })}
                           >
                             <ArrowDown size={14} />
                           </button>
@@ -385,8 +475,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
               <div className="settings-item-content">
                 <div className="settings-item-icon safe"><Coins size={18} /></div>
                 <div className="settings-item-text">
-                  <h4>记账货币</h4>
-                  <p>直接切换只改变显示标签；需要迁移旧金额时使用手动汇率批量换算。</p>
+                  <h4>{t('settings.currency')}</h4>
+                  <p>{t('settings.currencyDesc')}</p>
                 </div>
               </div>
               <div className="settings-item-action settings-inline-actions">
@@ -410,7 +500,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
                   }}
                   disabled={isProcessing}
                 >
-                  批量换算
+                  {t('settings.batchConvert')}
                 </button>
               </div>
             </div>
@@ -520,6 +610,32 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
           </div>
           
           <div className="settings-list-group">
+            <div className="settings-list-item settings-list-item-vertical">
+              <div className="settings-item-content">
+                <div className="settings-item-icon safe"><UserRound size={18} /></div>
+                <div className="settings-item-text">
+                  <h4>{t('settings.displayName')}</h4>
+                  <p>{t('settings.displayNameDesc')}</p>
+                </div>
+              </div>
+              <div className="settings-item-action">
+                <form onSubmit={handleDisplayNameSave} className="settings-profile-form">
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={displayNameInput}
+                    onChange={e => setDisplayNameDraft(e.target.value)}
+                    placeholder={t('settings.displayNamePlaceholder')}
+                    maxLength={40}
+                  />
+                  <button className="secondary btn-sm" type="submit">
+                    <Save size={14} />
+                    {t('settings.displayNameSave')}
+                  </button>
+                </form>
+              </div>
+            </div>
+
             <div className="settings-list-item">
               <div className="settings-item-content">
                 <div className="settings-item-icon"><LogOut size={18} /></div>

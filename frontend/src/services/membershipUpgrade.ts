@@ -1,4 +1,5 @@
 import type { UserProfile } from '../db/schema';
+import type { LanguageCode } from '../i18n/translations';
 
 export type MembershipRequestTrigger = 'roll-limit' | 'generic';
 
@@ -10,12 +11,25 @@ export interface MembershipRequestDraft {
   trigger: MembershipRequestTrigger;
 }
 
+export interface MembershipRequestCopy {
+  subject: string;
+  greeting: string;
+  accountEmail: string;
+  contactEmail: string;
+  userId: string;
+  trigger: string;
+  note: string;
+  noValue: string;
+  notProvided: string;
+  rollLimitTrigger: string;
+  genericTrigger: string;
+  closing: string;
+}
+
 const DEFAULT_SUPPORT_EMAIL = 'filmory@example.com';
 export const MEMBERSHIP_SUPPORT_EMAIL = String(
   import.meta.env.VITE_SUPPORT_EMAIL || DEFAULT_SUPPORT_EMAIL
 ).trim() || DEFAULT_SUPPORT_EMAIL;
-export const MEMBERSHIP_RESPONSE_EXPECTATION = '24 小时内';
-
 const normalizeMultiline = (value?: string) => (
   value
     ?.replace(/\r\n/g, '\n')
@@ -25,38 +39,61 @@ const normalizeMultiline = (value?: string) => (
     .trim() || ''
 );
 
-export const buildMembershipRequestSubject = () => 'Filmory VIP 升级申请';
+const DEFAULT_MEMBERSHIP_REQUEST_COPY: MembershipRequestCopy = {
+  subject: 'Filmory VIP 升级申请',
+  greeting: '您好，我想申请升级为 Filmory VIP。',
+  accountEmail: '账号邮箱',
+  contactEmail: '联系邮箱',
+  userId: '用户 ID',
+  trigger: '触发场景',
+  note: '补充说明',
+  noValue: '无',
+  notProvided: '未提供',
+  rollLimitTrigger: '已达到免费版进行中拍摄卷上限',
+  genericTrigger: '主动咨询 VIP 升级',
+  closing: '请告知下一步付款或人工开通方式，谢谢。',
+};
 
-export const buildMembershipRequestMessage = ({
-  userId,
-  accountEmail,
-  contactEmail,
-  note,
-  trigger,
-}: MembershipRequestDraft) => {
+export const buildMembershipRequestSubject = (
+  copy: MembershipRequestCopy = DEFAULT_MEMBERSHIP_REQUEST_COPY
+) => copy.subject;
+
+export const buildMembershipRequestMessage = (
+  {
+    userId,
+    accountEmail,
+    contactEmail,
+    note,
+    trigger,
+  }: MembershipRequestDraft,
+  copy: MembershipRequestCopy = DEFAULT_MEMBERSHIP_REQUEST_COPY
+) => {
   const triggerLabel = trigger === 'roll-limit'
-    ? '已达到免费版进行中拍摄卷上限'
-    : '主动咨询 VIP 升级';
+    ? copy.rollLimitTrigger
+    : copy.genericTrigger;
 
   const normalizedNote = normalizeMultiline(note);
 
   return [
-    '您好，我想申请升级为 Filmory VIP。',
+    copy.greeting,
     '',
-    `账号邮箱：${accountEmail || '未提供'}`,
-    `联系邮箱：${contactEmail}`,
-    `用户 ID：${userId}`,
-    `触发场景：${triggerLabel}`,
-    `补充说明：${normalizedNote || '无'}`,
+    `${copy.accountEmail}: ${accountEmail || copy.notProvided}`,
+    `${copy.contactEmail}: ${contactEmail}`,
+    `${copy.userId}: ${userId}`,
+    `${copy.trigger}: ${triggerLabel}`,
+    `${copy.note}: ${normalizedNote || copy.noValue}`,
     '',
-    '请告知下一步付款或人工开通方式，谢谢。',
+    copy.closing,
   ].join('\n');
 };
 
-export const buildMembershipMailtoHref = (draft: MembershipRequestDraft) => {
+export const buildMembershipMailtoHref = (
+  draft: MembershipRequestDraft,
+  copy: MembershipRequestCopy = DEFAULT_MEMBERSHIP_REQUEST_COPY
+) => {
   const params = new URLSearchParams({
-    subject: buildMembershipRequestSubject(),
-    body: buildMembershipRequestMessage(draft),
+    subject: buildMembershipRequestSubject(copy),
+    body: buildMembershipRequestMessage(draft, copy),
   });
 
   return `mailto:${MEMBERSHIP_SUPPORT_EMAIL}?${params.toString()}`;
@@ -81,6 +118,7 @@ export const buildPendingMembershipProfile = ({
   userId,
   tier: existingProfile?.tier ?? 'regular',
   role: existingProfile?.role,
+  displayName: existingProfile?.displayName,
   highResQuotaUsed: existingProfile?.highResQuotaUsed ?? 0,
   membershipRequestStatus: 'pending',
   membershipRequestedAt: requestedAt,
@@ -90,10 +128,13 @@ export const buildPendingMembershipProfile = ({
   updatedAt: requestedAt,
 });
 
-export const formatMembershipRequestTime = (timestamp?: number) => {
+export const formatMembershipRequestTime = (
+  timestamp?: number,
+  locale: LanguageCode = 'zh-CN'
+) => {
   if (!timestamp) return '';
 
-  return new Intl.DateTimeFormat('zh-CN', {
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(timestamp));

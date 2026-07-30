@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { LockKeyhole } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { useAuth } from './useAuth';
+import { useLanguage } from './useLanguage';
 import { TrialGateContext } from './trialGateContextCore';
 import {
-  TRIAL_RESOURCE_LABELS,
+  TRIAL_RESOURCE_LABEL_KEYS,
   canCreateTrialResource,
   getTrialLimitMessage,
   type TrialResourceKey,
@@ -16,6 +17,7 @@ import '../components/TrialRegistrationModal.css';
 export const TrialGateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const { authMode } = useAuth();
+  const { t } = useLanguage();
   const [blockedResource, setBlockedResource] = useState<TrialResourceKey | null>(null);
 
   const requireRegistration = useCallback((resource: TrialResourceKey) => {
@@ -37,7 +39,7 @@ export const TrialGateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [authMode]);
 
   const closeModal = () => setBlockedResource(null);
-  const resourceLabel = blockedResource ? TRIAL_RESOURCE_LABELS[blockedResource] : '内容';
+  const resourceLabel = blockedResource ? t(TRIAL_RESOURCE_LABEL_KEYS[blockedResource]) : t('trial.resource.content');
 
   return (
     <TrialGateContext.Provider value={{ guardTrialResource, requireRegistration }}>
@@ -54,18 +56,18 @@ export const TrialGateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 <LockKeyhole size={20} />
               </span>
               <div className="trial-registration-copy">
-                <h2>注册后继续完整记录</h2>
-                <p>{getTrialLimitMessage(blockedResource)}</p>
+                <h2>{t('trial.registrationTitle')}</h2>
+                <p>{getTrialLimitMessage(blockedResource, t)}</p>
               </div>
             </div>
 
             <div className="trial-registration-note">
-              当前试用数据保存在这台设备上。注册后我们会引导你把试用记录保存到账号，避免之后换设备时丢失。
+              {t('trial.registrationNote')}
             </div>
 
             <div className="trial-registration-actions">
               <button type="button" className="secondary" onClick={closeModal}>
-                继续只看试用数据
+                {t('trial.keepTrial')}
               </button>
               <button
                 type="button"
@@ -75,7 +77,7 @@ export const TrialGateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                   navigate(AUTH_ROUTES.login);
                 }}
               >
-                登录已有账号
+                {t('trial.loginExisting')}
               </button>
               <button
                 type="button"
@@ -85,7 +87,7 @@ export const TrialGateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                   navigate(`${AUTH_ROUTES.login}?mode=signup&trial=1&resource=${encodeURIComponent(resourceLabel)}`);
                 }}
               >
-                注册并保留试用数据
+                {t('trial.signupKeepData')}
               </button>
             </div>
           </div>

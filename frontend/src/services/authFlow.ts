@@ -1,3 +1,7 @@
+import type { TranslationKey } from '../i18n/translations';
+
+type AuthTranslator = (key: TranslationKey, values?: Record<string, string | number>) => string;
+
 export const AUTH_ROUTES = {
   login: '/login',
   callback: '/auth/callback',
@@ -98,17 +102,16 @@ export const validatePassword = (password: string) => ({
   hasNumber: /\d/.test(password),
 });
 
-export const getPasswordValidationMessage = (password: string) => {
+export const getPasswordValidationMessage = (password: string, t?: AuthTranslator) => {
   const validation = validatePassword(password);
   if (validation.minLength && validation.hasUppercase && validation.hasLowercase && validation.hasNumber) {
     return '';
   }
-  return `密码至少 ${PASSWORD_POLICY.minLength} 位，且必须包含大写字母、小写字母和数字。`;
+  if (t) {
+    return t('auth.passwordPolicyError', { min: PASSWORD_POLICY.minLength });
+  }
+  return `Password must be at least ${PASSWORD_POLICY.minLength} characters and include uppercase, lowercase, and a number.`;
 };
-
-export const getPasswordPolicyDescription = () => (
-  `至少 ${PASSWORD_POLICY.minLength} 位，包含大写字母、小写字母和数字。`
-);
 
 type AuthMessageContext =
   | 'login'
@@ -119,24 +122,61 @@ type AuthMessageContext =
   | 'oauth'
   | 'resend-verification';
 
+export const getAuthErrorTranslationKey = (
+  error: unknown,
+  context: AuthMessageContext
+): TranslationKey | null => {
+  const message = formatAuthError(error, '').trim().toLowerCase();
+
+  if (/invalid login credentials/.test(message)) return 'auth.invalidCredentials';
+  if (/email not confirmed|email_not_confirmed|confirm your email/.test(message)) return 'auth.emailNotConfirmed';
+  if (/user already registered|already been registered/.test(message)) return 'auth.alreadyRegistered';
+  if (/password should be at least|password is too short|weak password/.test(message)) return 'auth.passwordPolicyError';
+  if (/same password|new password should be different/.test(message)) return 'auth.samePassword';
+  if (/email rate limit exceeded|rate limit/.test(message)) return 'auth.emailRateLimit';
+  if (/signup is disabled/.test(message)) return 'auth.signupDisabled';
+
+  if (
+    context === 'callback' &&
+    /expired|invalid grant|otp expired|access denied|unauthorized/.test(message)
+  ) {
+    return 'auth.callbackExpiredError';
+  }
+
+  if (
+    context === 'reset-password' &&
+    /session|token|expired|grant/.test(message)
+  ) {
+    return 'auth.resetSessionInvalid';
+  }
+
+  return null;
+};
+
 export const getAuthErrorMessage = (
   error: unknown,
   context: AuthMessageContext,
-  fallback: string
+  fallback: string,
+  t?: AuthTranslator
 ) => {
+  const translationKey = getAuthErrorTranslationKey(error, context);
+  if (translationKey && t) {
+    return t(translationKey, { min: PASSWORD_POLICY.minLength });
+  }
+
   const message = formatAuthError(error, fallback);
   const normalized = message.trim().toLowerCase();
 
   if (/invalid login credentials/.test(normalized)) {
-    return '邮箱或密码不正确，请重新检查后再试。';
+    return 'Email or password is incorrect. Check them and try again.';
   }
 
   if (/email not confirmed|email_not_confirmed|confirm your email/.test(normalized)) {
-    return '该邮箱尚未完成验证。请先打开验证邮件完成确认后，再回来登录。';
+    return 'This email has not been verified yet. Open the verification email first, then come back to log in.';
   }
 
   if (/user already registered|already been registered/.test(normalized)) {
-    return '这个邮箱已经注册过账号，请直接登录或使用找回密码。';
+    return 'This email already has an account. Log in directly or use password recovery.';
   }
 
   if (/password should be at least|password is too short|weak password/.test(normalized)) {
@@ -144,37 +184,33 @@ export const getAuthErrorMessage = (
   }
 
   if (/same password|new password should be different/.test(normalized)) {
-    return '新密码不能与当前密码相同，请换一个新的密码。';
+    return 'The new password cannot match the current password. Choose a different one.';
   }
 
   if (/email rate limit exceeded|rate limit/.test(normalized)) {
-    return '邮件发送过于频繁，请稍后再试。';
+    return 'Emails are being sent too frequently. Try again later.';
   }
 
   if (/signup is disabled/.test(normalized)) {
-    return '当前环境暂未开放注册，请联系管理员。';
+    return 'Sign up is disabled in this environment. Contact the administrator.';
   }
 
   if (
     context === 'callback' &&
     /expired|invalid grant|otp expired|access denied|unauthorized/.test(normalized)
   ) {
-    return '认证链接已过期，请重新发起邮箱验证或密码重设流程。';
+    return 'The authentication link has expired. Start email verification or password reset again.';
   }
 
   if (
     context === 'reset-password' &&
     /session|token|expired|grant/.test(normalized)
   ) {
-    return '当前重设密码会话不可用，请重新打开邮件中的链接后再试。';
+    return 'This password reset session is unavailable. Open the link in the email again and retry.';
   }
 
   return message;
 };
-
-export const getMailpitHint = () => (
-  '如果你正在本地 Supabase + Mailpit 环境中测试，验证邮件和重设密码邮件会出现在本地开发邮箱里。'
-);
 
 export const getAuthSuccessRedirectPath = (nextPath: string) => (
   nextPath.startsWith('/') ? nextPath : AUTH_ROUTES.login

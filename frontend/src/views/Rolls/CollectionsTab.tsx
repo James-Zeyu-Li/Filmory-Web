@@ -11,6 +11,7 @@ import { IconButton } from '../../components/ui/IconButton';
 import { EmptyState } from '../../components/EmptyState';
 import { Modal } from '../../components/Modal';
 import { usePhotoUrlMap } from '../../hooks/usePhotoUrlMap';
+import { useLanguage } from '../../contexts/useLanguage';
 
 interface CollectionsTabProps {
   onCollectionSelect: (collectionId: string) => void;
@@ -21,6 +22,7 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
   const { user } = useAuth();
   const { confirm } = useConfirm();
   const { guardTrialResource } = useTrialGate();
+  const { t } = useLanguage();
   const collections = useCollections();
   const allRolls = useRolls();
   const allPhotos = usePhotoAssets();
@@ -94,9 +96,9 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
   const handleDelete = useCallback(async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const confirmed = await confirm({
-      title: '删除项目集',
-      message: '确认删除此项目？项目内的胶卷记录会保留并回到散卷列表，只会解除项目关联。',
-      confirmText: '确认删除',
+      title: t('collections.deleteTitle'),
+      message: t('collections.deleteMessage'),
+      confirmText: t('collections.confirmDelete'),
       isDanger: true
     });
     if (confirmed) {
@@ -111,7 +113,7 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
         }
       }
     }
-  }, [confirm, user]);
+  }, [confirm, t, user]);
 
   const filteredCollections = collections;
 
@@ -120,12 +122,12 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
       const linkedRolls = allRolls.filter(r => r.collectionId === collection.id);
 
       const uniqueCameraIds = Array.from(new Set(linkedRolls.flatMap(r => r.cameraIds || [])));
-      const cameraNames = uniqueCameraIds.map(id => cameras.find(c => c.id === id)?.name || '未知相机');
+      const cameraNames = uniqueCameraIds.map(id => cameras.find(c => c.id === id)?.name || t('common.unknownCamera'));
       
       const uniqueFilmIds = Array.from(new Set(linkedRolls.map(r => r.filmStockId).filter(id => id && id !== 'digital-placeholder')));
       const filmNames = uniqueFilmIds.map(id => {
         const f = filmStocks.find(fs => fs.id === id);
-        return f ? `${f.brand} ${f.name}` : '未知胶卷';
+        return f ? `${f.brand} ${f.name}` : t('common.unknownFilm');
       });
       
       // Build mosaic: collect up to 4 cover URLs from linked rolls
@@ -159,7 +161,7 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
               )}
               
               <div className="roll-card-status">
-                <span className="status-badge active">{linkedRolls.length} 卷</span>
+                <span className="status-badge active">{t('collections.rollCount', { count: linkedRolls.length })}</span>
               </div>
             </div>
 
@@ -182,11 +184,11 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
               )}
               
               <div className="roll-card-actions">
-                <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleOpenModal(collection); }} title="编辑项目">
-                  <Edit3 size={14} /> <span>编辑</span>
+                <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleOpenModal(collection); }} title={t('collections.editTitle')}>
+                  <Edit3 size={14} /> <span>{t('collections.edit')}</span>
                 </button>
-                <button className="action-btn danger" onClick={(e) => handleDelete(collection.id!, e)} title="删除项目">
-                  <Trash2 size={14} /> <span>删除</span>
+                <button className="action-btn danger" onClick={(e) => handleDelete(collection.id!, e)} title={t('collections.deleteTitle')}>
+                  <Trash2 size={14} /> <span>{t('collections.delete')}</span>
                 </button>
               </div>
             </div>
@@ -241,23 +243,23 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
             )}
 
             <span className="collection-card-rolls-tag">
-              <Film size={10} /> {linkedRolls.length} 卷
+              <Film size={10} /> {t('collections.rollCount', { count: linkedRolls.length })}
             </span>
           </div>
 
           {/* Actions */}
           <div className="collection-card-actions roll-card-row-actions" onClick={e => e.stopPropagation()}>
-            <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleOpenModal(collection); }} title="编辑项目">
-              <Edit3 size={14} /> <span>编辑</span>
+            <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleOpenModal(collection); }} title={t('collections.editTitle')}>
+              <Edit3 size={14} /> <span>{t('collections.edit')}</span>
             </button>
-            <button className="action-btn danger" onClick={(e) => handleDelete(collection.id!, e)} title="删除项目">
-              <Trash2 size={14} /> <span>删除</span>
+            <button className="action-btn danger" onClick={(e) => handleDelete(collection.id!, e)} title={t('collections.deleteTitle')}>
+              <Trash2 size={14} /> <span>{t('collections.delete')}</span>
             </button>
           </div>
         </div>
       );
     });
-  }, [filteredCollections, allRolls, cameras, filmStocks, viewMode, onCollectionSelect, getRollCoverUrl, handleDelete]);
+  }, [filteredCollections, allRolls, cameras, filmStocks, viewMode, onCollectionSelect, getRollCoverUrl, handleDelete, t]);
 
   return (
     <div className="collections-tab-container">
@@ -267,11 +269,11 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
           <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
             <EmptyState 
               icon={Folder}
-              title="暂无拍摄项目"
-              description="创建一个拍摄项目（如：北海道旅拍），把多卷胶卷记录放在一起整理。"
+              title={t('collections.emptyTitle')}
+              description={t('collections.emptyDesc')}
               action={
                 <Button variant="primary" onClick={() => handleOpenModal()}>
-                  新建项目
+                  {t('collections.new')}
                 </Button>
               }
             />
@@ -290,22 +292,22 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
       {/* Collection Modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
             <div className="modal-header">
-              <h3>{editingCollection ? '编辑项目' : '新建项目'}</h3>
+              <h3>{editingCollection ? t('collections.editTitle') : t('collections.new')}</h3>
               <IconButton type="button" onClick={() => setIsModalOpen(false)} icon={<X size={20} />} />
             </div>
             <form onSubmit={handleSave}>
               <div className="modal-body form-group">
-                <label>项目名称 <span style={{ color: 'var(--danger-color)' }}>*</span></label>
+                <label>{t('collections.collectionName')} <span style={{ color: 'var(--danger-color)' }}>*</span></label>
                 <input 
                   type="text" 
                   value={name} 
                   onChange={e => setName(e.target.value)} 
-                  placeholder="例如：2026 东京旅拍" 
+                  placeholder={t('collections.collectionNamePlaceholder')}
                   required 
                   autoFocus
                 />
                 
-                <label>拍摄日期 <span style={{ color: 'var(--danger-color)' }}>*</span></label>
+                <label>{t('collections.date')} <span style={{ color: 'var(--danger-color)' }}>*</span></label>
                 <input 
                   type="date" 
                   value={date} 
@@ -313,18 +315,18 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
                   required 
                 />
                 
-                <label>项目描述</label>
+                <label>{t('collections.description')}</label>
                 <textarea 
                   value={description} 
                   onChange={e => setDescription(e.target.value)} 
-                  placeholder="记录这个项目的拍摄想法、地点或备忘..."
+                  placeholder={t('collections.descriptionPlaceholder')}
                   rows={3}
                 />
               </div>
               
               <div className="form-actions">
-                <Button type="button" onClick={() => setIsModalOpen(false)}>取消</Button>
-                <Button variant="primary" type="submit">保存</Button>
+                <Button type="button" onClick={() => setIsModalOpen(false)}>{t('common.cancel')}</Button>
+                <Button variant="primary" type="submit">{t('collections.save')}</Button>
               </div>
             </form>
       </Modal>

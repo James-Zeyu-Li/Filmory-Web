@@ -1,5 +1,6 @@
 .compare-mode-toggle {
   display: flex;
+  flex-wrap: wrap;
   background-color: var(--bg-tertiary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -17,6 +18,7 @@
   gap: 6px;
   cursor: pointer;
   color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .compare-mode-toggle button.primary {
@@ -81,6 +83,9 @@
 
 .dropzone-empty p {
   font-size: 12px;
+  margin: 0;
+  text-align: center;
+  padding: 0 12px;
 }
 
 .dropzone-preview {
@@ -434,4 +439,31 @@
 
 .label-right {
   right: 16px;
+}
+
+@media (max-width: 720px) {
+  .compare-workspace-body {
+    height: auto;
+    min-height: calc(100vh - 80px);
+    padding: 16px !important;
+  }
+
+  .compare-uploaders-container {
+    flex-direction: column;
+    height: auto;
+    gap: 12px;
+  }
+
+  .local-dropzone {
+    min-height: 108px;
+  }
+
+  .compare-mode-toggle {
+    width: 100%;
+  }
+
+  .compare-mode-toggle button {
+    flex: 1 1 130px;
+    justify-content: center;
+  }
 }

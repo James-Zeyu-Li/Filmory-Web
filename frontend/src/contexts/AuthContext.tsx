@@ -16,6 +16,10 @@ import {
 import { TRIAL_USER_ID } from '../services/trialPolicy';
 import { SyncService } from '../services/syncService';
 import { clearWorkspaceTabPreferences } from '../services/workspacePreferences';
+import {
+  buildLocalUserProfile,
+  resolveUserProfileDisplayName,
+} from '../services/userProfile';
 
 const DEV_AUTH_STORAGE_KEY = 'filmory_dev_auth_bypass';
 const TRIAL_AUTH_STORAGE_KEY = 'filmory_trial_auth';
@@ -27,21 +31,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [accountRole, setAccountRole] = useState<AccountRole>('user');
   const [isLoading, setIsLoading] = useState(true);
 
-  const persistDevBypassProfile = useCallback(async () => {
-    const existingProfile = await db.userProfiles.get(DEV_BYPASS_USER_ID);
-    await db.userProfiles.put({
-      id: DEV_BYPASS_USER_ID,
-      userId: DEV_BYPASS_USER_ID,
-      tier: existingProfile?.tier ?? 'vip',
-      role: 'admin',
-      highResQuotaUsed: existingProfile?.highResQuotaUsed ?? 0,
-      membershipRequestStatus: existingProfile?.membershipRequestStatus,
-      membershipRequestedAt: existingProfile?.membershipRequestedAt,
-      membershipContactEmail: existingProfile?.membershipContactEmail,
-      membershipRequestNote: existingProfile?.membershipRequestNote,
-      membershipRequestSource: existingProfile?.membershipRequestSource,
-      updatedAt: Date.now(),
+  const persistLocalUserProfile = useCallback(async (
+    nextUser: User,
+    nextRole: AccountRole,
+    nextMode: AuthMode
+  ) => {
+    const existingProfile = await db.userProfiles.get(nextUser.id);
+    const displayName = resolveUserProfileDisplayName({
+      user: nextUser,
+      existingProfile,
+      nextDisplayName: nextMode === 'dev-bypass' && !existingProfile?.displayName
+        ? 'Developer'
+        : nextMode === 'trial' && !existingProfile?.displayName
+          ? 'Trial User'
+          : undefined,
     });
+    const profileForBuild = nextMode !== 'dev-bypass'
+      ? existingProfile
+      : existingProfile
+        ? { ...existingProfile, tier: existingProfile.tier ?? 'vip' }
+        : {
+            id: nextUser.id,
+            userId: nextUser.id,
+            tier: 'vip' as const,
+            role: nextRole,
+            highResQuotaUsed: 0,
+            updatedAt: new Date().getTime(),
+          };
+
+    await db.userProfiles.put(buildLocalUserProfile({
+      userId: nextUser.id,
+      role: nextRole,
+      existingProfile: profileForBuild,
+      displayName,
+    }));
   }, []);
 
   const resolveAccountRole = useCallback(async (nextUser: User | null): Promise<AccountRole> => {
@@ -69,6 +92,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAccountRole(nextRole);
 
     if (nextUser) {
+      await persistLocalUserProfile(nextUser, nextRole, nextMode);
+    }
+
+    if (nextUser) {
       localStorage.setItem('filmory_user_id', nextUser.id);
       if (nextMode === 'supabase') {
         localStorage.removeItem(DEV_AUTH_STORAGE_KEY);
@@ -79,15 +106,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem(DEV_AUTH_STORAGE_KEY);
       localStorage.removeItem(TRIAL_AUTH_STORAGE_KEY);
     }
-
-    if (nextMode === 'dev-bypass') {
-      persistDevBypassProfile().catch(error => {
-        console.warn('Failed to persist dev bypass profile', error);
-      });
-    }
-
     setIsLoading(false);
-  }, [persistDevBypassProfile, resolveAccountRole]);
+  }, [persistLocalUserProfile, resolveAccountRole]);
 
   useEffect(() => {
     // Check active session on mount.
@@ -151,8 +171,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthMode('dev-bypass');
     setAccountRole('admin');
     setIsLoading(false);
-    persistDevBypassProfile().catch(error => {
-      console.warn('Failed to persist dev bypass profile', error);
+    persistLocalUserProfile(mockUser, 'admin', 'dev-bypass').catch(error => {
+      console.warn('Failed to persist local dev bypass profile', error);
     });
   };
 
@@ -166,6 +186,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthMode('trial');
     setAccountRole('user');
     setIsLoading(false);
+    persistLocalUserProfile(trialUser, 'user', 'trial').catch(error => {
+      console.warn('Failed to persist local trial profile', error);
+    });
   };
 
   const logout = async () => {
