@@ -244,6 +244,13 @@ button:hover {
   filter: brightness(1.1);
 }
 
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
 button.primary {
   background: var(--accent);
   color: #000;
@@ -368,6 +375,11 @@ button.icon-btn:active {
 
 .form-control:focus {
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+.form-control:focus-visible {
+  outline: none;
 }
 
 select.form-control {
@@ -564,6 +576,27 @@ select.form-control {
   margin-top: 32px !important;
   padding-top: 24px;
   border-top: 1px solid var(--border-color);
+}
+
+@media (max-width: 540px) {
+  .modal-overlay {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .modal-content {
+    max-height: calc(100dvh - 24px);
+    padding: 20px;
+  }
+
+  .modal-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .modal-footer button {
+    width: 100%;
+  }
 }
 
 button.success {

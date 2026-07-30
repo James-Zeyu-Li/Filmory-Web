@@ -24,13 +24,15 @@
   flex-direction: column;
 }
 
-.roll-card:hover {
+.roll-card:hover,
+.roll-card:focus-within {
   transform: translateY(-3px);
   border-color: var(--accent);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
 
-.roll-card:hover .roll-card-cover {
+.roll-card:hover .roll-card-cover,
+.roll-card:focus-within .roll-card-cover {
   transform: scale(1.04);
 }
 
@@ -167,12 +169,14 @@
   width: 100%;
 }
 
-.collection-card-row:hover {
+.collection-card-row:hover,
+.collection-card-row:focus-within {
   border-color: var(--accent);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
-.collection-card-row:hover .collection-card-thumb {
+.collection-card-row:hover .collection-card-thumb,
+.collection-card-row:focus-within .collection-card-thumb {
   transform: scale(1.06);
 }
 
@@ -276,12 +280,14 @@
   width: 100%;
 }
 
-.roll-card-row:hover {
+.roll-card-row:hover,
+.roll-card-row:focus-within {
   border-color: var(--accent);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
-.roll-card-row:hover .roll-card-row-thumb {
+.roll-card-row:hover .roll-card-row-thumb,
+.roll-card-row:focus-within .roll-card-row-thumb {
   transform: scale(1.06);
 }
 

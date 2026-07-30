@@ -12,6 +12,7 @@ import { SyncService } from './services/syncService';
 import { Film } from 'lucide-react';
 import { MobileHeader } from './components/MobileHeader';
 import { TrialBanner } from './components/TrialBanner';
+import { PwaUpdatePrompt } from './components/PwaUpdatePrompt';
 import { PageTransition } from './components/PageTransition';
 import { AnimatePresence } from 'framer-motion';
 import { ConfirmProvider } from './contexts/ConfirmContext';
@@ -185,6 +186,7 @@ function App() {
   return (
     <ConfirmProvider>
       <FeedbackProvider>
+        <PwaUpdatePrompt />
         <CurrencyProvider>
           <TrialGateProvider>
             <AppContent />

@@ -27,7 +27,8 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.kpi-card:hover {
+.kpi-card:hover,
+.kpi-card:focus-within {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
@@ -127,7 +128,8 @@
   border-bottom: none;
 }
 
-.ledger-table tr:hover td {
+.ledger-table tr:hover td,
+.ledger-table tr:focus-within td {
   background: rgba(255, 255, 255, 0.02);
 }
 

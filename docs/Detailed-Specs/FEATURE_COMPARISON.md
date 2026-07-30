@@ -17,6 +17,8 @@
 | 导入导出 | Excel 导入/导出已对齐当前需求 | 保持文案不再写 JSON 备份 |
 | 同步与安全 | Dexie local-first 是当前事实源；Supabase schema/RLS/private Storage/signed URL/RPC、migration 链和 live security/sync 测试已准备 | 真实 App 开启 Supabase Sync smoke 与生产环境变量切换 |
 | VIP | 已实现前端 regular/vip 模型、5 卷限制、Upgrade Modal、Settings 会员状态、本地“申请开通中”持久化流程、Supabase trigger 后端硬防线与回归测试 | 真实开通回写、支付/分享链路 |
+| PWA 与反馈 | 已实现 Service Worker prompt 更新提示，全局 Toast 支持操作按钮，“立即更新 / 稍后”由用户选择 | 生产部署后复核真实版本更新提示 |
+| 国际化与微交互 | 核心界面已接入 `zh-CN` / `en-US`；全局 focus、表单 focus ring、移动端 modal footer、Compare/Gear/Rolls/Finance 交互反馈已收口 | 隐藏/legacy 页面和 Tags 等非主路径文案机会型清理 |
 
 ## 当前 Web 端关键设计
 
@@ -28,6 +30,8 @@
 - 标签采用照片字段上的 flat-string 方案，优先保证本地搜索性能和简单同步。
 - Excel 是当前正式导入导出格式；JSON/ZIP 覆盖恢复不是当前主业务入口。
 - Settings 支持胶卷记录页签顺序、项目集页签显隐和工作区偏好持久化；登出后默认回到主工作区，但不清除用户明确设置的布局偏好。
+- PWA 更新检测自动运行，但刷新时机交给用户；更新 Toast 不打断当前表单或拍摄卷编辑。
+- 微交互以可访问性和操作判断为主，不做大规模视觉重设计。
 
 ## 不再作为当前事实的历史口径
 

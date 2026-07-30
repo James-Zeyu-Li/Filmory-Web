@@ -3,6 +3,10 @@ import 'fake-indexeddb/auto';
 import 'vitest-canvas-mock';
 import { vi } from 'vitest';
 
+vi.mock('virtual:pwa-register', () => ({
+  registerSW: vi.fn(() => vi.fn()),
+}));
+
 // Mock matchMedia if needed by some UI components (like Recharts)
 Object.defineProperty(window, 'matchMedia', {
   writable: true,

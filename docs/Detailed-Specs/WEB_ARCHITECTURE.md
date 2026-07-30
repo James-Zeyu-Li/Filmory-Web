@@ -12,6 +12,8 @@ Filmory Web 当前是 React/Vite 单页应用，采用 Dexie local-first 数据�
 - Stats：统计面板已按胶片工作流精简，不再强调总照片数。
 - Compare：双对象对比工作台。
 - Settings：胶片功能总闸、胶卷记录页签顺序/显隐、货币偏好与手动批量换算、标签设置、Excel 导入导出、账号删除、安全确认。
+- PWA 与全局反馈：Service Worker 使用 prompt 更新模式；新版本可用时通过全局 Feedback Toast 提示“立即更新 / 稍后”，由用户决定刷新时机。Feedback Toast 支持 action buttons 和常驻提示。
+- UI 微交互：全局 keyboard focus、表单 focus ring、移动端 modal footer stacking 已收口；Compare 清除按钮样式限定在局部 class，Gear/Rolls/Finance 可交互卡片具备 `focus-within` 反馈。
 - Hidden legacy Photos / Albums：全局照片库和跨卷相册已从主导航和路由入口隐藏；底层 `photoAssets`、`albums`、`albumPhotos` 仍保留，用于拍摄卷封面/样片 fallback、历史数据兼容和后续迁移。
 
 ## 2. 架构图
@@ -65,7 +67,16 @@ Supabase (cloud/production target)
 - 已登录用户访问 `/login` 会跳回 `/dashboard`；未登录用户访问私有工作区会被路由守卫重定向到 `/login`。
 - 前端可独立验证页面、路由、错误态和重设密码兜底；本地 Supabase + Mailpit 已验证注册确认邮件和密码重设邮件，生产 SMTP / OAuth provider / 线上 Redirect URL 仍需上线前单独验证。
 
-## 5. 当前风险与 Roadmap 连接
+## 5. PWA 与前端体验策略
+
+- `vite-plugin-pwa` 使用 `registerType: 'prompt'`，避免新 Service Worker 静默强制接管并刷新正在编辑的页面。
+- `registerFilmoryServiceWorker()` 负责注册 Service Worker、监听 `onNeedRefresh`，并定期触发 `registration.update()` 检查新版本。
+- 当新版本可用时，服务层派发 `filmory-pwa-update-ready` 事件；`PwaUpdatePrompt` 订阅事件并通过 Feedback Toast 展示“立即更新 / 稍后”。
+- 点击“立即更新”会调用 vite-plugin-pwa 提供的 update callback，向等待中的 Service Worker 发送 `SKIP_WAITING`，再进入新版本；点击“稍后”只关闭提示，不打断当前表单。
+- 全局反馈系统支持 `actions` 和 `durationMs: 0`，用于 PWA 更新这类需要用户明确决策的通知；普通保存/失败反馈继续使用自动消失的 toast。
+- UI 可访问性和一致性交互优先通过全局 CSS 解决：按钮/链接/summary 使用 `:focus-visible`，`.form-control` 统一 focus ring，移动端 modal footer 自动纵向堆叠。
+
+## 6. 当前风险与 Roadmap 连接
 
 优先执行顺序以 `docs/ROADMAP_TODO.md` 为准。当前仍需处理：
 
@@ -73,5 +84,4 @@ Supabase (cloud/production target)
 - 器材 reference catalog 已迁到独立 `frontend/src/catalog/gear/` 并补 validation；后续只需按使用反馈扩充数据，不迁入用户资产表。
 - 生产认证链路复核：生产 SMTP、线上域名 Redirect URL、OAuth provider 配置和 session 边界。
 - 会员商业化闭环：真实开通回写、支付 webhook 和可选分享/增长功能。
-- 危险操作取消态 E2E 补强。
 - 前端模块机会型抽取，不做无必要的大规模 OOP 重构。

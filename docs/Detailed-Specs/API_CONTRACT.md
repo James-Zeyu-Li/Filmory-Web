@@ -96,6 +96,7 @@
 
 - 单元/模块测试默认不依赖真实 Supabase。
 - 当前 auth 前端已具备独立单测与 Playwright 公共路由覆盖，至少验证注册跳转、弱密码拦截、无效登录文案、未验证邮箱重发、找回密码、重设密码兜底、callback 错误态和 unsafe `next` fallback。
+- PWA 更新提示由 `pwa-update-prompt` 单测覆盖，验证新版本事件会显示操作型 toast，“立即更新”调用 update callback，“稍后”只关闭提示。
 - P0 live integration tests 可通过 `RUN_P0_LIVE_TESTS=1` 显式开启，验证 private bucket、signed URL、跨用户拒绝读取、`delete_user()` 权限和 cascade 清理。
 - Sync live integration test 可通过 `RUN_SYNC_LIVE_TESTS=1` 显式开启，验证 Dexie `syncQueue` 推送到 Supabase，并从远端更新 pull 回 Dexie。
-- E2E 用 Playwright 覆盖核心 UI 流程；危险操作取消态已覆盖取消删除相机、取消删除拍摄卷和取消账号注销最终确认。
+- E2E 用 Playwright 覆盖核心 UI 流程；危险操作取消态已覆盖取消删除相机、取消删除拍摄卷和取消账号注销最终确认。i18n/settings 相关 E2E 同时作为移动端/桌面端布局 smoke，防止全局 focus/modal CSS 改动造成横向溢出或主要按钮不可用。

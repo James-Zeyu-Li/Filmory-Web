@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
-import { FeedbackContext, type FeedbackOptions } from './feedbackContextCore';
+import { FeedbackContext, type FeedbackAction, type FeedbackOptions } from './feedbackContextCore';
 import { useLanguage } from './useLanguage';
 
 interface FeedbackProviderProps {
@@ -9,7 +9,9 @@ interface FeedbackProviderProps {
 }
 
 type ActiveFeedback = Required<Pick<FeedbackOptions, 'title' | 'type'>> &
-  Pick<FeedbackOptions, 'message'>;
+  Pick<FeedbackOptions, 'message'> & {
+    actions?: FeedbackAction[];
+  };
 
 export const FeedbackProvider: React.FC<FeedbackProviderProps> = ({ children }) => {
   const [activeFeedback, setActiveFeedback] = useState<ActiveFeedback | null>(null);
@@ -24,23 +26,34 @@ export const FeedbackProvider: React.FC<FeedbackProviderProps> = ({ children }) 
     };
   }, []);
 
-  const notify = ({ title, message, type = 'info', durationMs = 3600 }: FeedbackOptions) => {
-    if (timeoutRef.current !== null) {
-      window.clearTimeout(timeoutRef.current);
-    }
-    setActiveFeedback({ title, message, type });
-    timeoutRef.current = window.setTimeout(() => {
-      setActiveFeedback(null);
-      timeoutRef.current = null;
-    }, durationMs);
-  };
-
   const dismiss = () => {
     if (timeoutRef.current !== null) {
       window.clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
     setActiveFeedback(null);
+  };
+
+  const notify = ({ title, message, type = 'info', durationMs = 3600, actions }: FeedbackOptions) => {
+    if (timeoutRef.current !== null) {
+      window.clearTimeout(timeoutRef.current);
+    }
+    setActiveFeedback({ title, message, type, actions });
+    if (durationMs > 0) {
+      timeoutRef.current = window.setTimeout(() => {
+        setActiveFeedback(null);
+        timeoutRef.current = null;
+      }, durationMs);
+    } else {
+      timeoutRef.current = null;
+    }
+  };
+
+  const handleAction = (action: FeedbackAction) => {
+    action.onClick();
+    if (!action.keepOpen) {
+      dismiss();
+    }
   };
 
   const icon = activeFeedback?.type === 'success'
@@ -50,7 +63,7 @@ export const FeedbackProvider: React.FC<FeedbackProviderProps> = ({ children }) 
       : <Info size={18} />;
 
   return (
-    <FeedbackContext.Provider value={{ notify }}>
+    <FeedbackContext.Provider value={{ notify, dismiss }}>
       {children}
       {activeFeedback && (
         <div
@@ -90,6 +103,29 @@ export const FeedbackProvider: React.FC<FeedbackProviderProps> = ({ children }) 
               <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.45, whiteSpace: 'pre-wrap' }}>
                 {activeFeedback.message}
               </p>
+            )}
+            {activeFeedback.actions && activeFeedback.actions.length > 0 && (
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
+                {activeFeedback.actions.map(action => (
+                  <button
+                    key={action.label}
+                    type="button"
+                    onClick={() => handleAction(action)}
+                    style={{
+                      border: action.variant === 'primary' ? '1px solid var(--accent)' : '1px solid var(--border-color)',
+                      background: action.variant === 'primary' ? 'var(--accent)' : 'var(--bg-tertiary)',
+                      color: action.variant === 'primary' ? '#fff' : 'var(--text-primary)',
+                      cursor: 'pointer',
+                      borderRadius: '999px',
+                      padding: '6px 10px',
+                      fontSize: '12px',
+                      fontWeight: 700
+                    }}
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
           <button

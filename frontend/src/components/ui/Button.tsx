@@ -21,19 +21,19 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       ...props
     },
     ref
-	  ) => {
-	    // Map variants to existing CSS classes.
-	    const variantClass = variant === 'secondary' ? 'secondary' :
-	                         variant === 'outline' ? 'outline-btn' :
-	                         variant === 'text' ? 'text-btn' :
-	                         variant === 'ghost' ? 'text-btn' :
-	                         variant;
-	    const sizeClass = size === 'sm' ? 'btn-sm' : size === 'lg' ? 'btn-lg' : '';
+  ) => {
+    // Map variants to existing CSS classes.
+    const variantClass = variant === 'secondary' ? 'secondary' :
+                         variant === 'outline' ? 'outline-btn' :
+                         variant === 'text' ? 'text-btn' :
+                         variant === 'ghost' ? 'text-btn' :
+                         variant;
+    const sizeClass = size === 'sm' ? 'btn-sm' : size === 'lg' ? 'btn-lg' : '';
 
-	    return (
-	      <button
-	        ref={ref}
-	        className={`${variantClass} ${sizeClass} ${className}`.trim()}
+    return (
+      <button
+        ref={ref}
+        className={`${variantClass} ${sizeClass} ${className}`.trim()}
         disabled={disabled}
         style={style}
         {...props}

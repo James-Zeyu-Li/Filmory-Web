@@ -9,6 +9,7 @@ The app runs primarily in the browser with IndexedDB/Dexie for fast offline-firs
 - React 19 + TypeScript + Vite
 - Dexie / IndexedDB local-first data layer
 - Supabase for Auth, Postgres, Storage, RLS, and sync readiness
+- PWA support with user-controlled update prompts
 - Vitest + Testing Library for unit tests
 - Playwright for E2E tests
 

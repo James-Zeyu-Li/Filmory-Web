@@ -121,7 +121,7 @@
   max-width: 80%;
 }
 
-.icon-btn {
+.compare-clear-btn {
   background: rgba(255, 255, 255, 0.2);
   border: none;
   border-radius: 50%;
@@ -134,7 +134,8 @@
   color: #fff;
 }
 
-.icon-btn:hover {
+.compare-clear-btn:hover,
+.compare-clear-btn:focus-visible {
   background: #ef4444;
 }
 

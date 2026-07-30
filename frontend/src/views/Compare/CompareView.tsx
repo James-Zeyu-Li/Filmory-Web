@@ -29,7 +29,7 @@ const FileDropzone: React.FC<FileDropzoneProps> = ({ target, file, url, onDropFi
         <img src={url} alt={copy.previewAlt} />
         <div className="dropzone-overlay">
           <span>{file?.name}</span>
-          <button className="icon-btn btn-sm" onClick={() => onClearFile(target)} title={copy.clearTitle}>
+          <button className="compare-clear-btn" onClick={() => onClearFile(target)} title={copy.clearTitle}>
             <X size={14} />
           </button>
         </div>

@@ -153,6 +153,11 @@ export const translations = {
 
     'feedback.dismiss': '关闭提示',
 
+    'pwa.updateTitle': '发现新版本',
+    'pwa.updateMessage': 'Filmory 已准备好更新。你可以现在刷新到新版本，或稍后再处理，避免打断正在录入的内容。',
+    'pwa.updateNow': '立即更新',
+    'pwa.updateLater': '稍后',
+
     'excel.importTitle': '批量导入器材与拍摄记录',
     'excel.processingRead': '正在读取表格内容...',
     'excel.importCompleteTitle': '表格导入完成',
@@ -967,6 +972,11 @@ export const translations = {
     'auth.statusVerifiedDesc': 'If you returned from a verification email, you can now log in with email and password.',
 
     'feedback.dismiss': 'Dismiss notification',
+
+    'pwa.updateTitle': 'New version available',
+    'pwa.updateMessage': 'A Filmory update is ready. Refresh now to use the latest version, or postpone it so your current editing flow is not interrupted.',
+    'pwa.updateNow': 'Update now',
+    'pwa.updateLater': 'Later',
 
     'excel.importTitle': 'Batch import gear and roll records',
     'excel.processingRead': 'Reading spreadsheet...',

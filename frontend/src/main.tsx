@@ -6,12 +6,9 @@ import { AuthProvider } from './contexts/AuthContext.tsx'
 import { ThemeProvider } from './contexts/ThemeContext.tsx'
 import { LanguageProvider } from './contexts/LanguageContext.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
-import { registerSW } from 'virtual:pwa-register'
+import { registerFilmoryServiceWorker } from './services/pwaUpdateService.ts'
 
-// Register Service Worker for PWA
-if ('serviceWorker' in navigator) {
-  registerSW({ immediate: true })
-}
+registerFilmoryServiceWorker()
 
 import { BrowserRouter } from 'react-router-dom'
 
