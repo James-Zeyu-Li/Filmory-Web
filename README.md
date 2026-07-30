@@ -18,7 +18,7 @@ The app runs primarily in the browser with IndexedDB/Dexie for fast offline-firs
 Filmory-Web/
 ├── frontend/      # React app, tests, catalog data, and browser data layer
 ├── supabase/      # Local Supabase config and migrations
-├── docs/          # Roadmap, schema, architecture, and product notes
+├── docs/          # Shared implementation notes such as schema and architecture
 ├── scripts/       # Helper scripts
 └── filmory.sh     # Local development control script
 ```
@@ -72,7 +72,6 @@ npm run e2e
 
 ## Documentation
 
-- Roadmap and active tasks: [docs/ROADMAP_TODO.md](docs/ROADMAP_TODO.md)
 - Database model: [docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)
 - Supabase contract: [docs/Detailed-Specs/API_CONTRACT.md](docs/Detailed-Specs/API_CONTRACT.md)
 - Architecture notes: [docs/Detailed-Specs/WEB_ARCHITECTURE.md](docs/Detailed-Specs/WEB_ARCHITECTURE.md)
@@ -81,5 +80,6 @@ npm run e2e
 ## Development Notes
 
 - Keep user data writes local-first through Dexie unless a task explicitly targets Supabase integration.
-- Keep schema changes in `supabase/migrations/` and update docs when the data model changes.
+- Keep schema changes in `supabase/migrations/` and update shared implementation docs when the data model changes.
 - Do not commit local credentials, generated build output, test artifacts, or one-off debugging screenshots.
+- Keep local roadmap, audit notes, and manual verification checklists in ignored local files.

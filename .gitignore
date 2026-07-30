@@ -62,3 +62,11 @@ trace.zip
 *.webm
 *-debug.png
 before-click-*.png
+
+# Local-only planning, audit, and manual verification notes
+.local-docs/
+docs/ROADMAP_TODO.md
+docs/auth-manual-checklist.md
+docs/audit_result/
+docs/Data/
+docs/supabase_schema.sql
