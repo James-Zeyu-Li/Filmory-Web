@@ -51,7 +51,8 @@ Use this file for current status.
 
 ### F. Audit Reconciliation
 - Implemented and verified from older audit records: `COMMON_FILM_STOCKS.format`, `commonLenses.mountKey`, front-end VIP gating, Playwright E2E migration to `frontend/e2e`, Realtime `user_id` filtering, default-off SyncService app lifecycle wiring, local Supabase env separation, and `tagConfigs` composite uniqueness.
-- Still valid and tracked in `docs/ROADMAP_TODO.md`: Supabase migration-chain live reset, replacing the local Supabase anon-key placeholder after `supabase start`, sync retry/throttle/logout boundaries, real email/Mailpit auth verification, VIP backend enforcement/payment/share links, legacy `rolls.camera_id` decision, and systematic form-focus/reflow/icon-button polish.
+- Implemented after this audit was first written: Supabase migration-chain live reset, sync retry/throttle/logout boundaries, local Mailpit auth email verification, VIP backend active-roll enforcement, and current lint warning cleanup.
+- Still valid and tracked in `docs/ROADMAP_TODO.md`: real App Supabase Sync smoke with browser UI, production SMTP/OAuth/redirect validation, payment automation, optional share/growth features, legacy `rolls.camera_id` decision, and systematic form-focus/reflow/icon-button polish.
 - Historical audit files should not be used as direct task lists. If a historical item conflicts with this file or `docs/ROADMAP_TODO.md`, the Roadmap wins.
 
 ### G. Auth Production-Facing Front-End Closure
@@ -73,6 +74,7 @@ Implemented:
 - user tier detection
 - Upgrade Modal entry and plan messaging
 - 5 active-roll limit for regular users
+- Supabase trigger enforcement for the regular-user active roll limit
 - Settings membership surface
 - local pending upgrade-request state with contact email / note persistence
 - mail-draft and copy-to-clipboard manual upgrade flow
@@ -81,7 +83,6 @@ Implemented:
 - Playwright regression coverage
 
 Not yet implemented:
-- server-side enforcement in Supabase / Postgres / RPC layer
 - payment integration
 - public VIP sharing links
 
@@ -157,7 +158,7 @@ As of 2026-07-18:
 - Premium UX audit items are largely implemented for the originally documented scope.
 - Gear creation, 120 back workflow, roll quick-add film, and Settings tab-order preferences are implemented for the latest documented scope.
 - The public auth UI now includes signup email verification redirects, unverified-email resend, forgot-password, reset-password, callback status pages, strong password validation, safe callback fallback, and front-end regression coverage.
-- The main remaining membership gap is no longer UI wiring; it is backend enforcement and commercial/payment follow-through.
+- The main remaining membership gap is no longer UI wiring or active-roll backend enforcement; it is commercial/payment follow-through and optional share/growth features.
 - The main remaining auth gap is no longer missing pages, redirects, or local Mailpit delivery; it is production SMTP, provider configuration, and final session-boundary manual verification.
 - The main remaining UX gap is no longer empty-state or premium polish basics; it is systematic consistency review across the rest of the product.
 
@@ -188,5 +189,5 @@ Verification result:
 - local Supabase migration chain, P0 security live tests, and sync push/pull live test are verified
 - key gear builder, 120 back, and smoke flows are covered by focused E2E
 - the current implementation is strong enough to treat the front-end membership flow as implemented
-- current full Vitest run passes at `59 tests` with `3 skipped`; live sync is skipped unless explicitly enabled
-- remaining work is primarily backend and long-tail UX refinement
+- current full Vitest run passes at `68 tests` with `5 skipped`; live sync is skipped unless explicitly enabled
+- remaining work is primarily commercial integration, production environment validation, and long-tail UX refinement

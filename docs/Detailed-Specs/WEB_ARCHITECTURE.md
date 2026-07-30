@@ -43,6 +43,7 @@ Supabase (cloud/production target)
 - 当前本地-only 阶段以 Dexie 为事实源；云端 RLS 是接入 Supabase 后的最终安全边界，本地 `userId` 过滤是当前体验和正确性边界。
 - 业务表都必须按当前用户隔离。
 - Storage 只保存照片原图/大图对象；器材头像等轻量图优先本地 Base64。
+- 图片压缩统一使用 WebP，并通过命名常量控制最长边和 quality；照片缩略图、拍摄卷封面和器材头像都按最长边等比缩放，不只限制宽度。
 
 ## 4. Supabase 职责
 
@@ -62,15 +63,15 @@ Supabase (cloud/production target)
 - 常见认证失败已映射为用户态文案，包括无效登录、未验证邮箱、重复注册、弱密码、链接过期和频率限制；不再直接裸露原始 Supabase 英文错误。
 - callback `next` 路径必须是站内相对路径；不安全目标会回退到 `/login`，避免 open redirect。
 - 已登录用户访问 `/login` 会跳回 `/dashboard`；未登录用户访问私有工作区会被路由守卫重定向到 `/login`。
-- 在未接入真实 Supabase / Mailpit 的情况下，前端可独立验证页面、路由、错误态和重设密码兜底；真实邮件收发仍需在本地 Supabase 启动后继续验证。
+- 前端可独立验证页面、路由、错误态和重设密码兜底；本地 Supabase + Mailpit 已验证注册确认邮件和密码重设邮件，生产 SMTP / OAuth provider / 线上 Redirect URL 仍需上线前单独验证。
 
 ## 5. 当前风险与 Roadmap 连接
 
 优先执行顺序以 `docs/ROADMAP_TODO.md` 为准。当前仍需处理：
 
-- Supabase 接入前：补写入后的节流 push、网络恢复重试、退出登录同步边界，并 live 验证 migration 链。
+- 真实 App 开启 Supabase Sync smoke：用真实 Supabase Auth 账号在浏览器 UI 中验证写入、刷新、RLS 隔离和同步状态。
 - 器材 reference catalog 已迁到独立 `frontend/src/catalog/gear/` 并补 validation；后续只需按使用反馈扩充数据，不迁入用户资产表。
-- 生产认证链路复核：真实邮件、Mailpit、回调 URL、路由守卫、session 刷新。
-- VIP 功能接线与后端硬防线。
+- 生产认证链路复核：生产 SMTP、线上域名 Redirect URL、OAuth provider 配置和 session 边界。
+- 会员商业化闭环：真实开通回写、支付 webhook 和可选分享/增长功能。
 - 危险操作取消态 E2E 补强。
 - 前端模块机会型抽取，不做无必要的大规模 OOP 重构。

@@ -65,7 +65,7 @@
 
 统一 bucket：`filmory-assets`。
 
-当前本地-only 阶段：照片可使用本地 blob/thumbnail fallback；Storage 契约在接入 Supabase 或生产部署前必须 live 验证。
+当前本地-only 阶段：照片可使用本地 blob/thumbnail fallback；P0 live security tests 已覆盖 private bucket、signed URL、匿名/跨用户读取失败等基础契约。真实 App 开启 Supabase Sync / Storage 后仍需做浏览器 UI smoke。
 
 安全要求：
 
@@ -77,7 +77,7 @@
 
 上传流程：
 
-1. 前端生成本地 WebP 缩略图，存入 `thumbnailUrl` 作为快速预览和 fallback。
+1. 前端按最长边等比生成本地 WebP 缩略图，存入 `thumbnailUrl` 作为快速预览和 fallback。
 2. 前端使用 TUS 上传原图到 Supabase Storage。
 3. 上传成功后保存 `storageKey`。
 4. 展示时优先用 `storageKey` 创建 signed URL。

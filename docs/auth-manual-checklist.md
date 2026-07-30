@@ -159,11 +159,11 @@
 - 生产 SMTP 真发信验证
 - 生产 OAuth provider 控制台配置正确性
 - 真实线上域名下的 Redirect URL 校验
-- Supabase migration chain / `supabase db reset` 验证
-- 会员后端硬防线
+- 真实线上环境的 Supabase Auth session 边界验证
+- 真实线上 App 开启 Supabase Sync 后的浏览器 UI smoke
 
 ## 建议验收顺序
 
 1. 先做纯前端路由和表单校验检查。
-2. 再接本地 Supabase + Mailpit 验证真实邮件链路。
+2. 本地 Supabase + Mailpit 链路已验证；如修改 auth flow，再按本清单回归。
 3. 最后在准备上线前单独做生产环境 auth checklist。
