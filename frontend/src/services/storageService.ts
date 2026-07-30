@@ -1,5 +1,6 @@
 import { supabase, supabaseUrl } from './supabaseClient';
 import * as tus from 'tus-js-client';
+import { getBoundedImageSize, IMAGE_OUTPUT_MIME_TYPE } from '../utils/imageService';
 
 export interface UploadResult {
   storageKey: string;
@@ -9,11 +10,17 @@ export interface UploadResult {
 
 const PHOTO_BUCKET = 'filmory-assets';
 const SIGNED_URL_TTL_SECONDS = 60 * 60;
+export const PHOTO_THUMBNAIL_MAX_EDGE = 400;
+export const PHOTO_THUMBNAIL_WEBP_QUALITY = 0.6;
 
 /**
  * 压缩图片，生成轻量级 Base64 缩略图
  */
-const generateThumbnail = (file: File, maxWidth = 400): Promise<string> => {
+export const generateThumbnail = (
+  file: File,
+  maxEdge = PHOTO_THUMBNAIL_MAX_EDGE,
+  quality = PHOTO_THUMBNAIL_WEBP_QUALITY
+): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -22,10 +29,7 @@ const generateThumbnail = (file: File, maxWidth = 400): Promise<string> => {
       img.src = event.target?.result as string;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const ratio = maxWidth / img.width;
-        // 如果原图比缩略图要求还小，直接按原图大小，否则等比例缩小
-        const width = img.width > maxWidth ? maxWidth : img.width;
-        const height = img.width > maxWidth ? img.height * ratio : img.height;
+        const { width, height } = getBoundedImageSize(img.width, img.height, maxEdge);
         
         canvas.width = width;
         canvas.height = height;
@@ -33,8 +37,7 @@ const generateThumbnail = (file: File, maxWidth = 400): Promise<string> => {
         if (ctx) {
           // 绘制压缩图
           ctx.drawImage(img, 0, 0, width, height);
-          // 输出 0.6 质量的 WebP 格式，极限减小本地体积
-          resolve(canvas.toDataURL('image/webp', 0.6));
+          resolve(canvas.toDataURL(IMAGE_OUTPUT_MIME_TYPE, quality));
         } else {
           reject(new Error('Canvas context not available'));
         }

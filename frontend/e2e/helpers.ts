@@ -22,6 +22,13 @@ export async function loginWithDevBypass(page: Page) {
   await expect(page.getByRole('heading', { name: /控制中心/ })).toBeVisible();
 }
 
+export async function startTrialFromLanding(page: Page) {
+  await resetBrowserData(page);
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: /Try it Now/ }).click();
+  await expect(page.getByRole('heading', { name: /控制中心/ })).toBeVisible();
+}
+
 export async function resetAndLogin(page: Page) {
   await resetBrowserData(page);
   await loginWithDevBypass(page);

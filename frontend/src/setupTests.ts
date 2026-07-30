@@ -34,8 +34,21 @@ vi.mock('./contexts/useAuth', () => ({
     user: { id: 'mock-user-id', email: 'test@filmory.app' },
     session: null,
     isLoading: false,
+    authMode: 'supabase',
+    accountRole: 'user',
+    isAdmin: false,
+    isDevBypass: false,
+    isTrial: false,
+    startTrial: vi.fn(),
     signInMock: vi.fn(),
     logout: vi.fn()
+  })
+}));
+
+vi.mock('./contexts/useTrialGate', () => ({
+  useTrialGate: () => ({
+    guardTrialResource: vi.fn(() => true),
+    requireRegistration: vi.fn(),
   })
 }));
 

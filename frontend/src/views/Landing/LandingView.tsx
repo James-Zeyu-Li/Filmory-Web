@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Camera, Image, Layers, Wallet } from 'lucide-react';
+import { useAuth } from '../../contexts/useAuth';
 import './LandingView.css';
 
 const containerVariants = {
@@ -18,6 +19,14 @@ const itemVariants = {
 };
 
 export const LandingView: React.FC = () => {
+  const navigate = useNavigate();
+  const { startTrial } = useAuth();
+
+  const handleStartTrial = () => {
+    startTrial();
+    navigate('/dashboard');
+  };
+
   return (
     <div className="landing-container">
       {/* Navbar */}
@@ -27,8 +36,11 @@ export const LandingView: React.FC = () => {
           <span>Filmory</span>
         </div>
         <div className="landing-nav-actions">
+          <button type="button" className="btn-ghost-trial" onClick={handleStartTrial}>
+            先试用一下
+          </button>
           <Link to="/login" className="btn-secondary">登录</Link>
-          <Link to="/login" className="btn-primary">免费注册</Link>
+          <Link to="/login?mode=signup" className="btn-primary">免费注册</Link>
         </div>
       </nav>
 
@@ -53,8 +65,11 @@ export const LandingView: React.FC = () => {
             少一点表格和备忘录，多一点专注拍摄本身。
           </motion.p>
           <motion.div variants={itemVariants} className="hero-actions">
-            <Link to="/login" className="btn-primary large">
-              开始整理拍摄记录 <ArrowRight size={18} />
+            <button type="button" className="btn-primary large" onClick={handleStartTrial}>
+              Try it Now <ArrowRight size={18} />
+            </button>
+            <Link to="/login?mode=signup" className="btn-secondary large">
+              注册后长期保存
             </Link>
           </motion.div>
         </motion.div>

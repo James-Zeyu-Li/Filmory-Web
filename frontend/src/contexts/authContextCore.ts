@@ -10,6 +10,8 @@ export interface AuthContextType {
   accountRole: AccountRole;
   isAdmin: boolean;
   isDevBypass: boolean;
+  isTrial: boolean;
+  startTrial: () => void;
   signInMock: () => void;
   logout: () => Promise<void>;
 }

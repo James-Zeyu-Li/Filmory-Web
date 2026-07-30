@@ -7,6 +7,8 @@ import {
 import { ExcelImportModal } from '../../components/ExcelImportModal';
 import './DashboardView.css';
 import { useRolls, useCameras, useFilmStocks, useFilmBacks, useLenses } from '../../hooks/useData';
+import { useAuth } from '../../contexts/useAuth';
+import { useTrialGate } from '../../contexts/useTrialGate';
 
 interface DashboardViewProps {
   enableFilmMode: boolean;
@@ -24,6 +26,8 @@ const cardVariants = {
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, onNavigate }) => {
   const [showExcelModal, setShowExcelModal] = useState(false);
+  const { authMode } = useAuth();
+  const { requireRegistration } = useTrialGate();
   const rolls = useRolls();
   const cameras = useCameras();
   const filmBacks = useFilmBacks();
@@ -207,7 +211,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
             <motion.button
               className="launchpad-pill portal-upload"
               custom={5} initial="hidden" animate="visible" variants={cardVariants}
-              onClick={() => setShowExcelModal(true)}
+              onClick={() => {
+                if (authMode === 'trial') {
+                  requireRegistration('rolls');
+                  return;
+                }
+                setShowExcelModal(true);
+              }}
             >
               <UploadCloud size={16} /> <span>批量导入</span>
             </motion.button>

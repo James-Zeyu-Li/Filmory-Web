@@ -4,11 +4,16 @@ import { useAuth } from '../../contexts/useAuth';
 import { useConfirm } from '../../contexts/useConfirm';
 import { useFeedback } from '../../contexts/useFeedback';
 import { useCurrency } from '../../contexts/useCurrency';
+import { useTrialGate } from '../../contexts/useTrialGate';
 import { uploadPhotoToCloud } from '../../services/storageService';
 import { Folder, Search, LayoutGrid, List, Trash2, Film, Plus, Camera, ArrowLeft, CheckCircle, X, Upload, Star, Sparkles, Package, Aperture } from 'lucide-react';
 import { IconButton } from '../../components/ui/IconButton';
 import { motion } from 'framer-motion';
-import { compressImageToWebP } from '../../utils/imageService';
+import {
+  ROLL_COVER_PREVIEW_MAX_EDGE,
+  ROLL_COVER_PREVIEW_WEBP_QUALITY,
+  compressImageToWebP,
+} from '../../utils/imageService';
 import './RollsView.css';
 import { useCameraSystems, useCollections, useCameras, useFilmBacks, useFilmStocks, useRolls, usePhotoAssets, useLenses } from '../../hooks/useData';
 import { usePhotoUrlMap } from '../../hooks/usePhotoUrlMap';
@@ -53,10 +58,11 @@ const getDefaultLibraryView = (
 };
 
 export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
-  const { user } = useAuth();
+  const { user, authMode } = useAuth();
   const { confirm } = useConfirm();
   const { notify } = useFeedback();
   const { currencySymbol } = useCurrency();
+  const { guardTrialResource, requireRegistration } = useTrialGate();
   const location = useLocation();
   const { tier: userTier, isLoading: isUserTierLoading } = useUserTier();
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
@@ -300,6 +306,11 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     e.preventDefault();
     if (!rollTitle || selectedCameraIds.length === 0 || (enableFilmMode && !filmSearchText.trim()) || !user) return;
 
+    if (!guardTrialResource({ resource: 'rolls', currentCount: rolls.length })) {
+      setIsNewRollModalOpen(false);
+      return;
+    }
+
     if (isUserTierLoading) {
       notify({
         type: 'error',
@@ -341,6 +352,10 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
         if (matched) {
             finalFilmId = matched.id!;
         } else {
+            if (!guardTrialResource({ resource: 'filmStocks', currentCount: filmStocks.length })) {
+              setIsNewRollModalOpen(false);
+              return;
+            }
             const parts = filmSearchText.trim().split(' ');
             const brand = parts[0] || 'Unknown';
             const name = parts.slice(1).join(' ') || 'Unknown Film';
@@ -594,11 +609,20 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   
   const handleCoverUpload = async (file: File) => {
     if (!selectedRollId) return;
+    if (authMode === 'trial') {
+      requireRegistration('photos');
+      return;
+    }
+
     setIsUploading(true);
     setUploadProgress(0);
     
     try {
-        const webpFile = await compressImageToWebP(file, 1920, 0.8);
+        const webpFile = await compressImageToWebP(
+          file,
+          ROLL_COVER_PREVIEW_MAX_EDGE,
+          ROLL_COVER_PREVIEW_WEBP_QUALITY
+        );
         const photoId = crypto.randomUUID();
         const currentUserId = user?.id || 'offline';
         

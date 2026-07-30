@@ -1,6 +1,7 @@
 import type { User } from '@supabase/supabase-js';
+import { TRIAL_USER_EMAIL, TRIAL_USER_ID } from './trialPolicy';
 
-export type AuthMode = 'supabase' | 'dev-bypass';
+export type AuthMode = 'supabase' | 'dev-bypass' | 'trial';
 export type AccountRole = 'user' | 'admin';
 
 export const DEV_BYPASS_USER_ID = 'mock_uid_123';
@@ -21,6 +22,20 @@ export const createDevBypassUser = () => ({
   },
   user_metadata: {
     authMode: 'dev-bypass',
+  },
+} as User);
+
+export const createTrialUser = () => ({
+  id: TRIAL_USER_ID,
+  email: TRIAL_USER_EMAIL,
+  aud: 'authenticated',
+  created_at: new Date(0).toISOString(),
+  app_metadata: {
+    provider: 'trial',
+    role: 'user',
+  },
+  user_metadata: {
+    authMode: 'trial',
   },
 } as User);
 

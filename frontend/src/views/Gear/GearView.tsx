@@ -16,12 +16,17 @@ import { useAuth } from '../../contexts/useAuth';
 import { useConfirm } from '../../contexts/useConfirm';
 import { useFeedback } from '../../contexts/useFeedback';
 import { useCurrency } from '../../contexts/useCurrency';
+import { useTrialGate } from '../../contexts/useTrialGate';
 import { useCameraSystems, useCameras, useFilmBacks, useLenses, useFilmStocks, useOtherEquipments } from '../../hooks/useData';
 import { EmptyState } from '../../components/EmptyState';
 import { Modal } from '../../components/Modal';
 import { IconButton } from '../../components/ui/IconButton';
 import { motion } from 'framer-motion';
-import { compressImageToBase64 } from '../../utils/imageService';
+import {
+  GEAR_AVATAR_MAX_EDGE,
+  GEAR_AVATAR_WEBP_QUALITY,
+  compressImageToBase64,
+} from '../../utils/imageService';
 import { removeGearAvatar, type GearAvatarTableName } from '../../services/gearAvatarService';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { GEAR_SUB_TAB_KEY } from '../../services/workspacePreferences';
@@ -69,6 +74,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
   const { confirm } = useConfirm();
   const { notify } = useFeedback();
   const { currencySymbol } = useCurrency();
+  const { guardTrialResource } = useTrialGate();
   const location = useLocation();
   const navigate = useNavigate();
   const initialSearchParams = new URLSearchParams(location.search);
@@ -209,9 +215,11 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     setUploadingEntityId(activeUploadEntity.id);
 
     try {
-      // Create an 800px WebP Base64 string
-      // This provides excellent click-to-enlarge quality while staying under ~50KB
-      const base64DataUrl = await compressImageToBase64(file, 800, 0.8);
+      const base64DataUrl = await compressImageToBase64(
+        file,
+        GEAR_AVATAR_MAX_EDGE,
+        GEAR_AVATAR_WEBP_QUALITY
+      );
 
       // Save directly to Local Database based on entity type
       const table = (db as any)[activeUploadEntity.type];
@@ -511,6 +519,11 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     e.preventDefault();
     if (!newCamera.name) return;
 
+    if (!editingCameraId && !guardTrialResource({ resource: 'cameras', currentCount: allCameras.length })) {
+      setIsCameraModalOpen(false);
+      return;
+    }
+
     if (
       !editingCameraId &&
       newCamera.format === '120' &&
@@ -689,6 +702,11 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     e.preventDefault();
     if (!newLens.name) return;
 
+    if (!editingLensId && !guardTrialResource({ resource: 'lenses', currentCount: allLenses.length })) {
+      setIsLensModalOpen(false);
+      return;
+    }
+
     if (!editingLensId) {
       const exists = allLenses.find(lens => lens.name === newLens.name);
       if (exists) {
@@ -789,6 +807,11 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
   const handleSaveFilm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newFilm.brand || !newFilm.name) return;
+
+    if (!editingFilmId && !guardTrialResource({ resource: 'filmStocks', currentCount: filmStocks.length })) {
+      setIsFilmModalOpen(false);
+      return;
+    }
 
     if (!editingFilmId) {
       const exists = filmStocks.find(film => film.brand === newFilm.brand && film.name === newFilm.name);
@@ -894,6 +917,11 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
   const handleSaveEquipment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEquipment.name) return;
+
+    if (!editingEquipmentId && !guardTrialResource({ resource: 'otherEquipments', currentCount: otherEquipments.length })) {
+      setIsEquipmentModalOpen(false);
+      return;
+    }
 
     if (!editingEquipmentId) {
       const exists = otherEquipments.find(equipment => equipment.name === newEquipment.name);

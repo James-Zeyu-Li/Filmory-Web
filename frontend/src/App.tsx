@@ -12,11 +12,13 @@ import { seedDatabaseIfNeeded } from './services/seedService';
 import { SyncService } from './services/syncService';
 import { Film } from 'lucide-react';
 import { MobileHeader } from './components/MobileHeader';
+import { TrialBanner } from './components/TrialBanner';
 import { PageTransition } from './components/PageTransition';
 import { AnimatePresence } from 'framer-motion';
 import { ConfirmProvider } from './contexts/ConfirmContext';
 import { FeedbackProvider } from './contexts/FeedbackContext';
 import { CurrencyProvider } from './contexts/CurrencyContext';
+import { TrialGateProvider } from './contexts/TrialGateContext';
 import { useAuth } from './contexts/useAuth';
 import { LoginView } from './views/Auth/LoginView';
 import { ForgotPasswordView } from './views/Auth/ForgotPasswordView';
@@ -30,7 +32,7 @@ import './App.css';
 function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, authMode, isLoading: authLoading } = useAuth();
   const routeState = location.state as { skipPageTransition?: boolean } | null;
   const disablePageTransition = Boolean(routeState?.skipPageTransition);
   const userId = user?.id;
@@ -51,9 +53,14 @@ function AppContent() {
   }, [enableFilmMode]);
 
   // Seed the local workspace only after a real/dev user is known.
+  // Trial starts empty so the one-item quota is not consumed by samples.
   useEffect(() => {
     if (authLoading) return;
     if (!userId) {
+      queueMicrotask(() => setIsLoading(false));
+      return;
+    }
+    if (authMode === 'trial') {
       queueMicrotask(() => setIsLoading(false));
       return;
     }
@@ -77,10 +84,10 @@ function AppContent() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, userId]);
+  }, [authLoading, authMode, userId]);
 
   useEffect(() => {
-    if (!userId) {
+    if (!userId || authMode === 'trial') {
       SyncService.stop();
       return;
     }
@@ -89,7 +96,7 @@ function AppContent() {
     return () => {
       SyncService.stop();
     };
-  }, [userId]);
+  }, [authMode, userId]);
 
   if (authLoading || isLoading) {
     return (
@@ -114,7 +121,7 @@ function AppContent() {
   const isPublicRoute = publicPaths.has(location.pathname);
 
   if (isPublicRoute) {
-    if (user && location.pathname === AUTH_ROUTES.login) {
+    if (user && authMode !== 'trial' && location.pathname === AUTH_ROUTES.login) {
       return <Navigate to="/dashboard" replace />;
     }
 
@@ -147,6 +154,7 @@ function AppContent() {
       />
       
       <main className="app-main-content">
+        <TrialBanner />
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
             <Route path="/dashboard" element={<PageTransition disableMotion={disablePageTransition}><DashboardView enableFilmMode={enableFilmMode} onNavigate={(path, options) => navigate(`/${path}`, { state: options?.skipPageTransition ? { skipPageTransition: true } : undefined })} /></PageTransition>} />
@@ -180,7 +188,9 @@ function App() {
     <ConfirmProvider>
       <FeedbackProvider>
         <CurrencyProvider>
-          <AppContent />
+          <TrialGateProvider>
+            <AppContent />
+          </TrialGateProvider>
         </CurrencyProvider>
       </FeedbackProvider>
     </ConfirmProvider>

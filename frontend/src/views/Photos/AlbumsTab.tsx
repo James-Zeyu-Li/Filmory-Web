@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { db } from '../../db/schema';
 import { FolderHeart, Plus, Calendar, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '../../contexts/useAuth';
+import { useTrialGate } from '../../contexts/useTrialGate';
 import { useAlbums, useAlbumPhotos, usePhotoAssets } from '../../hooks/useData';
 import { usePhotoUrlMap } from '../../hooks/usePhotoUrlMap';
 import { EmptyState } from '../../components/EmptyState';
@@ -12,6 +13,7 @@ interface AlbumsTabProps {
 
 export const AlbumsTab: React.FC<AlbumsTabProps> = ({ onSelectAlbum }) => {
   const { user } = useAuth();
+  const { guardTrialResource } = useTrialGate();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newAlbumName, setNewAlbumName] = useState('');
   const [newAlbumDesc, setNewAlbumDesc] = useState('');
@@ -70,6 +72,11 @@ export const AlbumsTab: React.FC<AlbumsTabProps> = ({ onSelectAlbum }) => {
   const handleCreateAlbum = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAlbumName.trim()) return;
+
+    if (!guardTrialResource({ resource: 'albums', currentCount: albums.length })) {
+      setShowCreateModal(false);
+      return;
+    }
 
     await db.albums.add({
       id: crypto.randomUUID(),

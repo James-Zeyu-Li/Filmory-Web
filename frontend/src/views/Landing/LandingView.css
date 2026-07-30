@@ -53,9 +53,32 @@
 
 .landing-nav-actions {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   align-items: center;
   flex-shrink: 0;
+}
+
+.landing-nav-actions button {
+  font: inherit;
+}
+
+.btn-ghost-trial {
+  color: rgba(255, 255, 255, 0.86);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.92rem;
+  padding: 9px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-ghost-trial:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
 }
 
 .landing-nav-actions .btn-secondary {
@@ -191,21 +214,43 @@
   margin: 0 0 48px 0;
 }
 
-.btn-primary.large {
+.hero-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.btn-primary.large,
+.btn-secondary.large {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 12px;
-  background: #fff;
-  color: #000;
   text-decoration: none;
   font-weight: 600;
   font-size: 1.1rem;
   padding: 16px 32px;
   border-radius: 8px;
   transition: all 0.2s;
+  border: 0;
+  cursor: pointer;
 }
 
-.btn-primary.large:hover {
+.btn-primary.large {
+  background: #fff;
+  color: #000;
+}
+
+.btn-secondary.large {
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.btn-primary.large:hover,
+.btn-secondary.large:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(255, 255, 255, 0.15);
 }
@@ -329,13 +374,23 @@
     gap: 8px;
   }
 
+  .btn-ghost-trial {
+    padding-inline: 10px;
+    font-size: 0.86rem;
+  }
+
   .landing-nav-actions .btn-secondary,
   .landing-nav-actions .btn-primary {
     padding-inline: 12px;
     font-size: 0.9rem;
   }
 
-  .btn-primary.large {
+  .hero-actions {
+    width: 100%;
+  }
+
+  .btn-primary.large,
+  .btn-secondary.large {
     width: 100%;
     justify-content: center;
     padding-inline: 20px;

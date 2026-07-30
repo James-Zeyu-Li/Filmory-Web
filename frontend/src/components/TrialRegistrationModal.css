@@ -1,0 +1,60 @@
+.trial-registration-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.trial-registration-hero {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.trial-registration-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(245, 158, 11, 0.14);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.trial-registration-copy h2 {
+  margin: 0 0 8px;
+  font-size: 1.3rem;
+}
+
+.trial-registration-copy p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.trial-registration-note {
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.trial-registration-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (max-width: 640px) {
+  .trial-registration-actions {
+    flex-direction: column;
+  }
+
+  .trial-registration-actions button {
+    width: 100%;
+  }
+}

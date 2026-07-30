@@ -3,6 +3,7 @@ import { db, type Collection } from '../../db/schema';
 import { useCollections, useRolls, usePhotoAssets, useCameras, useFilmStocks } from '../../hooks/useData';
 import { useAuth } from '../../contexts/useAuth';
 import { useConfirm } from '../../contexts/useConfirm';
+import { useTrialGate } from '../../contexts/useTrialGate';
 import { Edit3, Trash2, X, Calendar, Camera, Film, Folder } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { motion } from 'framer-motion';
@@ -19,6 +20,7 @@ interface CollectionsTabProps {
 export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSelect, viewMode = 'list' }) => {
   const { user } = useAuth();
   const { confirm } = useConfirm();
+  const { guardTrialResource } = useTrialGate();
   const collections = useCollections();
   const allRolls = useRolls();
   const allPhotos = usePhotoAssets();
@@ -73,6 +75,10 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
         date: new Date(date).getTime()
       });
     } else {
+      if (!guardTrialResource({ resource: 'collections', currentCount: collections.length })) {
+        setIsModalOpen(false);
+        return;
+      }
       await db.collections.add({
         id: crypto.randomUUID(),
         userId: user?.id || 'offline',

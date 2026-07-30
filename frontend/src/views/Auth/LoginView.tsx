@@ -25,7 +25,8 @@ export const LoginView: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const showDevBypass = isDevBypassEnabled();
-  const [isRegister, setIsRegister] = useState(false);
+  const isTrialSignupIntent = searchParams.get('trial') === '1';
+  const [isRegister, setIsRegister] = useState(searchParams.get('mode') === 'signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -159,6 +160,12 @@ export const LoginView: React.FC = () => {
         {prefixedMessage && (
           <div className="alert-box success">
             <span>{prefixedMessage}</span>
+          </div>
+        )}
+
+        {isTrialSignupIntent && isRegister && (
+          <div className="alert-box success">
+            <span>创建账号后，可以继续把这台设备上的试用记录保存到你的账号。</span>
           </div>
         )}
 
