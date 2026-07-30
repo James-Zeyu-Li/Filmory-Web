@@ -21,7 +21,7 @@
 - `userId`: 当前用户
 - `name`, `type`, `format`
 - `cameraSystemId`: 120 可换后背相机所属系统
-- `backType`: `fixed` / `interchangeable`
+- `backType`: 可选，`fixed` / `interchangeable`；135/数码机身可为空，120 逻辑需要时写入
 - `notes`
 - `avatarUrl`: 本地头像预览
 - `purchasePrice`: 购入成本
@@ -190,9 +190,9 @@
 - `payload`
 - `timestamp`
 
-`syncQueue` 由 Dexie hooks 自动生成；业务组件不应该直接绕过数据层向 Supabase 写业务表。
+`syncQueue` 由 Dexie hooks 自动生成；业务组件不应该直接绕过数据层向 Supabase 写业务表。hook 会在原始 Dexie transaction 完成后再写入队列，避免业务 transaction 必须手动包含 `syncQueue`。
 
-当前本地-only 阶段：`syncQueue` 可被生成并由测试覆盖；`SyncService` 已接入默认关闭的 App 生命周期开关，只有 `VITE_ENABLE_SUPABASE_SYNC=true` 且 Supabase URL/key 格式匹配时才会自动 sync 与订阅 Realtime。节流 push、网络/窗口恢复重试、退出登录停止订阅和状态展示已实现；本地 `supabase db reset`、P0 live security tests 与 `RUN_SYNC_LIVE_TESTS=1` sync live test 已通过。生产/Cloud 接入前仍需确认 legacy `rolls.camera_id` 是否保留，以及用真实环境变量做跨设备 smoke。
+当前本地-only 阶段：`syncQueue` 可被生成并由测试覆盖；`SyncService` 已接入默认关闭的 App 生命周期开关，只有 `VITE_ENABLE_SUPABASE_SYNC=true` 且 Supabase URL/key 格式匹配时才会自动 sync 与订阅 Realtime。节流 push、网络/窗口恢复重试、退出登录停止订阅和状态展示已实现；本地 `supabase migration up --local`、P0 live security tests、`RUN_SYNC_LIVE_TESTS=1` sync live test 和 `RUN_SYNC_E2E_SMOKE=1` 真实 App UI sync smoke 已通过。生产/Cloud 接入前仍需确认 legacy `rolls.camera_id` 是否保留，以及用线上环境变量做跨设备 smoke。
 
 ## 安全约束
 

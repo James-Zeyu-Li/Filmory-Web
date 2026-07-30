@@ -25,7 +25,7 @@ React/Vite SPA
   v
 Dexie / IndexedDB
   |
-  | Dexie hooks create syncQueue
+  | Dexie hooks create syncQueue after business transactions commit
   v
 SyncService (off by default; gated by VITE_ENABLE_SUPABASE_SYNC)
   |
@@ -41,7 +41,7 @@ Supabase (cloud/production target)
 ## 3. 数据原则
 
 - UI 从 Dexie 读取，保证离线可用和低延迟。
-- 写操作先落本地，再进入 `syncQueue`。
+- 写操作先落本地，再在 Dexie transaction 完成后进入 `syncQueue`。
 - 当前本地-only 阶段以 Dexie 为事实源；云端 RLS 是接入 Supabase 后的最终安全边界，本地 `userId` 过滤是当前体验和正确性边界。
 - 业务表都必须按当前用户隔离。
 - Storage 只保存照片原图/大图对象；器材头像等轻量图优先本地 Base64。
@@ -66,6 +66,7 @@ Supabase (cloud/production target)
 - callback `next` 路径必须是站内相对路径；不安全目标会回退到 `/login`，避免 open redirect。
 - 已登录用户访问 `/login` 会跳回 `/dashboard`；未登录用户访问私有工作区会被路由守卫重定向到 `/login`。
 - 前端可独立验证页面、路由、错误态和重设密码兜底；本地 Supabase + Mailpit 已验证注册确认邮件和密码重设邮件，生产 SMTP / OAuth provider / 线上 Redirect URL 仍需上线前单独验证。
+- 本地 Docker Supabase + 真实 Auth UI sync smoke 已验证：显式开启 `VITE_ENABLE_SUPABASE_SYNC=true` 后，UI 创建的相机、胶卷库存和拍摄卷能写入 Supabase 并 pull 回 Dexie。
 
 ## 5. PWA 与前端体验策略
 
@@ -80,7 +81,7 @@ Supabase (cloud/production target)
 
 优先执行顺序以 `docs/ROADMAP_TODO.md` 为准。当前仍需处理：
 
-- 真实 App 开启 Supabase Sync smoke：用真实 Supabase Auth 账号在浏览器 UI 中验证写入、刷新、RLS 隔离和同步状态。
+- Cloud/生产 Supabase smoke：用线上 Supabase Auth、迁移后的 schema、生产 env 和真实 Redirect URL 复核写入、刷新、RLS 隔离和同步状态。
 - 器材 reference catalog 已迁到独立 `frontend/src/catalog/gear/` 并补 validation；后续只需按使用反馈扩充数据，不迁入用户资产表。
 - 生产认证链路复核：生产 SMTP、线上域名 Redirect URL、OAuth provider 配置和 session 边界。
 - 会员商业化闭环：真实开通回写、支付 webhook 和可选分享/增长功能。

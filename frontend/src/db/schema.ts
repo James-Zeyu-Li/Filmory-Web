@@ -16,6 +16,8 @@ export interface SyncQueueItem {
   timestamp: number;
 }
 
+const LOCAL_CHANGE_EVENT = 'filmory-sync-request';
+
 export interface LedgerTransaction {
   id?: string;
   userId?: string;
@@ -568,6 +570,26 @@ export class FilmoryDatabase extends Dexie {
 
     // Auto-inject userId and track sync changes on creation
     this.on('ready', () => {
+      const enqueueSyncChange = (item: SyncQueueItem) => {
+        const enqueue = () => {
+          void this.syncQueue.add(item)
+            .then(() => {
+              window.dispatchEvent(new CustomEvent(LOCAL_CHANGE_EVENT, { detail: { source: 'dexie-hook' } }));
+            })
+            .catch(error => {
+              console.error('Failed to enqueue local sync change:', error);
+            });
+        };
+
+        const currentTransaction = Dexie.currentTransaction;
+        if (currentTransaction) {
+          currentTransaction.on('complete', enqueue);
+          return;
+        }
+
+        enqueue();
+      };
+
       this.tables.forEach(table => {
         if (table.name === 'syncQueue') return; // Do not intercept queue itself
 
@@ -585,15 +607,14 @@ export class FilmoryDatabase extends Dexie {
           }
 
           if (!window.__filmory_is_pulling) {
-            this.syncQueue.add({
+            enqueueSyncChange({
               userId: obj.userId || currentUserId,
               tableName: table.name,
               action: 'upsert',
               recordId: assignedId as string,
-              payload: obj,
+              payload: { ...obj },
               timestamp: Date.now()
             });
-            window.dispatchEvent(new CustomEvent('filmory-sync-request', { detail: { source: 'dexie-create' } }));
           }
 
           if (!primKey && assignedId) {
@@ -605,7 +626,7 @@ export class FilmoryDatabase extends Dexie {
           if (!window.__filmory_is_pulling) {
             const updatedObj = { ...obj, ...modifications };
             const currentUserId = updatedObj.userId || localStorage.getItem('filmory_user_id') || 'mock_uid_123';
-            this.syncQueue.add({
+            enqueueSyncChange({
               userId: currentUserId,
               tableName: table.name,
               action: 'upsert',
@@ -613,21 +634,19 @@ export class FilmoryDatabase extends Dexie {
               payload: updatedObj,
               timestamp: Date.now()
             });
-            window.dispatchEvent(new CustomEvent('filmory-sync-request', { detail: { source: 'dexie-update' } }));
           }
         });
 
         table.hook('deleting', (primKey, obj: any) => {
           if (!window.__filmory_is_pulling) {
             const currentUserId = obj?.userId || localStorage.getItem('filmory_user_id') || 'mock_uid_123';
-            this.syncQueue.add({
+            enqueueSyncChange({
               userId: currentUserId,
               tableName: table.name,
               action: 'delete',
               recordId: primKey as string,
               timestamp: Date.now()
             });
-            window.dispatchEvent(new CustomEvent('filmory-sync-request', { detail: { source: 'dexie-delete' } }));
           }
         });
       });

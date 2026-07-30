@@ -21,6 +21,15 @@ vi.mock('../services/supabaseClient', () => ({
   },
 }));
 
+const waitForQueuedRecord = async (recordId: string) => {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const queued = await db.syncQueue.where('recordId').equals(recordId).first();
+    if (queued) return queued;
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  throw new Error(`Timed out waiting for sync queue record ${recordId}`);
+};
+
 describe('SyncService schema parity', () => {
   beforeEach(async () => {
     SyncService.stop();
@@ -47,6 +56,62 @@ describe('SyncService schema parity', () => {
       subscribe: supabaseMock.subscribe,
     });
     vi.unstubAllEnvs();
+  });
+
+  it('queues records written inside business transactions that do not include syncQueue', async () => {
+    const cameraId = 'transaction-camera-1';
+
+    await db.transaction('rw', db.cameras, db.ledgerTransactions, async () => {
+      await db.cameras.add({
+        id: cameraId,
+        userId: 'user-1',
+        name: 'Transaction Camera',
+        type: 'film',
+        format: '135',
+        addedAt: 1782864000000,
+      });
+    });
+
+    const queued = await waitForQueuedRecord(cameraId);
+    expect(queued).toEqual(expect.objectContaining({
+      userId: 'user-1',
+      tableName: 'cameras',
+      action: 'upsert',
+      recordId: cameraId,
+      payload: expect.objectContaining({
+        name: 'Transaction Camera',
+      }),
+    }));
+  });
+
+  it('omits undefined optional fields so Supabase defaults remain intact', async () => {
+    await db.syncQueue.add({
+      userId: 'user-1',
+      tableName: 'cameras',
+      action: 'upsert',
+      recordId: 'camera-with-default-back-type',
+      payload: {
+        id: 'camera-with-default-back-type',
+        userId: 'user-1',
+        name: 'Default Back Type Camera',
+        type: 'film',
+        format: '135',
+        cameraSystemId: undefined,
+        backType: undefined,
+        addedAt: 1782864000000,
+      },
+      timestamp: 1782864000000,
+    });
+
+    await SyncService.push();
+
+    expect(supabaseMock.from).toHaveBeenCalledWith('cameras');
+    expect(supabaseMock.upsert).toHaveBeenCalledWith([
+      expect.not.objectContaining({
+        camera_system_id: expect.anything(),
+        back_type: expect.anything(),
+      }),
+    ]);
   });
 
   it('pushes collections to the matching Supabase table', async () => {

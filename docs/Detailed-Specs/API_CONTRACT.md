@@ -5,8 +5,8 @@
 ## 1. 数据流
 
 - **本地读写**：页面和组件优先通过 Dexie 数据层读写 IndexedDB。
-- **同步队列**：Dexie hooks 将业务表的 create/update/delete 写入 `syncQueue`。
-- **当前状态**：`SyncService` 已有 push/pull/realtime 代码、节流/恢复/重试/停止订阅生命周期和模块测试，并通过 `VITE_ENABLE_SUPABASE_SYNC=true` 显式开关接入 App 生命周期；默认本地开发不依赖 Supabase API，也不会自动 push/pull。
+- **同步队列**：Dexie hooks 将业务表的 create/update/delete 写入 `syncQueue`；队列写入发生在原始 Dexie transaction 完成后，避免业务 transaction 必须显式包含 `syncQueue`。
+- **当前状态**：`SyncService` 已有 push/pull/realtime 代码、节流/恢复/重试/停止订阅生命周期和模块测试，并通过 `VITE_ENABLE_SUPABASE_SYNC=true` 显式开关接入 App 生命周期；默认本地开发不依赖 Supabase API，也不会自动 push/pull。本地 Docker Supabase 下的真实 App UI sync smoke 已通过。
 - **Push 目标**：同步服务读取当前用户的 `syncQueue`，把 upsert/delete 推送到 Supabase。
 - **Pull 目标**：按 `updated_at`/同步水位从 Supabase 拉取当前用户增量数据。
 - **禁止事项**：业务组件不应直接散落 `supabase.from(...).upsert()`，避免绕过本地队列和多租户过滤。
@@ -59,13 +59,15 @@
 - `rolls.cameraIds`、`rolls.collectionId` 已通过 `camera_ids`、`collection_id` 对齐云端。
 - `cameraSystems`、`filmBacks` 已接入 Dexie、Supabase migration 和 `SyncService.tableMap`。
 - `cameras.cameraSystemId`、`cameras.backType`、`rolls.filmBackId`、`rolls.lensIds`、`lenses.mountKey` 已通过 `camera_system_id`、`back_type`、`film_back_id`、`lens_ids`、`mount_key` 对齐云端。
+- `cameras.back_type` 在 Supabase 侧允许为空并保留 default `'fixed'`，以兼容 135/数码机身和历史本地数据；120 相关流程仍会在需要时写入 `fixed` / `interchangeable`。
+- 同步 push 会过滤本地-only 或云端托管字段，例如 `blob`、`updatedAt`、`deletedAt`；`updated_at` 由 Supabase trigger/default 管理。
 - 会员 active roll 限制由 Supabase trigger `enforce_membership_active_roll_limit_on_rolls` 保护：`regular` 用户最多 5 个 `status='active'` 的 `rolls`，`archived` 不计入，`vip` 放行。
 
 ## 4. Storage 契约
 
 统一 bucket：`filmory-assets`。
 
-当前本地-only 阶段：照片可使用本地 blob/thumbnail fallback；P0 live security tests 已覆盖 private bucket、signed URL、匿名/跨用户读取失败等基础契约。真实 App 开启 Supabase Sync / Storage 后仍需做浏览器 UI smoke。
+当前本地-only 阶段：照片可使用本地 blob/thumbnail fallback；P0 live security tests 已覆盖 private bucket、signed URL、匿名/跨用户读取失败等基础契约。真实 App sync UI smoke 已覆盖业务表写入；开启 Supabase Storage 原图上传后仍需做浏览器 UI smoke。
 
 安全要求：
 
@@ -99,4 +101,5 @@
 - PWA 更新提示由 `pwa-update-prompt` 单测覆盖，验证新版本事件会显示操作型 toast，“立即更新”调用 update callback，“稍后”只关闭提示。
 - P0 live integration tests 可通过 `RUN_P0_LIVE_TESTS=1` 显式开启，验证 private bucket、signed URL、跨用户拒绝读取、`delete_user()` 权限和 cascade 清理。
 - Sync live integration test 可通过 `RUN_SYNC_LIVE_TESTS=1` 显式开启，验证 Dexie `syncQueue` 推送到 Supabase，并从远端更新 pull 回 Dexie。
+- App-level Supabase sync smoke 可通过 `RUN_SYNC_E2E_SMOKE=1 VITE_ENABLE_SUPABASE_SYNC=true` 显式开启，使用真实 Supabase Auth UI 创建相机、胶卷库存和拍摄卷，并用 service role 查询本地 Supabase 表验证写入。
 - E2E 用 Playwright 覆盖核心 UI 流程；危险操作取消态已覆盖取消删除相机、取消删除拍摄卷和取消账号注销最终确认。i18n/settings 相关 E2E 同时作为移动端/桌面端布局 smoke，防止全局 focus/modal CSS 改动造成横向溢出或主要按钮不可用。

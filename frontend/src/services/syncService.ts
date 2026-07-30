@@ -19,7 +19,7 @@ const hasAutoSyncFlag = () => import.meta.env.VITE_ENABLE_SUPABASE_SYNC === 'tru
 const camelToSnake = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
 const snakeToCamel = (str: string) => str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
 
-const localOnlyFields = new Set(['blob']);
+const localOnlyFields = new Set(['blob', 'updatedAt', 'deletedAt']);
 
 const convertKeysToSnakeCase = (obj: any): any => {
   if (typeof obj !== 'object' || obj === null) return obj;
@@ -30,6 +30,7 @@ const convertKeysToSnakeCase = (obj: any): any => {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
       // Omit local-only fields that shouldn't go to Supabase
       if (localOnlyFields.has(key)) continue;
+      if (obj[key] === undefined) continue;
       
       newObj[camelToSnake(key)] = convertKeysToSnakeCase(obj[key]);
     }
