@@ -123,7 +123,7 @@
 
 ### `Album` / `AlbumPhoto`
 
-跨卷相册与照片关联。
+跨卷相册与照片关联。全局 Photos / Albums UI 已隐藏；这些表暂时保留用于历史数据兼容、拍摄卷封面/样片 fallback 和后续迁移决策。
 
 - `Album`: `id`, `userId`, `name`, `description`, `coverPhotoId`, `addedAt`
 - `AlbumPhoto`: `id`, `userId`, `albumId`, `photoId`, `addedAt`
@@ -167,6 +167,7 @@
 - `userId`
 - `tier`: `regular` / `vip`
 - `role`: `user` / `admin`
+- `displayName`: 用户自定义显示名称；可重复，不参与登录和权限判断
 - `highResQuotaUsed`
 - `membershipRequestStatus`: 本地/后续可同步的手动升级申请状态，当前使用 `pending`
 - `membershipRequestedAt`: 最近一次记录手动升级申请的时间

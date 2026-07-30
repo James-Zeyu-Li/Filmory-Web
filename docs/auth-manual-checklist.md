@@ -19,6 +19,12 @@
 - 线上域名下的 Redirect URL 验证。
 - 完整人工点击邮件链接后的 session 刷新与重设密码页面提交验收。
 
+2026-07-29 已完成前端双语化回归：
+
+- Auth callback/status/forgot/reset、登录/注册主流程、密码规则、显示名称校验和常见 Supabase Auth 错误 fallback 已接入 `zh-CN` / `en-US`。
+- Excel Import 弹窗、导入结果 toast、导入 service error/notes、全局 Feedback 关闭标签和 Confirm 默认按钮已接入双语；Excel 模板 sheet 名和列名保持中文，作为导入格式协议不翻译。
+- 已用 `npx playwright test e2e/i18n.spec.ts` 覆盖英文 Auth 辅助页、Excel Import 弹窗和 1440px / 390px 视口不溢出。
+
 ## 范围
 
 本轮应被手动检查的代码点：
@@ -31,6 +37,7 @@
 - `/auth/check-email` 与 `/auth/verified` 状态页
 - 密码强度规则与确认密码
 - 登录页/私有路由守卫
+- 双语切换后的 Auth 辅助页、Excel Import、Feedback / Confirm 默认文案
 
 ## 环境分层
 
@@ -142,6 +149,17 @@
 - [ ] 成功/失败提示样式一致，没有明显布局跳动。
 - [ ] 注册、找回密码、重设密码、状态页的返回登录入口都可正常工作。
 
+### 12. 双语化回归
+
+- [ ] 在 Settings 切换为 English 后，登录/注册、忘记密码、重设密码、邮箱状态页和 callback 错误页显示英文文案。
+- [ ] 英文模式下弱密码、显示名称为空/过长、登录失败、未验证邮箱、过期 callback link 均显示英文用户文案，不泄漏中文 fallback。
+- [ ] 英文模式下未验证邮箱登录仍显示“Resend verification email”入口；不要依赖已翻译文本判断业务状态。
+- [ ] 英文模式下 Dashboard 的 Batch Import 入口打开后，Excel Import 弹窗标题、步骤说明、按钮、导入成功/失败 toast 均为英文。
+- [ ] Confirm dialog 未传入自定义按钮文案时，默认按钮随语言显示为 Cancel / Confirm 或 取消 / 确认。
+- [ ] Feedback toast 的关闭按钮 `aria-label` 随语言切换。
+- [ ] 390px 移动端和 1440px 桌面端检查 Auth 辅助页与 Excel Import 弹窗不横向溢出。
+- [ ] Excel 模板下载后的 sheet 名和列名仍保持当前中文格式；这是导入协议，不作为未翻译问题处理。
+
 ## 建议记录方式
 
 每次手动验收建议记录：
@@ -161,6 +179,7 @@
 - 真实线上域名下的 Redirect URL 校验
 - 真实线上环境的 Supabase Auth session 边界验证
 - 真实线上 App 开启 Supabase Sync 后的浏览器 UI smoke
+- 隐藏/legacy Photos 子页面、Tags 管理等非主路径文案完整双语化
 
 ## 建议验收顺序
 

@@ -6,13 +6,13 @@ Filmory Web 当前是 React/Vite 单页应用，采用 Dexie local-first 数据�
 
 - Landing 与认证页：本地开发保留 dev login；Supabase Auth 是生产目标，生产环境不展示认证后门。公共认证路由已补齐为 `/login`、`/auth/callback`、`/auth/check-email`、`/auth/verified`、`/auth/forgot-password`、`/auth/reset-password`。
 - Dashboard：快捷入口、进行中胶卷、使用中机身/后背、库存概览。
-- Photos / Albums：照片时间流、相册、评分、标签、封面、signed URL 图片展示。
 - Rolls / Collections：进行中卷、归档卷、拍摄项目集、照片导入、冲洗备注、费用、封面、删除确认、快捷添加胶卷。
 - Gear：相机、镜头、胶卷库存、其他器材 CRUD；头像/缩略图使用本地预览字段；相机系统支持 120 可换后背；相机、镜头、胶卷新增流程使用 `frontend/src/catalog/gear/` 的静态 reference catalog 辅助填表。
 - Finance：财务流水和费用统计。
 - Stats：统计面板已按胶片工作流精简，不再强调总照片数。
 - Compare：双对象对比工作台。
 - Settings：胶片功能总闸、胶卷记录页签顺序/显隐、货币偏好与手动批量换算、标签设置、Excel 导入导出、账号删除、安全确认。
+- Hidden legacy Photos / Albums：全局照片库和跨卷相册已从主导航和路由入口隐藏；底层 `photoAssets`、`albums`、`albumPhotos` 仍保留，用于拍摄卷封面/样片 fallback、历史数据兼容和后续迁移。
 
 ## 2. 架构图
 

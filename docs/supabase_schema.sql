@@ -226,6 +226,7 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   tier text NOT NULL DEFAULT 'regular',
   role text NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+  display_name text,
   high_res_quota_used integer NOT NULL DEFAULT 0,
   membership_request_status text CHECK (membership_request_status IN ('pending')),
   membership_requested_at bigint,
@@ -269,8 +270,14 @@ END $$;
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public.user_profiles (id, user_id, tier, high_res_quota_used)
-  VALUES (new.id, new.id, 'regular', 0)
+  INSERT INTO public.user_profiles (id, user_id, tier, display_name, high_res_quota_used)
+  VALUES (
+    new.id,
+    new.id,
+    'regular',
+    nullif(trim(new.raw_user_meta_data ->> 'display_name'), ''),
+    0
+  )
   ON CONFLICT (id) DO NOTHING;
   RETURN new;
 END;

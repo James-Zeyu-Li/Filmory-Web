@@ -48,8 +48,8 @@
 | `photoAssets` | `photo_assets` | 照片资产 |
 | `otherEquipments` | `other_equipments` | 其他器材/耗材 |
 | `tagConfigs` | `tag_configs` | 标签字典 |
-| `albums` | `albums` | 跨卷相册 |
-| `albumPhotos` | `album_photos` | 相册照片关联 |
+| `albums` | `albums` | 隐藏的 legacy 跨卷相册，暂保留兼容 |
+| `albumPhotos` | `album_photos` | 隐藏的 legacy 相册照片关联，暂保留兼容 |
 | `ledgerTransactions` | `ledger_transactions` | 财务流水 |
 | `userProfiles` | `user_profiles` | VIP/regular 会员状态 |
 
@@ -98,4 +98,4 @@
 - 当前 auth 前端已具备独立单测与 Playwright 公共路由覆盖，至少验证注册跳转、弱密码拦截、无效登录文案、未验证邮箱重发、找回密码、重设密码兜底、callback 错误态和 unsafe `next` fallback。
 - P0 live integration tests 可通过 `RUN_P0_LIVE_TESTS=1` 显式开启，验证 private bucket、signed URL、跨用户拒绝读取、`delete_user()` 权限和 cascade 清理。
 - Sync live integration test 可通过 `RUN_SYNC_LIVE_TESTS=1` 显式开启，验证 Dexie `syncQueue` 推送到 Supabase，并从远端更新 pull 回 Dexie。
-- E2E 用 Playwright 覆盖核心 UI 流程；危险操作取消态仍在 Roadmap 中补强。
+- E2E 用 Playwright 覆盖核心 UI 流程；危险操作取消态已覆盖取消删除相机、取消删除拍摄卷和取消账号注销最终确认。
