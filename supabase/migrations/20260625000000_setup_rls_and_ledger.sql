@@ -10,7 +10,7 @@ ALTER TABLE public.lenses ADD COLUMN IF NOT EXISTS purchase_price NUMERIC;
 
 -- 2. CREATE ledger_transactions TABLE
 CREATE TABLE IF NOT EXISTS public.ledger_transactions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     amount NUMERIC NOT NULL,
     date BIGINT NOT NULL,

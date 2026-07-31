@@ -1,7 +1,7 @@
 -- Filmory-Web: align Supabase schema with Dexie collections and roll relationships.
 
 CREATE TABLE IF NOT EXISTS public.collections (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name text NOT NULL,
   date bigint NOT NULL,

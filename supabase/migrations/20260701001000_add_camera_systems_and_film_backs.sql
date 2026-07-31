@@ -1,7 +1,7 @@
 -- Filmory-Web: model interchangeable 120 film backs as camera-system resources.
 
 CREATE TABLE IF NOT EXISTS public.camera_systems (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name text NOT NULL,
   mount_key text,
@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS public.camera_systems (
 );
 
 CREATE TABLE IF NOT EXISTS public.film_backs (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   camera_system_id uuid NOT NULL REFERENCES public.camera_systems(id) ON DELETE CASCADE,
   name text NOT NULL,

@@ -2,8 +2,8 @@
 -- Filmory-Web: Initial Supabase Schema, RLS, and Storage Bucket Setup
 -- =================================================================================
 
--- 1. Enable UUID Extension (usually enabled by default in Supabase)
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- 1. Enable UUID generation support (usually enabled by default in Supabase)
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- =================================================================================
 -- 2. CREATE TABLES (Map 1:1 with Dexie Local-First Entities)
@@ -11,7 +11,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- 📷 CAMERAS
 CREATE TABLE public.cameras (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     type TEXT NOT NULL,
@@ -26,7 +26,7 @@ CREATE TABLE public.cameras (
 
 -- 🔍 LENSES
 CREATE TABLE public.lenses (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     focal_length NUMERIC NOT NULL,
@@ -39,7 +39,7 @@ CREATE TABLE public.lenses (
 
 -- 🎞️ FILM STOCKS
 CREATE TABLE public.film_stocks (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     brand TEXT NOT NULL,
     name TEXT NOT NULL,
@@ -56,7 +56,7 @@ CREATE TABLE public.film_stocks (
 
 -- 🎞️ ROLLS
 CREATE TABLE public.rolls (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     camera_id UUID REFERENCES public.cameras(id),
@@ -78,7 +78,7 @@ CREATE TABLE public.rolls (
 
 -- 🖼️ PHOTO ASSETS
 CREATE TABLE public.photo_assets (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     roll_id UUID NOT NULL REFERENCES public.rolls(id) ON DELETE CASCADE,
     original_file_name TEXT NOT NULL,
@@ -102,7 +102,7 @@ CREATE TABLE public.photo_assets (
 
 -- 🏷️ TAG CONFIGS
 CREATE TABLE public.tag_configs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     color TEXT NOT NULL,
@@ -114,7 +114,7 @@ CREATE TABLE public.tag_configs (
 
 -- 🎒 OTHER EQUIPMENTS
 CREATE TABLE public.other_equipments (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     type TEXT NOT NULL,
@@ -128,7 +128,7 @@ CREATE TABLE public.other_equipments (
 
 -- 📚 ALBUMS
 CREATE TABLE public.albums (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     description TEXT,
@@ -140,7 +140,7 @@ CREATE TABLE public.albums (
 
 -- 🔗 ALBUM PHOTOS (Mapping Table)
 CREATE TABLE public.album_photos (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     album_id UUID NOT NULL REFERENCES public.albums(id) ON DELETE CASCADE,
     photo_id UUID NOT NULL REFERENCES public.photo_assets(id) ON DELETE CASCADE,
