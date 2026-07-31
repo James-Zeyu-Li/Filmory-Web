@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
+import { AccountCenterModal } from './components/AccountCenterModal';
 import { DashboardView } from './views/Dashboard/DashboardView';
 import { RollsView } from './views/Rolls/RollsView';
 import { GearView } from './views/Gear/GearView';
@@ -39,6 +40,7 @@ function AppContent() {
   
   const [sidebarOpenPath, setSidebarOpenPath] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isAccountCenterOpen, setIsAccountCenterOpen] = useState(false);
   const isSidebarOpen = sidebarOpenPath === location.pathname;
   
   const [enableFilmMode, setEnableFilmMode] = useState<boolean>(() => {
@@ -150,6 +152,7 @@ function AppContent() {
       <Sidebar 
         isOpen={isSidebarOpen} 
         onClose={() => setSidebarOpenPath(null)} 
+        onOpenAccountCenter={() => setIsAccountCenterOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
       
@@ -170,6 +173,12 @@ function AppContent() {
       </main>
 
       <AnimatePresence>
+        {isAccountCenterOpen && (
+          <AccountCenterModal
+            isOpen={isAccountCenterOpen}
+            onClose={() => setIsAccountCenterOpen(false)}
+          />
+        )}
         {isSettingsOpen && (
           <SettingsView 
             enableFilmMode={enableFilmMode} 

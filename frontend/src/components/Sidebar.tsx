@@ -7,7 +7,8 @@ import {
   BarChart2,
   Columns,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  UserRound
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { SyncStatusBadge } from './SyncStatusBadge';
@@ -18,11 +19,12 @@ export type ActiveTab = 'dashboard' | 'rolls' | 'gear' | 'settings' | 'insights'
 
 interface SidebarProps {
   onOpenSettings: () => void;
+  onOpenAccountCenter: () => void;
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, isOpen, onClose }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenAccountCenter, isOpen, onClose }) => {
   const { t } = useLanguage();
   const [isCollapsed, setIsCollapsed] = useState(window.innerWidth < 1250 && window.innerWidth > 1024);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
@@ -32,6 +34,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, isOpen, onClos
     setIsClosing(true);
     onClose();
     setTimeout(() => setIsClosing(false), 300);
+  };
+
+  const handleOpenAccountCenter = () => {
+    onOpenAccountCenter();
+    onClose();
   };
 
   React.useEffect(() => {
@@ -138,6 +145,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, isOpen, onClos
         >
           {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
           <span>{t('nav.collapse')}</span>
+        </button>
+        <div className="nav-spacer" style={{ height: '8px' }} />
+
+        <button
+          className="nav-item"
+          onClick={handleOpenAccountCenter}
+          style={{ background: 'transparent', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', outline: 'none' }}
+        >
+          <UserRound size={20} />
+          <span>{t('nav.account')}</span>
         </button>
         <div className="nav-spacer" style={{ height: '8px' }} />
 

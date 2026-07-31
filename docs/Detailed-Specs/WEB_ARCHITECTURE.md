@@ -65,6 +65,7 @@ Supabase (cloud/production target)
 - 常见认证失败已映射为用户态文案，包括无效登录、未验证邮箱、重复注册、弱密码、链接过期和频率限制；不再直接裸露原始 Supabase 英文错误。
 - callback `next` 路径必须是站内相对路径；不安全目标会回退到 `/login`，避免 open redirect。
 - 已登录用户访问 `/login` 会跳回 `/dashboard`；未登录用户访问私有工作区会被路由守卫重定向到 `/login`。
+- 工作区内有固定 Account Center 入口：Trial/未登录引导注册或登录，真实账号显示 email、会员等级和云同步状态，Dev Bypass 明确标记为本机开发账号；该入口复用现有 Auth 页面，不嵌入第二套登录表单。
 - 前端可独立验证页面、路由、错误态和重设密码兜底；本地 Supabase + Mailpit 已验证注册确认邮件和密码重设邮件，生产 SMTP / OAuth provider / 线上 Redirect URL 仍需上线前单独验证。
 - 本地 Docker Supabase + 真实 Auth UI sync smoke 已验证：显式开启 `VITE_ENABLE_SUPABASE_SYNC=true` 后，UI 创建的相机、胶卷库存和拍摄卷能写入 Supabase 并 pull 回 Dexie。
 
