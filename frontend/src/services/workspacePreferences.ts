@@ -1,5 +1,4 @@
 export const GEAR_SUB_TAB_KEY = 'filmory_gear_sub_tab';
-export const INSIGHTS_TAB_KEY = 'filmory_insights_tab';
 export const ROLLS_LIBRARY_VIEW_KEY = 'filmory_rolls_library_view';
 export const ROLLS_TAB_ORDER_KEY = 'filmory_rolls_tab_order';
 export const ROLLS_COLLECTIONS_TAB_ENABLED_KEY = 'filmory_rolls_collections_tab_enabled';
@@ -11,7 +10,6 @@ export const DEFAULT_ROLLS_TAB_ORDER: RollsTabId[] = ['collections', 'all', 'loo
 
 const WORKSPACE_TAB_PREFERENCE_KEYS = [
   GEAR_SUB_TAB_KEY,
-  INSIGHTS_TAB_KEY,
   ROLLS_LIBRARY_VIEW_KEY,
 ];
 

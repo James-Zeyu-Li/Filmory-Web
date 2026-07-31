@@ -195,7 +195,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
         </header>
       )}
 
-      <div className={`view-body stats-workspace-body ${isEmbedded ? 'embedded-mode' : ''}`} style={isEmbedded ? { padding: '24px 0 0 0' } : {}}>
+      <div className={`view-body stats-workspace-body ${isEmbedded ? 'embedded-mode' : ''}`} style={isEmbedded ? { padding: 0 } : {}}>
         {/* KPI Cards Grid */}
         <div className="stats-kpi-grid">
           <div className="kpi-card stats-kpi-gold">

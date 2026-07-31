@@ -1,0 +1,75 @@
+import { render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ThemeProvider } from '../contexts/ThemeContext';
+import { useTheme } from '../contexts/useTheme';
+import { ensureTrialDefaultTheme } from '../services/themePreference';
+
+const storage = new Map<string, string>();
+
+const ThemeProbe = () => {
+  const { theme, actualTheme } = useTheme();
+  return (
+    <>
+      <span data-testid="theme">{theme}</span>
+      <span data-testid="actual-theme">{actualTheme}</span>
+    </>
+  );
+};
+
+describe('trial theme default', () => {
+  beforeEach(() => {
+    storage.clear();
+
+    vi.mocked(localStorage.getItem).mockImplementation((key: string) => storage.get(key) ?? null);
+    vi.mocked(localStorage.setItem).mockImplementation((key: string, value: string) => {
+      storage.set(key, value);
+    });
+    vi.mocked(localStorage.removeItem).mockImplementation((key: string) => {
+      storage.delete(key);
+    });
+    vi.mocked(localStorage.clear).mockImplementation(() => {
+      storage.clear();
+    });
+  });
+
+  it('switches to dark when trial starts without an existing theme preference', async () => {
+    render(
+      <ThemeProvider>
+        <ThemeProbe />
+      </ThemeProvider>
+    );
+
+    expect(screen.getByTestId('theme')).toHaveTextContent('system');
+    expect(document.documentElement).toHaveAttribute('data-theme', 'light');
+
+    ensureTrialDefaultTheme();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('theme')).toHaveTextContent('dark');
+      expect(screen.getByTestId('actual-theme')).toHaveTextContent('dark');
+      expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
+    });
+  });
+
+  it('keeps an existing explicit theme preference when trial starts', async () => {
+    storage.set('filmory-theme', 'light');
+    storage.set('filmory-theme-explicit', 'true');
+
+    render(
+      <ThemeProvider>
+        <ThemeProbe />
+      </ThemeProvider>
+    );
+
+    expect(screen.getByTestId('theme')).toHaveTextContent('light');
+    expect(document.documentElement).toHaveAttribute('data-theme', 'light');
+
+    ensureTrialDefaultTheme();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('theme')).toHaveTextContent('light');
+      expect(screen.getByTestId('actual-theme')).toHaveTextContent('light');
+      expect(document.documentElement).toHaveAttribute('data-theme', 'light');
+    });
+  });
+});

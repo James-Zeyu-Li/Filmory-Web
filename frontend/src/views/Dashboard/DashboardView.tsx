@@ -5,6 +5,7 @@ import {
   Play, BarChart2, Calendar, ArrowRight, Film, Package, UploadCloud, Aperture, Layers
 } from 'lucide-react';
 import { ExcelImportModal } from '../../components/ExcelImportModal';
+import { StatsView } from '../Stats/StatsView';
 import './DashboardView.css';
 import { useRolls, useCameras, useFilmStocks, useFilmBacks, useLenses } from '../../hooks/useData';
 import { useAuth } from '../../contexts/useAuth';
@@ -45,17 +46,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
     .filter(f => f.isSystem === 0);
   const totalFilmStock = usableFilmStocks
     .reduce((acc, f) => acc + (f.stockCount || 0), 0);
-  const filmStockByFormat = usableFilmStocks.reduce<Record<string, number>>((acc, film) => {
-    const format = film.format || '未标注';
-    acc[format] = (acc[format] || 0) + (film.stockCount || 0);
-    return acc;
-  }, {});
-  const colorFilmStock = usableFilmStocks
-    .filter(f => f.colorType === 'color')
-    .reduce((acc, f) => acc + (f.stockCount || 0), 0);
-  const bwFilmStock = usableFilmStocks
-    .filter(f => f.colorType === 'bw')
-    .reduce((acc, f) => acc + (f.stockCount || 0), 0);
 
   const activeCameraIds = Array.from(new Set(
     activeRolls.flatMap(r => r.cameraIds || []).filter((id): id is string => Boolean(id))
@@ -75,6 +65,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
   const activeLensIds = Array.from(new Set(
     activeRolls.flatMap(r => r.lensIds || []).filter((id): id is string => Boolean(id))
   ));
+  const showLoadedBackMetric = (
+    cameras.some(camera => camera.format === '120') ||
+    usableFilmStocks.some(film => film.format === '120') ||
+    filmBacks.some(back => back.format === '120') ||
+    rolls.some(roll => Boolean(roll.filmBackId))
+  );
 
   const getCameraName = (id?: string) => {
     return cameras.find(c => c.id === id)?.name || t('common.unknownCamera');
@@ -132,19 +128,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
                 <strong>{activeRolls.length} {t('common.rollUnit')}</strong>
               </div>
             </div>
-            <div className="metric-card">
+            <button
+              type="button"
+              className="metric-card metric-card-button"
+              onClick={() => onNavigate('gear?tab=filmStocks')}
+            >
               <div className="metric-icon stock"><Package size={18} /></div>
               <div className="metric-data">
                 <span>{t('dashboard.filmStock')}</span>
                 <strong>{totalFilmStock} {t('common.rollUnit')}</strong>
-                <div className="metric-breakdown" aria-label={t('dashboard.stockBreakdownLabel')}>
-                  <span>135 {filmStockByFormat['135'] || 0}</span>
-                  <span>120 {filmStockByFormat['120'] || 0}</span>
-                  <span>{t('dashboard.color')} {colorFilmStock}</span>
-                  <span>{t('dashboard.bw')} {bwFilmStock}</span>
-                </div>
               </div>
-            </div>
+            </button>
             <div className="metric-card">
               <div className="metric-icon camera"><Camera size={18} /></div>
               <div className="metric-data">
@@ -159,13 +153,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
                 <strong>{activeLensIds.length} {t('common.lensUnit')}</strong>
               </div>
             </div>
-            <div className="metric-card">
-              <div className="metric-icon back"><Package size={18} /></div>
-              <div className="metric-data">
-                <span>{t('dashboard.loadedBacks')}</span>
-                <strong>{activeFilmBackIds.length} {t('common.backUnit')}</strong>
+            {showLoadedBackMetric && (
+              <div className="metric-card">
+                <div className="metric-icon back"><Package size={18} /></div>
+                <div className="metric-data">
+                  <span>{t('dashboard.loadedBacks')}</span>
+                  <strong>{activeFilmBackIds.length} {t('common.backUnit')}</strong>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -182,7 +178,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
             </motion.button>
             {enableFilmMode && (
               <motion.button
-                className="launchpad-pill portal-orange"
+                className="launchpad-pill"
                 custom={1} initial="hidden" animate="visible" variants={cardVariants}
                 onClick={() => onNavigate('gear?tab=filmStocks&newFilm=1', { skipPageTransition: true })}
               >
@@ -201,7 +197,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
               custom={3} initial="hidden" animate="visible" variants={cardVariants}
               onClick={() => onNavigate('insights')}
             >
-              <BarChart2 size={16} /> <span>{t('dashboard.insights')}</span>
+              <BarChart2 size={16} /> <span>{t('dashboard.finance')}</span>
             </motion.button>
             <motion.button
               className="launchpad-pill portal-purple"
@@ -211,7 +207,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
               <Columns size={16} /> <span>{t('dashboard.compare')}</span>
             </motion.button>
             <motion.button
-              className="launchpad-pill portal-upload"
+              className="launchpad-pill"
               custom={5} initial="hidden" animate="visible" variants={cardVariants}
               onClick={() => {
                 if (authMode === 'trial') {
@@ -300,6 +296,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
               ))
             )}
           </div>
+        </div>
+
+        <div className="dash-section">
+          <h3>{t('dashboard.statsSection')}</h3>
+          <StatsView enableFilmMode={enableFilmMode} isEmbedded />
         </div>
 
       </div>

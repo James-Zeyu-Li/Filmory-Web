@@ -1,5 +1,20 @@
-.insights-tab-navigation {
-  margin-bottom: 0;
-  border-bottom: none;
-  padding-bottom: 0;
+.insights-page .view-body {
+  padding: 24px 18px 0;
+}
+
+.insights-body {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 1024px) {
+  .insights-page .view-body {
+    padding: 20px 14px 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .insights-page .view-body {
+    padding: 16px 12px 0;
+  }
 }

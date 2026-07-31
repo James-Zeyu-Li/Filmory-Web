@@ -20,6 +20,7 @@ import {
   buildLocalUserProfile,
   resolveUserProfileDisplayName,
 } from '../services/userProfile';
+import { ensureTrialDefaultTheme } from '../services/themePreference';
 
 const DEV_AUTH_STORAGE_KEY = 'filmory_dev_auth_bypass';
 const TRIAL_AUTH_STORAGE_KEY = 'filmory_trial_auth';
@@ -178,6 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const startTrial = () => {
     const trialUser = createTrialUser();
+    ensureTrialDefaultTheme();
     localStorage.setItem(TRIAL_AUTH_STORAGE_KEY, 'true');
     localStorage.removeItem(DEV_AUTH_STORAGE_KEY);
     localStorage.setItem('filmory_user_id', trialUser.id);

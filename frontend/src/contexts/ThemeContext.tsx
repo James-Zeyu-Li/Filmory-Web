@@ -1,17 +1,33 @@
 import React, { useEffect, useState } from 'react';
 import { ThemeContext, type Theme } from './themeContextCore';
+import {
+  getStoredTheme,
+  persistThemePreference,
+  THEME_SYNC_EVENT,
+} from '../services/themePreference';
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<Theme>(() => {
-    const saved = localStorage.getItem('filmory-theme') as Theme;
-    return saved || 'system';
+    return getStoredTheme() ?? 'system';
   });
 
   const [actualTheme, setActualTheme] = useState<'dark' | 'light'>('dark');
 
+  const setTheme = (nextTheme: Theme) => {
+    setThemeState(nextTheme);
+    persistThemePreference(nextTheme, 'user');
+  };
+
   useEffect(() => {
-    localStorage.setItem('filmory-theme', theme);
-    
+    const handleThemeSync = () => {
+      setThemeState(getStoredTheme() ?? 'system');
+    };
+
+    window.addEventListener(THEME_SYNC_EVENT, handleThemeSync);
+    return () => window.removeEventListener(THEME_SYNC_EVENT, handleThemeSync);
+  }, []);
+
+  useEffect(() => {
     const root = document.documentElement;
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
@@ -38,7 +54,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [theme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme: setThemeState, actualTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme, actualTheme }}>
       {children}
     </ThemeContext.Provider>
   );

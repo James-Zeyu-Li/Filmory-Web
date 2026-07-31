@@ -46,13 +46,26 @@
   border-radius: var(--radius-md);
   padding: 16px 20px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
+  min-width: 0;
+}
+
+.metric-card-button {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.metric-card-button:hover {
+  border-color: var(--accent-border);
+  background-color: var(--bg-tertiary);
 }
 
 .metric-icon {
   width: 40px;
   height: 40px;
+  flex: 0 0 40px;
   border-radius: 50%;
   background-color: var(--bg-secondary);
   display: flex;
@@ -95,6 +108,8 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .metric-data span {
@@ -107,23 +122,6 @@
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1;
-}
-
-.metric-breakdown {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.metric-breakdown span {
-  padding: 3px 7px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
-  font-size: 11px;
-  line-height: 1.2;
 }
 
 /* Row 2: Launchpad Row */
@@ -158,18 +156,6 @@
 
 .launchpad-pill svg {
   color: var(--text-secondary);
-}
-
-.portal-orange {
-  background-color: rgba(255, 100, 0, 0.1);
-  color: #ff7000;
-  border-color: rgba(255, 100, 0, 0.2);
-}
-
-.portal-upload {
-  background-color: rgba(16, 185, 129, 0.1);
-  color: var(--success);
-  border-color: rgba(16, 185, 129, 0.25);
 }
 
 /* Launchpad Grid */

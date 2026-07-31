@@ -154,7 +154,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
         </header>
       )}
 
-      <div className="finance-dashboard" style={isEmbedded ? { padding: '24px 0 0 0' } : {}}>
+      <div className="finance-dashboard" style={isEmbedded ? { padding: 0 } : {}}>
         {isEmbedded && (
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
             <button className="primary" onClick={() => setIsModalOpen(true)}>
