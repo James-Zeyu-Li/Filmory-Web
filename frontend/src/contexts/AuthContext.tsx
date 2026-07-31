@@ -21,6 +21,7 @@ import {
   resolveUserProfileDisplayName,
 } from '../services/userProfile';
 import { ensureTrialDefaultTheme } from '../services/themePreference';
+import { migrateTrialDataToUser } from '../services/trialDataMigration';
 
 const DEV_AUTH_STORAGE_KEY = 'filmory_dev_auth_bypass';
 const TRIAL_AUTH_STORAGE_KEY = 'filmory_trial_auth';
@@ -86,6 +87,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ? createTrialUser()
         : nextSession?.user || null;
     const nextRole = nextMode === 'dev-bypass' ? 'admin' : await resolveAccountRole(nextUser);
+    const shouldCarryTrialData = (
+      nextMode === 'supabase' &&
+      Boolean(nextUser?.id) &&
+      localStorage.getItem(TRIAL_AUTH_STORAGE_KEY) === 'true' &&
+      localStorage.getItem('filmory_user_id') === TRIAL_USER_ID
+    );
+
+    if (shouldCarryTrialData && nextUser?.id) {
+      const migrationResult = await migrateTrialDataToUser(nextUser.id);
+      if (migrationResult === 'target-has-data') {
+        console.info('Skipped trial data carry-over because the target account already has local data.');
+      }
+    }
 
     setSession(nextMode === 'dev-bypass' || nextMode === 'trial' ? null : nextSession);
     setUser(nextUser);

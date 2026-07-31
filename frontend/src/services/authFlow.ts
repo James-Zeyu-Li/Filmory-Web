@@ -67,13 +67,22 @@ export const readAuthCallbackParams = (href: string): AuthCallbackParams => {
   const hash = new URLSearchParams(url.hash.replace(/^#/, ''));
   const code = url.searchParams.get('code');
   const intentParam = url.searchParams.get('auth_intent');
+  const type = url.searchParams.get('type') || hash.get('type');
+  const hashIntent = type === 'recovery'
+    ? 'recovery'
+    : type === 'signup'
+      ? 'signup'
+      : null;
   const intent = intentParam === 'signup' || intentParam === 'recovery' || intentParam === 'oauth'
     ? intentParam
-    : null;
+    : hashIntent;
   const nextPath = url.searchParams.get('next') || (
-    intent === 'recovery' ? AUTH_ROUTES.resetPassword : '/dashboard'
+    intent === 'recovery'
+      ? AUTH_ROUTES.resetPassword
+      : intent === 'signup'
+        ? AUTH_ROUTES.verified
+        : '/dashboard'
   );
-  const type = url.searchParams.get('type') || hash.get('type');
   const errorDescription =
     url.searchParams.get('error_description') ||
     hash.get('error_description') ||
@@ -93,6 +102,15 @@ export const formatAuthError = (error: unknown, fallback: string) => {
   if (error instanceof Error && error.message) return error.message;
   if (typeof error === 'string' && error.trim()) return error;
   return fallback;
+};
+
+export const isAuthEmailRateLimitError = (error: unknown) => {
+  const maybeAuthError = error as { status?: number; code?: string; message?: string };
+  const message = formatAuthError(error, '').toLowerCase();
+
+  return maybeAuthError?.status === 429 ||
+    maybeAuthError?.code === 'over_email_send_rate_limit' ||
+    /email rate limit exceeded|too many requests|over_email_send_rate_limit/.test(message);
 };
 
 export const validatePassword = (password: string) => ({
@@ -133,7 +151,7 @@ export const getAuthErrorTranslationKey = (
   if (/user already registered|already been registered/.test(message)) return 'auth.alreadyRegistered';
   if (/password should be at least|password is too short|weak password/.test(message)) return 'auth.passwordPolicyError';
   if (/same password|new password should be different/.test(message)) return 'auth.samePassword';
-  if (/email rate limit exceeded|rate limit/.test(message)) return 'auth.emailRateLimit';
+  if (/email rate limit exceeded|rate limit|over_email_send_rate_limit|too many requests/.test(message)) return 'auth.emailRateLimit';
   if (/signup is disabled/.test(message)) return 'auth.signupDisabled';
 
   if (

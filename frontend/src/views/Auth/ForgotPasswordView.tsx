@@ -6,9 +6,15 @@ import {
   AUTH_ROUTES,
   buildPasswordRecoveryRedirectUrl,
   getAuthErrorMessage,
+  isAuthEmailRateLimitError,
 } from '../../services/authFlow';
 import { AuthShell } from './AuthShell';
 import { useLanguage } from '../../contexts/useLanguage';
+import { useAuthEmailCooldown } from '../../hooks/useAuthEmailCooldown';
+import {
+  AUTH_EMAIL_RATE_LIMIT_COOLDOWN_MS,
+  AUTH_EMAIL_SEND_COOLDOWN_MS,
+} from '../../services/authEmailCooldown';
 import './LoginView.css';
 
 export const ForgotPasswordView: React.FC = () => {
@@ -17,13 +23,20 @@ export const ForgotPasswordView: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const normalizedEmail = email.trim().toLowerCase();
+  const {
+    remainingSeconds,
+    isCoolingDown,
+    startCooldown,
+  } = useAuthEmailCooldown('password-recovery', normalizedEmail);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (isCoolingDown) return;
+
     setLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
-    const normalizedEmail = email.trim().toLowerCase();
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
@@ -31,11 +44,15 @@ export const ForgotPasswordView: React.FC = () => {
       });
       if (error) throw error;
 
+      startCooldown(AUTH_EMAIL_SEND_COOLDOWN_MS);
       setSuccessMsg(t('auth.forgotSuccess', {
         email: normalizedEmail,
         hint: t('auth.mailpitHint'),
       }));
     } catch (error) {
+      if (isAuthEmailRateLimitError(error)) {
+        startCooldown(AUTH_EMAIL_RATE_LIMIT_COOLDOWN_MS);
+      }
       setErrorMsg(getAuthErrorMessage(error, 'forgot-password', t('auth.forgotFallbackError'), t));
     } finally {
       setLoading(false);
@@ -81,11 +98,22 @@ export const ForgotPasswordView: React.FC = () => {
             onChange={event => setEmail(event.target.value)}
             required
           />
+          {isCoolingDown && (
+            <p className="auth-cooldown-note">
+              {t('auth.emailCooldownNote', { seconds: remainingSeconds })}
+            </p>
+          )}
         </div>
 
-        <button type="submit" className="btn-primary login-btn" disabled={loading}>
+        <button type="submit" className="btn-primary login-btn" disabled={loading || isCoolingDown}>
           <Send size={18} />
-          <span>{loading ? t('auth.forgotSending') : t('auth.forgotSubmit')}</span>
+          <span>
+            {loading
+              ? t('auth.forgotSending')
+              : isCoolingDown
+                ? t('auth.emailCooldownButton', { seconds: remainingSeconds })
+                : t('auth.forgotSubmit')}
+          </span>
         </button>
       </form>
     </AuthShell>

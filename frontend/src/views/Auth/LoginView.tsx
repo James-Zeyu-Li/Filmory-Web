@@ -13,6 +13,7 @@ import {
   getAuthErrorMessage,
   getAuthErrorTranslationKey,
   getPasswordValidationMessage,
+  isAuthEmailRateLimitError,
   isEmailNotConfirmedError,
   PASSWORD_POLICY,
 } from '../../services/authFlow';
@@ -23,6 +24,11 @@ import {
   getDisplayNameValidationMessage,
   normalizeDisplayName,
 } from '../../services/userProfile';
+import { useAuthEmailCooldown } from '../../hooks/useAuthEmailCooldown';
+import {
+  AUTH_EMAIL_RATE_LIMIT_COOLDOWN_MS,
+  AUTH_EMAIL_SEND_COOLDOWN_MS,
+} from '../../services/authEmailCooldown';
 import './LoginView.css';
 
 export const LoginView: React.FC = () => {
@@ -45,6 +51,12 @@ export const LoginView: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState('');
   const [needsEmailVerification, setNeedsEmailVerification] = useState(false);
   const [isResendingVerification, setIsResendingVerification] = useState(false);
+  const normalizedEmail = email.trim().toLowerCase();
+  const {
+    remainingSeconds: resendCooldownSeconds,
+    isCoolingDown: isResendCoolingDown,
+    startCooldown: startResendCooldown,
+  } = useAuthEmailCooldown('signup-confirmation', normalizedEmail);
   const prefixedMessage = useMemo(() => searchParams.get('message') || '', [searchParams]);
   const authTitle = isRegister ? t('auth.titleSignup') : t('auth.titleLogin');
   const authSubtitle = isRegister
@@ -137,12 +149,12 @@ export const LoginView: React.FC = () => {
   };
 
   const handleResendVerification = async () => {
-    const normalizedEmail = email.trim().toLowerCase();
-
     if (!normalizedEmail) {
       setErrorMsg(t('auth.emptyEmailForResend'));
       return;
     }
+
+    if (isResendCoolingDown) return;
 
     setIsResendingVerification(true);
     setErrorMsg('');
@@ -158,8 +170,12 @@ export const LoginView: React.FC = () => {
       });
       if (error) throw error;
 
+      startResendCooldown(AUTH_EMAIL_SEND_COOLDOWN_MS);
       setSuccessMsg(t('auth.resendSuccess', { email: normalizedEmail, hint: t('auth.mailpitHint') }));
     } catch (error) {
+      if (isAuthEmailRateLimitError(error)) {
+        startResendCooldown(AUTH_EMAIL_RATE_LIMIT_COOLDOWN_MS);
+      }
       setErrorMsg(getAuthErrorMessage(error, 'resend-verification', t('auth.resendFallbackError'), t));
     } finally {
       setIsResendingVerification(false);
@@ -211,15 +227,24 @@ export const LoginView: React.FC = () => {
                 type="button"
                 className="secondary auth-inline-button"
                 onClick={handleResendVerification}
-                disabled={isResendingVerification}
+                disabled={isResendingVerification || isResendCoolingDown}
               >
                 <MailPlus size={16} />
-                {isResendingVerification ? t('auth.resending') : t('auth.resendVerification')}
+                {isResendingVerification
+                  ? t('auth.resending')
+                  : isResendCoolingDown
+                    ? t('auth.emailCooldownButton', { seconds: resendCooldownSeconds })
+                    : t('auth.resendVerification')}
               </button>
               <Link to={buildCheckEmailUrl(email)} className="auth-inline-link">
                 {t('auth.viewInstructions')}
               </Link>
             </div>
+            {isResendCoolingDown && (
+              <p className="auth-cooldown-note">
+                {t('auth.emailCooldownNote', { seconds: resendCooldownSeconds })}
+              </p>
+            )}
           </div>
         )}
 

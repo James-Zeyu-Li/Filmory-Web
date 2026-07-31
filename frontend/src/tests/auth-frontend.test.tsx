@@ -307,6 +307,44 @@ describe('Auth frontend closure', () => {
     });
   });
 
+  it('auth callback routes hash recovery links to reset password', async () => {
+    window.history.pushState({}, '', `${AUTH_ROUTES.callback}#access_token=token&type=recovery`);
+
+    render(
+      <BrowserRouter>
+        <Routes>
+          <Route path={AUTH_ROUTES.callback} element={<AuthCallbackView />} />
+          <Route path={AUTH_ROUTES.resetPassword} element={<div>Reset Route Reached</div>} />
+        </Routes>
+      </BrowserRouter>
+    );
+
+    expect(mockedAuth.exchangeCodeForSession).not.toHaveBeenCalled();
+
+    await waitFor(() => {
+      expect(screen.getByText('Reset Route Reached')).toBeInTheDocument();
+    });
+  });
+
+  it('auth callback routes hash signup links to verified status', async () => {
+    window.history.pushState({}, '', `${AUTH_ROUTES.callback}#access_token=token&type=signup`);
+
+    render(
+      <BrowserRouter>
+        <Routes>
+          <Route path={AUTH_ROUTES.callback} element={<AuthCallbackView />} />
+          <Route path={AUTH_ROUTES.verified} element={<div>Verified Route Reached</div>} />
+        </Routes>
+      </BrowserRouter>
+    );
+
+    expect(mockedAuth.exchangeCodeForSession).not.toHaveBeenCalled();
+
+    await waitFor(() => {
+      expect(screen.getByText('Verified Route Reached')).toBeInTheDocument();
+    });
+  });
+
   it('auth callback falls back to login when next path is unsafe', async () => {
     window.history.pushState({}, '', `${AUTH_ROUTES.callback}?code=test-code&next=${encodeURIComponent('https://evil.example')}&auth_intent=oauth`);
 

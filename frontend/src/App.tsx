@@ -54,15 +54,15 @@ function AppContent() {
     localStorage.setItem('filmory_enable_film_mode', String(enableFilmMode));
   }, [enableFilmMode]);
 
-  // Seed the local workspace only after a real/dev user is known.
-  // Trial starts empty so the one-item quota is not consumed by samples.
+  // Seed sample data only for the local developer bypass account.
+  // Real Supabase users should start empty unless they explicitly carry over trial data.
   useEffect(() => {
     if (authLoading) return;
     if (!userId) {
       queueMicrotask(() => setIsLoading(false));
       return;
     }
-    if (authMode === 'trial') {
+    if (authMode !== 'dev-bypass') {
       queueMicrotask(() => setIsLoading(false));
       return;
     }

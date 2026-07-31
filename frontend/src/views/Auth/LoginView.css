@@ -305,6 +305,13 @@
   margin: 0;
 }
 
+.auth-cooldown-note {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .auth-helper-note svg {
   flex: 0 0 auto;
   margin-top: 1px;
