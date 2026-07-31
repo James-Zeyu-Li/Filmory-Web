@@ -2,6 +2,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { AccountCenterModal } from '../components/AccountCenterModal';
+import { db } from '../db/schema';
+import { supabase } from '../services/supabaseClient';
 
 const mockNotify = vi.fn();
 const mockLogout = vi.fn();
@@ -88,7 +90,12 @@ const renderAccountCenter = () => render(
 );
 
 describe('AccountCenterModal', () => {
+  const mockedAuth = supabase.auth as unknown as {
+    updateUser: ReturnType<typeof vi.fn>;
+  };
+
   beforeEach(() => {
+    vi.restoreAllMocks();
     mockNotify.mockReset();
     mockLogout.mockReset();
     mockLogout.mockResolvedValue(undefined);
@@ -99,9 +106,17 @@ describe('AccountCenterModal', () => {
     mockAuthState.isAdmin = false;
     mockAuthState.isDevBypass = false;
     mockAuthState.isTrial = false;
+    mockProfile.id = 'user-1';
+    mockProfile.userId = 'user-1';
     mockProfile.displayName = 'Analog James';
     mockTierState.tier = 'regular';
     mockTierState.capabilities.activeRollLimit = 5;
+
+    mockedAuth.updateUser.mockClear();
+    mockedAuth.updateUser.mockResolvedValue({ data: {}, error: null });
+
+    vi.spyOn(db.userProfiles, 'put').mockResolvedValue('user-1');
+    vi.spyOn(db.userProfiles, 'get').mockResolvedValue(mockProfile as any);
   });
 
   it('keeps a signup path available after the trial banner is dismissed', () => {
@@ -133,6 +148,86 @@ describe('AccountCenterModal', () => {
     await waitFor(() => expect(mockLogout).toHaveBeenCalled());
     expect(mockOnClose).toHaveBeenCalled();
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/login'));
+  });
+
+  it('saves display name to local profile and Supabase metadata for a real account', async () => {
+    renderAccountCenter();
+
+    fireEvent.change(screen.getByPlaceholderText('输入你想显示的名字'), {
+      target: { value: 'Analog James Studio' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '保存名字' }));
+
+    await waitFor(() => {
+      expect(db.userProfiles.put).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'user-1',
+          userId: 'user-1',
+          displayName: 'Analog James Studio',
+        })
+      );
+    });
+
+    expect(mockedAuth.updateUser).toHaveBeenCalledWith({
+      data: {
+        display_name: 'Analog James Studio',
+      },
+    });
+
+    expect(mockNotify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'success',
+        title: '显示名称已保存',
+      })
+    );
+  });
+
+  it('blocks invalid display name before saving', async () => {
+    renderAccountCenter();
+
+    fireEvent.change(screen.getByPlaceholderText('输入你想显示的名字'), {
+      target: { value: '   ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '保存名字' }));
+
+    await waitFor(() => {
+      expect(mockNotify).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'error',
+          title: '显示名称无效',
+        })
+      );
+    });
+
+    expect(db.userProfiles.put).not.toHaveBeenCalled();
+    expect(mockedAuth.updateUser).not.toHaveBeenCalled();
+  });
+
+  it('keeps display name local-only for trial users', async () => {
+    mockAuthState.user = { id: 'trial-user', email: '', user_metadata: {} };
+    mockAuthState.authMode = 'trial';
+    mockAuthState.isTrial = true;
+    mockProfile.id = 'trial-user';
+    mockProfile.userId = 'trial-user';
+
+    renderAccountCenter();
+
+    fireEvent.change(screen.getByPlaceholderText('输入你想显示的名字'), {
+      target: { value: 'Trial Notes' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '保存名字' }));
+
+    await waitFor(() => {
+      expect(db.userProfiles.put).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'trial-user',
+          userId: 'trial-user',
+          displayName: 'Trial Notes',
+        })
+      );
+    });
+
+    expect(mockedAuth.updateUser).not.toHaveBeenCalled();
   });
 
   it('marks the developer bypass account clearly', () => {

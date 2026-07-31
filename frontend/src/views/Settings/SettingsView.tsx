@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { BackupService } from '../../services/backupService';
-import { Shield, Download, X, LogOut, UserX, Sun, Moon, Monitor, Coins, Film, BadgeCheck, ArrowUp, ArrowDown, Folder, Crown, Zap, Languages, UserRound, Save } from 'lucide-react';
+import { Shield, Download, X, LogOut, UserX, Sun, Moon, Monitor, Coins, Film, BadgeCheck, ArrowUp, ArrowDown, Folder, Languages } from 'lucide-react';
 import { useAuth } from '../../contexts/useAuth';
 import { useTheme } from '../../contexts/useTheme';
 import { supabase } from '../../services/supabaseClient';
 import { Modal } from '../../components/Modal';
 import { useConfirm } from '../../contexts/useConfirm';
 import { useFeedback } from '../../contexts/useFeedback';
-import { db } from '../../db/schema';
 import { useCurrency } from '../../contexts/useCurrency';
 import { CURRENCY_OPTIONS, type CurrencyCode } from '../../contexts/currencyContextCore';
 import { useLanguage } from '../../contexts/useLanguage';
@@ -20,16 +19,6 @@ import {
   writeRollsTabOrder,
   type RollsTabId,
 } from '../../services/workspacePreferences';
-import { useUserProfile } from '../../hooks/useData';
-import { useUserTier } from '../../hooks/useUserTier';
-import { UpgradeModal } from '../../components/UpgradeModal';
-import { formatMembershipRequestTime } from '../../services/membershipUpgrade';
-import { getActiveRollLimitLabel } from '../../services/membershipPolicy';
-import {
-  buildLocalUserProfile,
-  getDisplayNameValidationMessage,
-  normalizeDisplayName,
-} from '../../services/userProfile';
 import './SettingsView.css';
 
 interface SettingsViewProps {
@@ -39,15 +28,12 @@ interface SettingsViewProps {
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setEnableFilmMode, onClose }) => {
-  const { user, logout, accountRole, isDevBypass, isAdmin, isTrial } = useAuth();
+  const { user, logout, accountRole, isDevBypass, isAdmin } = useAuth();
   const { theme, setTheme } = useTheme();
   const { currency, setCurrency, currencySymbol } = useCurrency();
   const { language, setLanguage, t } = useLanguage();
   const { confirm } = useConfirm();
   const { notify } = useFeedback();
-  const { tier: userTier, isLoading: isUserTierLoading, capabilities: membershipCapabilities } = useUserTier();
-  const userProfile = useUserProfile();
-  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [processMessage, setProcessMessage] = useState('');
@@ -61,16 +47,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
   const [conversionRate, setConversionRate] = useState('');
   const [rollsTabOrder, setRollsTabOrder] = useState<RollsTabId[]>(() => readRollsTabOrder());
   const [rollsCollectionsEnabled, setRollsCollectionsEnabled] = useState<boolean>(() => readRollsCollectionsTabEnabled());
-  const [displayNameDraft, setDisplayNameDraft] = useState<string | null>(null);
-  const displayNameInput = displayNameDraft ?? userProfile?.displayName ?? '';
 
   const rollsTabLabels: Record<RollsTabId, string> = {
     collections: t('settings.rollTabCollections'),
     all: t('settings.rollTabAll'),
     loose: t('settings.rollTabLoose'),
   };
-  const isMembershipRequestPending = userTier !== 'vip' && userProfile?.membershipRequestStatus === 'pending';
-  const membershipRequestTimeLabel = formatMembershipRequestTime(userProfile?.membershipRequestedAt);
 
   const handleFilmModeChange = (nextEnabled: boolean) => {
     setEnableFilmMode(nextEnabled);
@@ -244,56 +226,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
     } finally {
       setIsProcessing(false);
       setProcessMessage('');
-    }
-  };
-
-  const handleDisplayNameSave = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    if (!user) return;
-
-    const validationMessage = getDisplayNameValidationMessage(displayNameInput);
-    if (validationMessage) {
-      notify({
-        type: 'error',
-        title: t('settings.displayNameInvalidTitle'),
-        message: validationMessage,
-      });
-      return;
-    }
-
-    const normalizedDisplayName = normalizeDisplayName(displayNameInput);
-    const existingProfile = userProfile || await db.userProfiles.get(user.id);
-
-    try {
-      await db.userProfiles.put(buildLocalUserProfile({
-        userId: user.id,
-        role: accountRole,
-        existingProfile: existingProfile || undefined,
-        displayName: normalizedDisplayName,
-      }));
-      setDisplayNameDraft(null);
-
-      if (!isDevBypass && !isTrial) {
-        const { error } = await supabase.auth.updateUser({
-          data: {
-            display_name: normalizedDisplayName,
-          },
-        });
-        if (error) throw error;
-      }
-
-      notify({
-        type: 'success',
-        title: t('settings.displayNameSavedTitle'),
-        message: t('settings.displayNameSavedMessage'),
-      });
-    } catch (error) {
-      notify({
-        type: 'error',
-        title: t('settings.displayNameSaveFailedTitle'),
-        message: error instanceof Error ? error.message : t('settings.displayNameSaveFailedMessage'),
-      });
     }
   };
 
@@ -533,76 +465,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
           </div>
         </div>
 
-        {/* Membership Status Card */}
-        <div className="settings-section">
-          <div className="section-header"><h3>会员状态</h3></div>
-          <div className="settings-list-group">
-            <div className="settings-list-item">
-              <div className="settings-item-content">
-                <div className={`settings-item-icon ${!isUserTierLoading && userTier === 'vip' ? 'safe' : ''}`}>
-                  <Crown size={18} />
-                </div>
-                <div className="settings-item-text">
-                  {isUserTierLoading ? (
-                    <>
-                      <h4>正在读取会员状态</h4>
-                      <p>请稍候，正在同步当前账号的会员信息。</p>
-                    </>
-                  ) : isMembershipRequestPending ? (
-                    <>
-                      <h4>VIP 升级申请已记录</h4>
-                      <p>
-                        {membershipRequestTimeLabel ? `最近一次申请：${membershipRequestTimeLabel}。` : ''}
-                        {userProfile?.membershipContactEmail ? ` 联系邮箱：${userProfile.membershipContactEmail}。` : ''}
-                        可继续打开邮件或复制申请内容。
-                      </p>
-                    </>
-	                  ) : userTier === 'vip' ? (
-	                    <>
-	                      <h4>Filmory VIP</h4>
-	                      <p>
-	                        {getActiveRollLimitLabel(userTier)}进行中胶卷记录
-	                        {membershipCapabilities.cloudSyncEnabled ? ' · 云同步可用' : ''}
-	                        {membershipCapabilities.highResUploadEnabled ? ' · 高质量图片能力' : ''}
-	                      </p>
-	                    </>
-	                  ) : (
-	                    <>
-	                      <h4>免费版 · 进行中胶卷记录{getActiveRollLimitLabel(userTier)}</h4>
-	                      <p>器材库和胶卷库存不限量；升级后解锁无限进行中记录和后续云端能力。</p>
-	                    </>
-	                  )}
-                </div>
-              </div>
-              <div className="settings-item-action">
-                {isUserTierLoading ? (
-                  <span className="account-role-badge">读取中</span>
-                ) : isMembershipRequestPending ? (
-                  <button
-                    className="secondary btn-sm"
-                    onClick={() => setIsUpgradeModalOpen(true)}
-                  >
-                    查看申请
-                  </button>
-                ) : userTier === 'vip' ? (
-                  <span className="account-role-badge admin">
-                    <Crown size={12} />
-                    VIP 会员
-                  </span>
-                ) : (
-                  <button
-                    className="primary btn-sm"
-                    onClick={() => setIsUpgradeModalOpen(true)}
-                  >
-                    <Zap size={14} />
-                    升级 VIP
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Account Management Card */}
         <div className="settings-section">
           <div className="section-header">
@@ -610,32 +472,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
           </div>
           
           <div className="settings-list-group">
-            <div className="settings-list-item settings-list-item-vertical">
-              <div className="settings-item-content">
-                <div className="settings-item-icon safe"><UserRound size={18} /></div>
-                <div className="settings-item-text">
-                  <h4>{t('settings.displayName')}</h4>
-                  <p>{t('settings.displayNameDesc')}</p>
-                </div>
-              </div>
-              <div className="settings-item-action">
-                <form onSubmit={handleDisplayNameSave} className="settings-profile-form">
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={displayNameInput}
-                    onChange={e => setDisplayNameDraft(e.target.value)}
-                    placeholder={t('settings.displayNamePlaceholder')}
-                    maxLength={40}
-                  />
-                  <button className="secondary btn-sm" type="submit">
-                    <Save size={14} />
-                    {t('settings.displayNameSave')}
-                  </button>
-                </form>
-              </div>
-            </div>
-
             <div className="settings-list-item">
               <div className="settings-item-content">
                 <div className="settings-item-icon"><LogOut size={18} /></div>
@@ -760,12 +596,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
           </div>
         </form>
       </Modal>
-
-      <UpgradeModal
-        isOpen={isUpgradeModalOpen}
-        onClose={() => setIsUpgradeModalOpen(false)}
-        trigger="generic"
-      />
     </Modal>
   );
 };

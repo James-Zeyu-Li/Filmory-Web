@@ -232,20 +232,6 @@
   max-width: 160px;
 }
 
-.settings-profile-form {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  flex-wrap: wrap;
-  width: min(100%, 360px);
-}
-
-.settings-profile-form .form-control {
-  flex: 1 1 220px;
-  min-width: 0;
-}
-
 /* ─── Rolls Tab Order Panel ────────────────────────────────── */
 .settings-rolls-toggle-row {
   display: flex;
