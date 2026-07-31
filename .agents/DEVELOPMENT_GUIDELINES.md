@@ -78,9 +78,10 @@
 ## 五、 开发、测试与交付工作流 (Workflow)
 
 ### 1. 本地开发环境管理 (Local Environment Stack)
-* **一键启停脚本 (`filmory.sh`)**：项目根目录提供了强大的控制面板脚本。
-  - 启动所有服务：在终端运行 `./filmory.sh`，选择 `1) Start ALL`。这会自动拉起 Vite 前端、Supabase 后端及所有关联 Docker 容器。
-  - 彻底清理重启：如遇环境异常，可使用 `3) Restart ALL`。
+* **本地开发控制脚本 (`filmory.sh`)**：项目根目录提供前端与本地 Supabase Docker 环境的独立启停入口。
+  - 日常连接 Cloud Supabase 时，只启动或关闭 Vite 前端；Cloud 服务不由脚本控制。
+  - 本地 Auth、Mailpit、migration、RLS 或 sync 测试时，单独启动或关闭本地 Supabase；“启动/关闭本地全套”仅是组合快捷操作。
+  - 脚本不会自动管理旧 `docker-compose.yml` 的 Postgres、Redis、MinIO，避免影响非 Supabase CLI 管理的容器。
 * **本地沙盒邮件服务 (Mailpit)**：
   - 出于安全原因，Supabase 本地开发默认不会向外网发送真实邮件。
   - 所有注册的验证邮件、密码重置邮件，将被本地拦截并发送至 **Mailpit 控制台**。

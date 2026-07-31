@@ -45,7 +45,9 @@ Or use the root helper script for the local development menu:
 ./filmory.sh
 ```
 
-If local Supabase is started, Mailpit is available at `http://127.0.0.1:54324` for auth emails such as signup confirmation and password reset.
+`filmory.sh` keeps the frontend and local Supabase Docker environment independent: use the frontend-only actions for normal Cloud Supabase development, and start local Supabase only for local Auth, Mailpit, migration, RLS, or sync testing. The convenience “local full stack” actions start or stop both. It does not manage the legacy `docker-compose.yml` services.
+
+If local Supabase is started, Studio is available at `http://127.0.0.1:54323` and Mailpit is available at `http://127.0.0.1:54324` for auth emails such as signup confirmation and password reset.
 
 ## Environment
 
