@@ -3,6 +3,7 @@ import { LanguageContext } from './languageContextCore';
 import {
   DEFAULT_LANGUAGE,
   LANGUAGE_OPTIONS,
+  detectBrowserLanguage,
   translations,
   type LanguageCode,
   type TranslationKey,
@@ -26,7 +27,7 @@ const interpolate = (
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<LanguageCode>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return isLanguageCode(saved) ? saved : DEFAULT_LANGUAGE;
+    return isLanguageCode(saved) ? saved : detectBrowserLanguage();
   });
 
   useEffect(() => {

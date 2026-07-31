@@ -62,6 +62,40 @@
   font: inherit;
 }
 
+.landing-language-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.landing-language-switch button {
+  min-width: 42px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.landing-language-switch button:hover {
+  color: #fff;
+}
+
+.landing-language-switch button.active {
+  color: #111;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.16);
+}
+
 .btn-ghost-trial {
   color: rgba(255, 255, 255, 0.86);
   background: rgba(255, 255, 255, 0.06);
@@ -372,6 +406,16 @@
 
   .landing-nav-actions {
     gap: 8px;
+  }
+
+  .landing-language-switch {
+    padding: 2px;
+  }
+
+  .landing-language-switch button {
+    min-width: 34px;
+    padding: 5px 7px;
+    font-size: 0.76rem;
   }
 
   .btn-ghost-trial {

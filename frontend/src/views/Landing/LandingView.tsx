@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Camera, Image, Layers, Wallet } from 'lucide-react';
 import { useAuth } from '../../contexts/useAuth';
 import { useLanguage } from '../../contexts/useLanguage';
+import { LANGUAGE_OPTIONS, type LanguageCode } from '../../i18n/translations';
 import './LandingView.css';
 
 const containerVariants = {
@@ -22,7 +23,7 @@ const itemVariants = {
 export const LandingView: React.FC = () => {
   const navigate = useNavigate();
   const { startTrial } = useAuth();
-  const { t } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
 
   const handleStartTrial = () => {
     startTrial();
@@ -38,6 +39,19 @@ export const LandingView: React.FC = () => {
           <span>Filmory</span>
         </div>
         <div className="landing-nav-actions">
+          <div className="landing-language-switch" aria-label={t('landing.languageSwitch')}>
+            {LANGUAGE_OPTIONS.map(option => (
+              <button
+                key={option.code}
+                type="button"
+                className={language === option.code ? 'active' : ''}
+                onClick={() => setLanguage(option.code as LanguageCode)}
+                aria-pressed={language === option.code}
+              >
+                {option.shortLabel}
+              </button>
+            ))}
+          </div>
           <button type="button" className="btn-ghost-trial" onClick={handleStartTrial}>
             {t('landing.trial')}
           </button>

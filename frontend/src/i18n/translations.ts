@@ -13,6 +13,20 @@ export const LANGUAGE_OPTIONS: LanguageOption[] = [
 
 export const DEFAULT_LANGUAGE: LanguageCode = 'zh-CN';
 
+export const detectBrowserLanguage = (
+  preferredLanguages: readonly string[] = typeof navigator === 'undefined'
+    ? []
+    : navigator.languages?.length
+      ? navigator.languages
+      : [navigator.language]
+): LanguageCode => {
+  const hasChinesePreference = preferredLanguages.some(language => (
+    language.toLowerCase().startsWith('zh')
+  ));
+
+  return hasChinesePreference ? 'zh-CN' : 'en-US';
+};
+
 export const translations = {
   'zh-CN': {
     'common.cancel': '取消',
@@ -78,6 +92,7 @@ export const translations = {
     'landing.trial': '先试用一下',
     'landing.login': '登录',
     'landing.signup': '免费注册',
+    'landing.languageSwitch': '切换语言',
     'landing.badge': '胶片记录新版本已上线',
     'landing.titleLine1': '为摄影师打造的',
     'landing.titleHighlight': '极简数字化资产管理',
@@ -942,6 +957,7 @@ export const translations = {
     'landing.trial': 'Try first',
     'landing.login': 'Log in',
     'landing.signup': 'Sign up free',
+    'landing.languageSwitch': 'Switch language',
     'landing.badge': 'New film logging workflow is live',
     'landing.titleLine1': 'A minimal digital asset manager',
     'landing.titleHighlight': 'for photographers',
