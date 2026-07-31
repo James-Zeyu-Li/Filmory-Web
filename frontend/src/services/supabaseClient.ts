@@ -8,11 +8,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // Initialize and export the Supabase client.
-// PKCE keeps email verification and password recovery redirects on the
-// explicit /auth/callback route instead of relying on hash-token fallbacks.
+// AuthCallbackView owns URL session detection so it can preserve auth_intent/next
+// before tokens are persisted and the user is routed to the next auth step.
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    flowType: 'pkce',
-    detectSessionInUrl: true,
+    flowType: 'implicit',
+    detectSessionInUrl: false,
   },
 });

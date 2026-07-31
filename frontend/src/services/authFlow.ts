@@ -56,6 +56,8 @@ export const PASSWORD_POLICY = {
 
 export interface AuthCallbackParams {
   code: string | null;
+  accessToken: string | null;
+  refreshToken: string | null;
   nextPath: string;
   intent: AuthIntent | null;
   type: string | null;
@@ -66,6 +68,8 @@ export const readAuthCallbackParams = (href: string): AuthCallbackParams => {
   const url = new URL(href);
   const hash = new URLSearchParams(url.hash.replace(/^#/, ''));
   const code = url.searchParams.get('code');
+  const accessToken = hash.get('access_token');
+  const refreshToken = hash.get('refresh_token');
   const intentParam = url.searchParams.get('auth_intent');
   const type = url.searchParams.get('type') || hash.get('type');
   const hashIntent = type === 'recovery'
@@ -91,6 +95,8 @@ export const readAuthCallbackParams = (href: string): AuthCallbackParams => {
 
   return {
     code,
+    accessToken,
+    refreshToken,
     nextPath,
     intent,
     type,

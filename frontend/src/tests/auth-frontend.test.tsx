@@ -36,6 +36,7 @@ const mockedAuth = supabase.auth as unknown as {
   resetPasswordForEmail: ReturnType<typeof vi.fn>;
   updateUser: ReturnType<typeof vi.fn>;
   resend: ReturnType<typeof vi.fn>;
+  setSession: ReturnType<typeof vi.fn>;
   exchangeCodeForSession: ReturnType<typeof vi.fn>;
 };
 
@@ -50,6 +51,7 @@ describe('Auth frontend closure', () => {
     mockedAuth.resetPasswordForEmail.mockClear();
     mockedAuth.updateUser.mockClear();
     mockedAuth.resend.mockClear();
+    mockedAuth.setSession.mockClear();
     mockedAuth.exchangeCodeForSession.mockClear();
 
     mockedAuth.signUp.mockResolvedValue({ data: {}, error: null });
@@ -58,6 +60,7 @@ describe('Auth frontend closure', () => {
     mockedAuth.resetPasswordForEmail.mockResolvedValue({ data: {}, error: null });
     mockedAuth.updateUser.mockResolvedValue({ data: {}, error: null });
     mockedAuth.resend.mockResolvedValue({ data: {}, error: null });
+    mockedAuth.setSession.mockResolvedValue({ data: { session: null }, error: null });
     mockedAuth.exchangeCodeForSession.mockResolvedValue({ data: { session: null }, error: null });
   });
 
@@ -307,8 +310,8 @@ describe('Auth frontend closure', () => {
     });
   });
 
-  it('auth callback routes hash recovery links to reset password', async () => {
-    window.history.pushState({}, '', `${AUTH_ROUTES.callback}#access_token=token&type=recovery`);
+  it('auth callback stores implicit recovery session and routes to reset password', async () => {
+    window.history.pushState({}, '', `${AUTH_ROUTES.callback}#access_token=access-token&refresh_token=refresh-token&type=recovery`);
 
     render(
       <BrowserRouter>
@@ -319,6 +322,13 @@ describe('Auth frontend closure', () => {
       </BrowserRouter>
     );
 
+    await waitFor(() => {
+      expect(mockedAuth.setSession).toHaveBeenCalledWith({
+        access_token: 'access-token',
+        refresh_token: 'refresh-token',
+      });
+    });
+
     expect(mockedAuth.exchangeCodeForSession).not.toHaveBeenCalled();
 
     await waitFor(() => {
@@ -326,8 +336,8 @@ describe('Auth frontend closure', () => {
     });
   });
 
-  it('auth callback routes hash signup links to verified status', async () => {
-    window.history.pushState({}, '', `${AUTH_ROUTES.callback}#access_token=token&type=signup`);
+  it('auth callback stores implicit signup session and routes to verified status', async () => {
+    window.history.pushState({}, '', `${AUTH_ROUTES.callback}#access_token=access-token&refresh_token=refresh-token&type=signup`);
 
     render(
       <BrowserRouter>
@@ -337,6 +347,13 @@ describe('Auth frontend closure', () => {
         </Routes>
       </BrowserRouter>
     );
+
+    await waitFor(() => {
+      expect(mockedAuth.setSession).toHaveBeenCalledWith({
+        access_token: 'access-token',
+        refresh_token: 'refresh-token',
+      });
+    });
 
     expect(mockedAuth.exchangeCodeForSession).not.toHaveBeenCalled();
 

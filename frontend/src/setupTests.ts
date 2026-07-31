@@ -83,6 +83,7 @@ vi.mock('./services/supabaseClient', () => ({
       resetPasswordForEmail: vi.fn().mockResolvedValue({ data: {}, error: null }),
       updateUser: vi.fn().mockResolvedValue({ data: {}, error: null }),
       resend: vi.fn().mockResolvedValue({ data: {}, error: null }),
+      setSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
       exchangeCodeForSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
       getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
       onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),

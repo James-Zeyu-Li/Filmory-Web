@@ -23,7 +23,13 @@ export const AuthCallbackView: React.FC = () => {
     let cancelled = false;
 
     const resolveAuthCallback = async () => {
-      const { code, errorDescription, nextPath } = readAuthCallbackParams(window.location.href);
+      const {
+        code,
+        accessToken,
+        refreshToken,
+        errorDescription,
+        nextPath,
+      } = readAuthCallbackParams(window.location.href);
 
       if (errorDescription) {
         if (!cancelled) {
@@ -34,7 +40,13 @@ export const AuthCallbackView: React.FC = () => {
       }
 
       try {
-        if (code) {
+        if (accessToken && refreshToken) {
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (error) throw error;
+        } else if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) throw error;
         }
