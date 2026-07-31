@@ -51,7 +51,7 @@ describe('SyncService LWW (Last-Write-Wins) Resolution', () => {
 
     // 2. User made a local edit OFFLINE today!
     // But Dexie hook only puts it in syncQueue, local object updatedAt remains old.
-    const today = new Date('2026-06-25T12:00:00.000Z').getTime();
+    const today = new Date('2099-06-25T12:00:00.000Z').getTime();
     await db.syncQueue.add({
       userId: 'test_user',
       tableName: 'cameras',
@@ -67,7 +67,7 @@ describe('SyncService LWW (Last-Write-Wins) Resolution', () => {
       { 
         id: cameraId, 
         name: 'Cloud Edit', 
-        updated_at: '2026-06-24T12:00:00.000Z' // Yesterday
+        updated_at: '2099-06-24T12:00:00.000Z' // Older than the pending local edit.
       }
     ] as any;
 
@@ -91,12 +91,12 @@ describe('SyncService LWW (Last-Write-Wins) Resolution', () => {
       updatedAt: new Date('2026-01-01T10:00:00.000Z').getTime()
     });
 
-    // Cloud is newer (Today), and there are NO pending sync queue items.
+    // Cloud is newer, and there are NO pending sync queue items.
     mockSupabaseData.data = [
       { 
         id: cameraId, 
         name: 'Cloud New Edit', 
-        updated_at: '2026-06-25T12:00:00.000Z',
+        updated_at: '2099-06-25T12:00:00.000Z',
         brand: 'Sony',
         format: '135'
       }

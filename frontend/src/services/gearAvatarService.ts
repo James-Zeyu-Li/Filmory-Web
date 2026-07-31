@@ -8,18 +8,4 @@ export const removeGearAvatar = async (tableName: GearAvatarTableName, id: strin
   if (updatedCount === 0) {
     throw new Error('Gear record not found');
   }
-
-  const updatedRecord = await table.get(id);
-  if (!updatedRecord) {
-    throw new Error('Gear record not found');
-  }
-
-  await db.syncQueue.add({
-    userId: updatedRecord.userId,
-    tableName,
-    action: 'upsert',
-    recordId: id,
-    payload: updatedRecord,
-    timestamp: Date.now(),
-  });
 };
