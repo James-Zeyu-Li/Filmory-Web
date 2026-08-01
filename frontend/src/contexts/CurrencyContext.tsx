@@ -2,11 +2,11 @@ import React, { useEffect, useState } from 'react';
 import {
   CURRENCY_OPTIONS,
   CurrencyContext,
+  detectBrowserCurrency,
   type CurrencyCode,
 } from './currencyContextCore';
 
-const STORAGE_KEY = 'filmory_currency';
-const DEFAULT_CURRENCY: CurrencyCode = 'CNY';
+const STORAGE_KEY = 'grainfolio_currency';
 
 const isCurrencyCode = (value: string | null): value is CurrencyCode => (
   CURRENCY_OPTIONS.some(option => option.code === value)
@@ -15,7 +15,7 @@ const isCurrencyCode = (value: string | null): value is CurrencyCode => (
 export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currency, setCurrencyState] = useState<CurrencyCode>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return isCurrencyCode(saved) ? saved : DEFAULT_CURRENCY;
+    return isCurrencyCode(saved) ? saved : detectBrowserCurrency();
   });
 
   useEffect(() => {

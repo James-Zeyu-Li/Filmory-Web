@@ -25,7 +25,7 @@ Object.defineProperty(window, 'matchMedia', {
 // Mock localStorage for Dexie hooks and other components
 Object.defineProperty(window, 'localStorage', {
   value: {
-    getItem: vi.fn((key: string) => key === 'filmory_user_id' ? 'mock-user-id' : null),
+    getItem: vi.fn((key: string) => key === 'grainfolio_user_id' ? 'mock-user-id' : null),
     setItem: vi.fn(),
     removeItem: vi.fn(),
     clear: vi.fn(),
@@ -35,7 +35,7 @@ Object.defineProperty(window, 'localStorage', {
 // Mock auth hook globally so components using useAuth() don't crash without AuthProvider
 vi.mock('./contexts/useAuth', () => ({
   useAuth: () => ({
-    user: { id: 'mock-user-id', email: 'test@filmory.app' },
+    user: { id: 'mock-user-id', email: 'test@grainfolio.app' },
     session: null,
     isLoading: false,
     authMode: 'supabase',
@@ -45,7 +45,8 @@ vi.mock('./contexts/useAuth', () => ({
     isTrial: false,
     startTrial: vi.fn(),
     signInMock: vi.fn(),
-    logout: vi.fn()
+    logout: vi.fn(),
+    clearLocalAuthState: vi.fn()
   })
 }));
 
@@ -76,6 +77,7 @@ vi.mock('./contexts/useLanguage', async () => {
 // Mock Supabase globally to prevent "supabaseUrl is required" error during vitest runs
 vi.mock('./services/supabaseClient', () => ({
   supabase: {
+    rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
     auth: {
       signUp: vi.fn().mockResolvedValue({ data: {}, error: null }),
       signInWithPassword: vi.fn().mockResolvedValue({ data: {}, error: null }),

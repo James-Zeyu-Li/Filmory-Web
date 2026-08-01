@@ -23,8 +23,8 @@ import {
 import { ensureTrialDefaultTheme } from '../services/themePreference';
 import { migrateTrialDataToUser } from '../services/trialDataMigration';
 
-const DEV_AUTH_STORAGE_KEY = 'filmory_dev_auth_bypass';
-const TRIAL_AUTH_STORAGE_KEY = 'filmory_trial_auth';
+const DEV_AUTH_STORAGE_KEY = 'grainfolio_dev_auth_bypass';
+const TRIAL_AUTH_STORAGE_KEY = 'grainfolio_trial_auth';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -32,6 +32,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authMode, setAuthMode] = useState<AuthMode>('supabase');
   const [accountRole, setAccountRole] = useState<AccountRole>('user');
   const [isLoading, setIsLoading] = useState(true);
+
+  const clearLocalAuthState = useCallback(() => {
+    SyncService.stop();
+    setUser(null);
+    setSession(null);
+    setAuthMode('supabase');
+    setAccountRole('user');
+    clearWorkspaceTabPreferences();
+    localStorage.removeItem('grainfolio_user_id');
+    localStorage.removeItem(DEV_AUTH_STORAGE_KEY);
+    localStorage.removeItem(TRIAL_AUTH_STORAGE_KEY);
+  }, []);
 
   const persistLocalUserProfile = useCallback(async (
     nextUser: User,
@@ -91,7 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       nextMode === 'supabase' &&
       Boolean(nextUser?.id) &&
       localStorage.getItem(TRIAL_AUTH_STORAGE_KEY) === 'true' &&
-      localStorage.getItem('filmory_user_id') === TRIAL_USER_ID
+      localStorage.getItem('grainfolio_user_id') === TRIAL_USER_ID
     );
 
     if (shouldCarryTrialData && nextUser?.id) {
@@ -111,13 +123,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     if (nextUser) {
-      localStorage.setItem('filmory_user_id', nextUser.id);
+      localStorage.setItem('grainfolio_user_id', nextUser.id);
       if (nextMode === 'supabase') {
         localStorage.removeItem(DEV_AUTH_STORAGE_KEY);
         localStorage.removeItem(TRIAL_AUTH_STORAGE_KEY);
       }
     } else {
-      localStorage.removeItem('filmory_user_id');
+      localStorage.removeItem('grainfolio_user_id');
       localStorage.removeItem(DEV_AUTH_STORAGE_KEY);
       localStorage.removeItem(TRIAL_AUTH_STORAGE_KEY);
     }
@@ -136,7 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     Promise.race([supabase.auth.getSession(), sessionTimeout]).then(({ data: { session } }) => {
       if (!session) {
         // Handle local dev bypass persistence. This is never enabled for production builds.
-        const localUid = localStorage.getItem('filmory_user_id');
+        const localUid = localStorage.getItem('grainfolio_user_id');
         const wantsTrial = localStorage.getItem(TRIAL_AUTH_STORAGE_KEY) === 'true';
         if (wantsTrial && localUid === TRIAL_USER_ID) {
           applyAuthState(null, 'trial');
@@ -157,7 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (!session) {
-          const localUid = localStorage.getItem('filmory_user_id');
+          const localUid = localStorage.getItem('grainfolio_user_id');
           const wantsTrial = localStorage.getItem(TRIAL_AUTH_STORAGE_KEY) === 'true';
           if (wantsTrial && localUid === TRIAL_USER_ID) return;
 
@@ -180,7 +192,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const mockUser = createDevBypassUser();
     localStorage.setItem(DEV_AUTH_STORAGE_KEY, 'true');
     localStorage.removeItem(TRIAL_AUTH_STORAGE_KEY);
-    localStorage.setItem('filmory_user_id', mockUser.id);
+    localStorage.setItem('grainfolio_user_id', mockUser.id);
     setSession(null);
     setUser(mockUser);
     setAuthMode('dev-bypass');
@@ -196,7 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     ensureTrialDefaultTheme();
     localStorage.setItem(TRIAL_AUTH_STORAGE_KEY, 'true');
     localStorage.removeItem(DEV_AUTH_STORAGE_KEY);
-    localStorage.setItem('filmory_user_id', trialUser.id);
+    localStorage.setItem('grainfolio_user_id', trialUser.id);
     setSession(null);
     setUser(trialUser);
     setAuthMode('trial');
@@ -213,15 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.warn("Real signout failed, clearing local auth state", error);
     } finally {
-      SyncService.stop();
-      setUser(null);
-      setSession(null);
-      setAuthMode('supabase');
-      setAccountRole('user');
-      clearWorkspaceTabPreferences();
-      localStorage.removeItem('filmory_user_id');
-      localStorage.removeItem(DEV_AUTH_STORAGE_KEY);
-      localStorage.removeItem(TRIAL_AUTH_STORAGE_KEY);
+      clearLocalAuthState();
     }
   };
 
@@ -236,7 +240,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isTrial: authMode === 'trial',
     startTrial,
     signInMock,
-    logout
+    logout,
+    clearLocalAuthState,
   };
 
   return (

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BackupService } from '../../services/backupService';
-import { Shield, Download, X, LogOut, UserX, Sun, Moon, Monitor, Coins, Film, BadgeCheck, ArrowUp, ArrowDown, Folder, Languages } from 'lucide-react';
+import { Shield, Download, X, LogOut, UserX, Sun, Moon, Monitor, Coins, Film, BadgeCheck, ArrowUp, ArrowDown, Folder, Languages, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../contexts/useAuth';
 import { useTheme } from '../../contexts/useTheme';
 import { supabase } from '../../services/supabaseClient';
@@ -28,7 +28,7 @@ interface SettingsViewProps {
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setEnableFilmMode, onClose }) => {
-  const { user, logout, accountRole, isDevBypass, isAdmin } = useAuth();
+  const { user, logout, clearLocalAuthState, accountRole, isDevBypass, isAdmin } = useAuth();
   const { theme, setTheme } = useTheme();
   const { currency, setCurrency, currencySymbol } = useCurrency();
   const { language, setLanguage, t } = useLanguage();
@@ -47,12 +47,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
   const [conversionRate, setConversionRate] = useState('');
   const [rollsTabOrder, setRollsTabOrder] = useState<RollsTabId[]>(() => readRollsTabOrder());
   const [rollsCollectionsEnabled, setRollsCollectionsEnabled] = useState<boolean>(() => readRollsCollectionsTabEnabled());
+  const [isRollTabLayoutExpanded, setIsRollTabLayoutExpanded] = useState(false);
 
   const rollsTabLabels: Record<RollsTabId, string> = {
     collections: t('settings.rollTabCollections'),
     all: t('settings.rollTabAll'),
     loose: t('settings.rollTabLoose'),
   };
+  const visibleRollTabSummary = rollsTabOrder
+    .filter(tab => tab !== 'collections' || !enableFilmMode || rollsCollectionsEnabled)
+    .map(tab => rollsTabLabels[tab])
+    .join(' / ');
 
   const handleFilmModeChange = (nextEnabled: boolean) => {
     setEnableFilmMode(nextEnabled);
@@ -131,7 +136,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
           if (error) throw error;
         }
         
-        await logout();
+        // delete_user removes the auth user, so the current token may already be invalid.
+        // Clear local state directly instead of calling signOut and producing a 403 logout.
+        clearLocalAuthState();
         window.location.reload();
       } catch (error) {
         const message = error instanceof Error ? error.message : t('settings.unknownError');
@@ -339,14 +346,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
             </div>
 
             <div className="settings-sub-card">
-              <div className="settings-sub-card-header">
-                <div className="settings-item-icon safe"><Folder size={16} /></div>
-                <div className="settings-item-text">
-                  <h4>{t('settings.rollTabLayout')}</h4>
-                  <p>{t('settings.rollTabLayoutDesc')}</p>
+              <div className="settings-sub-card-header settings-sub-card-header-collapsible">
+                <div className="settings-sub-card-copy">
+                  <div className="settings-item-icon safe"><Folder size={16} /></div>
+                  <div className="settings-item-text">
+                    <h4>{t('settings.rollTabLayout')}</h4>
+                    <p>{t('settings.rollTabLayoutDesc')}</p>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  className={`settings-disclosure-button ${isRollTabLayoutExpanded ? 'expanded' : ''}`}
+                  onClick={() => setIsRollTabLayoutExpanded(expanded => !expanded)}
+                  aria-expanded={isRollTabLayoutExpanded}
+                  aria-controls="settings-roll-tab-layout-panel"
+                >
+                  <span>{isRollTabLayoutExpanded ? t('settings.collapseSection') : t('settings.expandSection')}</span>
+                  <ChevronDown size={14} />
+                </button>
               </div>
-              <div className="settings-sub-card-body">
+              <div className="settings-sub-card-summary">
+                <span>{t('settings.currentRollTabOrder')}</span>
+                <strong>{visibleRollTabSummary}</strong>
+              </div>
+              {isRollTabLayoutExpanded && (
+              <div className="settings-sub-card-body" id="settings-roll-tab-layout-panel">
                 <div className="settings-rolls-toggle-row">
                   <div>
                     <strong>{t('settings.showCollectionsTab')}</strong>
@@ -401,6 +425,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
                   })}
                 </div>
               </div>
+              )}
             </div>
 
             <div className="settings-list-item settings-list-item-vertical">
@@ -441,15 +466,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
 
         <div className="settings-section">
           <div className="section-header">
-            <h3>数据主权</h3>
+            <h3>{t('settings.dataOwnership')}</h3>
           </div>
           <div className="settings-list-group">
             <div className="settings-list-item">
               <div className="settings-item-content">
                 <div className="settings-item-icon safe"><Download size={18} /></div>
                 <div className="settings-item-text">
-                  <h4>导出元数据 Excel</h4>
-                  <p>导出相机、镜头、胶卷库存、胶卷记录和收支记录；不会打包原图。</p>
+                  <h4>{t('settings.exportMetadataTitle')}</h4>
+                  <p>{t('settings.exportMetadataDesc')}</p>
                 </div>
               </div>
               <div className="settings-item-action">
@@ -458,7 +483,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
                   onClick={handleExport}
                   disabled={isProcessing}
                 >
-                  {isProcessing ? '正在生成...' : '立即导出记录'}
+                  {isProcessing ? t('common.loading') : t('settings.exportMetadataAction')}
                 </button>
               </div>
             </div>
@@ -468,7 +493,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
         {/* Account Management Card */}
         <div className="settings-section">
           <div className="section-header">
-            <h3>账号与安全</h3>
+            <h3>{t('settings.accountSecurity')}</h3>
           </div>
           
           <div className="settings-list-group">
@@ -476,13 +501,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
               <div className="settings-item-content">
                 <div className="settings-item-icon"><LogOut size={18} /></div>
                 <div className="settings-item-text">
-                  <h4>退出登录</h4>
-                  <p>退出当前设备登录状态，不删除本地离线数据。</p>
+                  <h4>{t('settings.logoutTitle')}</h4>
+                  <p>{t('settings.logoutDesc')}</p>
                 </div>
               </div>
               <div className="settings-item-action">
                 <button className="secondary" onClick={handleLogout} disabled={isProcessing}>
-                  退出登录
+                  {t('settings.logoutAction')}
                 </button>
               </div>
             </div>
@@ -491,20 +516,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
               <div className="settings-item-content">
                 <div className="settings-item-icon danger"><UserX size={18} /></div>
                 <div className="settings-item-text">
-                  <h4>永久注销账号</h4>
-                  <p>彻底销毁 Filmory 账号和云端数据。此操作不可恢复。</p>
+                  <h4>{t('settings.deleteTitle')}</h4>
+                  <p>{t('settings.deleteDesc')}</p>
                 </div>
               </div>
               <div className="settings-item-action settings-danger-action">
                 {deleteConfirmationStep === 0 ? (
                     <button className="danger" onClick={handleDeleteAccount} disabled={isProcessing}>
-                      注销我的账号
+                      {t('settings.deleteStart')}
                     </button>
                 ) : (
                   <div className="delete-account-confirm-panel">
-                    <p>
-                      输入大写 DELETE 以继续注销。
-                    </p>
+                    <div className="delete-account-confirm-copy">
+                      <strong>{t('settings.deleteConfirmTitle')}</strong>
+                      <p>
+                        {t('settings.deleteConfirmDescPrefix')} <code>DELETE</code> {t('settings.deleteConfirmDescSuffix')}
+                      </p>
+                    </div>
                     {deleteError && (
                       <p className="delete-account-error">
                         {deleteError}
@@ -513,6 +541,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
                     <input 
                       type="text" 
                       placeholder="DELETE"
+                      aria-label={t('settings.deleteInputAria')}
                       value={deleteInput}
                       onChange={(e) => {
                         setDeleteInput(e.target.value);
@@ -520,15 +549,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
                       }}
                     />
                     <div className="delete-account-confirm-actions">
-                      <button className="danger" onClick={handleDeleteAccount} disabled={isProcessing}>
-                        确认永久销毁
+                      <button className="danger delete-account-confirm-primary" onClick={handleDeleteAccount} disabled={isProcessing}>
+                        {t('settings.deleteConfirmAction')}
                       </button>
-                      <button className="secondary" onClick={() => {
+                      <button className="secondary delete-account-confirm-secondary" onClick={() => {
                         setDeleteConfirmationStep(0);
                         setDeleteInput('');
                         setDeleteError('');
                       }}>
-                        取消
+                        {t('common.cancel')}
                       </button>
                     </div>
                   </div>

@@ -14,6 +14,7 @@ export interface AuthContextType {
   startTrial: () => void;
   signInMock: () => void;
   logout: () => Promise<void>;
+  clearLocalAuthState: () => void;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);

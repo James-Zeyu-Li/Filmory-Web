@@ -13,6 +13,60 @@ export const CURRENCY_OPTIONS: Array<{ code: CurrencyCode; label: string; symbol
   { code: 'TWD', label: '新台币 TWD', symbol: 'NT$', locale: 'zh-TW' },
 ];
 
+export const DEFAULT_CURRENCY: CurrencyCode = 'USD';
+
+const EURO_REGIONS = new Set([
+  'AT', 'BE', 'CY', 'DE', 'EE', 'ES', 'FI', 'FR', 'GR', 'HR',
+  'IE', 'IT', 'LT', 'LU', 'LV', 'MT', 'NL', 'PT', 'SI', 'SK',
+]);
+
+const getLocaleRegion = (locale: string) => {
+  const normalized = locale.replace('_', '-').trim();
+  const match = normalized.match(/-([A-Za-z]{2})\b/);
+  return match ? match[1].toUpperCase() : '';
+};
+
+export const detectBrowserCurrency = (
+  preferredLanguages: readonly string[] = typeof navigator === 'undefined'
+    ? []
+    : navigator.languages?.length
+      ? navigator.languages
+      : [navigator.language]
+): CurrencyCode => {
+  for (const language of preferredLanguages) {
+    const region = getLocaleRegion(language);
+
+    switch (region) {
+      case 'CN':
+        return 'CNY';
+      case 'US':
+        return 'USD';
+      case 'CA':
+        return 'CAD';
+      case 'GB':
+        return 'GBP';
+      case 'JP':
+        return 'JPY';
+      case 'HK':
+        return 'HKD';
+      case 'TW':
+        return 'TWD';
+      default:
+        if (EURO_REGIONS.has(region)) {
+          return 'EUR';
+        }
+    }
+  }
+
+  const primaryLanguage = preferredLanguages[0]?.toLowerCase() ?? '';
+  if (primaryLanguage.startsWith('zh-cn')) return 'CNY';
+  if (primaryLanguage.startsWith('zh-hk')) return 'HKD';
+  if (primaryLanguage.startsWith('zh-tw')) return 'TWD';
+  if (primaryLanguage.startsWith('ja')) return 'JPY';
+
+  return DEFAULT_CURRENCY;
+};
+
 export interface CurrencyContextType {
   currency: CurrencyCode;
   setCurrency: (currency: CurrencyCode) => void;
