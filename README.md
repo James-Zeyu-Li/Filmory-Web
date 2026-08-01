@@ -1,6 +1,6 @@
-# Filmory Web
+# Grainfolio Web
 
-Filmory Web is a local-first film photography workspace for managing rolls, cameras, lenses, film stock, albums, finance records, and shooting notes.
+Grainfolio Web is a local-first film photography workspace for managing rolls, cameras, lenses, film stock, albums, finance records, and shooting notes.
 
 The app runs primarily in the browser with IndexedDB/Dexie for fast offline-first data access. Supabase migrations, Auth, RLS, private Storage, and sync code are kept in the repo for local integration testing and future cloud deployment.
 
@@ -16,12 +16,12 @@ The app runs primarily in the browser with IndexedDB/Dexie for fast offline-firs
 ## Project Structure
 
 ```text
-Filmory-Web/
+Grainfolio-Web/
 ├── frontend/      # React app, tests, catalog data, and browser data layer
 ├── supabase/      # Local Supabase config and migrations
 ├── docs/          # Shared implementation notes such as schema and architecture
 ├── scripts/       # Helper scripts
-└── filmory.sh     # Local development control script
+└── grainfolio.sh     # Local development control script
 ```
 
 ## Getting Started
@@ -42,10 +42,10 @@ npm run dev
 Or use the root helper script for the local development menu:
 
 ```bash
-./filmory.sh
+./grainfolio.sh
 ```
 
-`filmory.sh` keeps the frontend and local Supabase Docker environment independent: use the frontend-only actions for normal Cloud Supabase development, and start local Supabase only for local Auth, Mailpit, migration, RLS, or sync testing. The convenience “local full stack” actions start or stop both. It does not manage the legacy `docker-compose.yml` services.
+`grainfolio.sh` keeps the frontend and local Supabase Docker environment independent: use the frontend-only actions for normal Cloud Supabase development, and start local Supabase only for local Auth, Mailpit, migration, RLS, or sync testing. The convenience “local full stack” actions start or stop both. It does not manage the legacy `docker-compose.yml` services.
 
 If local Supabase is started, Studio is available at `http://127.0.0.1:54323` and Mailpit is available at `http://127.0.0.1:54324` for auth emails such as signup confirmation and password reset.
 

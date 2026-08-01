@@ -75,7 +75,7 @@ describe('trial data migration', () => {
     await expect(db.cameras.where('userId').equals('real-user').count()).resolves.toBe(1);
     await expect(db.rolls.where('userId').equals('real-user').count()).resolves.toBe(1);
     await expect(db.syncQueue.where('userId').equals(TRIAL_USER_ID).count()).resolves.toBe(0);
-    expect(localStorage.setItem).toHaveBeenCalledWith('filmory_trial_migrated_to_user', 'real-user');
+    expect(localStorage.setItem).toHaveBeenCalledWith('grainfolio_trial_migrated_to_user', 'real-user');
   });
 
   it('does not merge trial data into an account that already has local data', async () => {
@@ -108,6 +108,6 @@ describe('trial data migration', () => {
 
     expect(result).toBe('no-trial-data');
     await expect(db.cameras.where('userId').equals('real-user').count()).resolves.toBe(0);
-    expect(localStorage.setItem).not.toHaveBeenCalledWith('filmory_trial_migrated_to_user', 'real-user');
+    expect(localStorage.setItem).not.toHaveBeenCalledWith('grainfolio_trial_migrated_to_user', 'real-user');
   });
 });

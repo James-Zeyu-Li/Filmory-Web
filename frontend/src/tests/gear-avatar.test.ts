@@ -24,10 +24,10 @@ describe('Gear avatar removal', () => {
     await db.filmStocks.clear();
     await db.otherEquipments.clear();
     await db.syncQueue.clear();
-    window.__filmory_is_pulling = false;
+    window.__grainfolio_is_pulling = false;
     localStorage.clear();
     vi.mocked(localStorage.getItem).mockImplementation((key: string) => (
-      key === 'filmory_user_id' ? 'user-a' : null
+      key === 'grainfolio_user_id' ? 'user-a' : null
     ));
     supabaseMock.upsert.mockClear();
     supabaseMock.update.mockClear();

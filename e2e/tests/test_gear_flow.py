@@ -14,7 +14,7 @@ def test_add_camera_uuid_fix(page: Page):
     gear_page = GearPage(page)
     
     # 1. 自动登录穿透
-    login_page.login("admin@filmory.com", "password123")
+    login_page.login("admin@grainfolio.com", "password123")
     
     # 2. 导航至器材库
     gear_page.go_to_gear()

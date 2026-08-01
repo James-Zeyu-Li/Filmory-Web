@@ -25,7 +25,7 @@ function createMockExcel(filePath: string) {
   XLSX.writeFile(wb, filePath);
 }
 
-test.describe('Filmory UI smoke flows', () => {
+test.describe('Grainfolio UI smoke flows', () => {
   test.beforeEach(async ({ page }) => {
     await resetAndLogin(page);
   });
@@ -108,7 +108,7 @@ test.describe('Filmory UI smoke flows', () => {
     const downloadPromise = page.waitForEvent('download');
     await page.getByRole('button', { name: '下载模板' }).click();
     const download = await downloadPromise;
-    expect(download.suggestedFilename()).toBe('Filmory_Import_Template.xlsx');
+    expect(download.suggestedFilename()).toBe('Grainfolio_Import_Template.xlsx');
     await expect(page.getByText('模板已下载，请留意：')).toBeVisible();
 
     const tempFilePath = 'mock_import.xlsx';

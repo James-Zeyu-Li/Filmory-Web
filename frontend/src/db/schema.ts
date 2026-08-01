@@ -2,7 +2,7 @@ import Dexie, { type Table } from 'dexie';
 
 declare global {
   interface Window {
-    __filmory_is_pulling?: boolean;
+    __grainfolio_is_pulling?: boolean;
   }
 }
 
@@ -16,7 +16,7 @@ export interface SyncQueueItem {
   timestamp: number;
 }
 
-const LOCAL_CHANGE_EVENT = 'filmory-sync-request';
+const LOCAL_CHANGE_EVENT = 'grainfolio-sync-request';
 
 export interface LedgerTransaction {
   id?: string;
@@ -200,7 +200,7 @@ export interface AlbumPhoto {
   addedAt: number;
 }
 
-export class FilmoryDatabase extends Dexie {
+export class GrainfolioDatabase extends Dexie {
   cameras!: Table<Camera>;
   cameraSystems!: Table<CameraSystem, string>;
   filmBacks!: Table<FilmBack, string>;
@@ -218,7 +218,7 @@ export class FilmoryDatabase extends Dexie {
   userProfiles!: Table<UserProfile, string>;
 
   constructor() {
-    super('FilmoryDatabase');
+    super('GrainfolioDatabase');
     this.version(1).stores({
       cameras: '++id, name, type, format, addedAt',
       lenses: '++id, name, focalLength, maxAperture, type, addedAt',
@@ -594,7 +594,7 @@ export class FilmoryDatabase extends Dexie {
         if (table.name === 'syncQueue') return; // Do not intercept queue itself
 
         table.hook('creating', (primKey, obj) => {
-          const currentUserId = localStorage.getItem('filmory_user_id') || 'mock_uid_123';
+          const currentUserId = localStorage.getItem('grainfolio_user_id') || 'mock_uid_123';
           if (typeof obj === 'object' && obj !== null && !('userId' in obj)) {
             obj.userId = currentUserId;
           }
@@ -606,7 +606,7 @@ export class FilmoryDatabase extends Dexie {
             assignedId = obj.id;
           }
 
-          if (!window.__filmory_is_pulling) {
+          if (!window.__grainfolio_is_pulling) {
             enqueueSyncChange({
               userId: obj.userId || currentUserId,
               tableName: table.name,
@@ -623,9 +623,9 @@ export class FilmoryDatabase extends Dexie {
         });
 
         table.hook('updating', (modifications, primKey, obj) => {
-          if (!window.__filmory_is_pulling) {
+          if (!window.__grainfolio_is_pulling) {
             const updatedObj = { ...obj, ...modifications };
-            const currentUserId = updatedObj.userId || localStorage.getItem('filmory_user_id') || 'mock_uid_123';
+            const currentUserId = updatedObj.userId || localStorage.getItem('grainfolio_user_id') || 'mock_uid_123';
             enqueueSyncChange({
               userId: currentUserId,
               tableName: table.name,
@@ -638,8 +638,8 @@ export class FilmoryDatabase extends Dexie {
         });
 
         table.hook('deleting', (primKey, obj: any) => {
-          if (!window.__filmory_is_pulling) {
-            const currentUserId = obj?.userId || localStorage.getItem('filmory_user_id') || 'mock_uid_123';
+          if (!window.__grainfolio_is_pulling) {
+            const currentUserId = obj?.userId || localStorage.getItem('grainfolio_user_id') || 'mock_uid_123';
             enqueueSyncChange({
               userId: currentUserId,
               tableName: table.name,
@@ -654,4 +654,4 @@ export class FilmoryDatabase extends Dexie {
   }
 }
 
-export const db = new FilmoryDatabase();
+export const db = new GrainfolioDatabase();

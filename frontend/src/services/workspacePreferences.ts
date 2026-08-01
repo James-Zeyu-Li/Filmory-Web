@@ -1,8 +1,8 @@
-export const GEAR_SUB_TAB_KEY = 'filmory_gear_sub_tab';
-export const ROLLS_LIBRARY_VIEW_KEY = 'filmory_rolls_library_view';
-export const ROLLS_TAB_ORDER_KEY = 'filmory_rolls_tab_order';
-export const ROLLS_COLLECTIONS_TAB_ENABLED_KEY = 'filmory_rolls_collections_tab_enabled';
-export const WORKSPACE_PREFERENCES_CHANGED_EVENT = 'filmory:workspace-preferences-changed';
+export const GEAR_SUB_TAB_KEY = 'grainfolio_gear_sub_tab';
+export const ROLLS_LIBRARY_VIEW_KEY = 'grainfolio_rolls_library_view';
+export const ROLLS_TAB_ORDER_KEY = 'grainfolio_rolls_tab_order';
+export const ROLLS_COLLECTIONS_TAB_ENABLED_KEY = 'grainfolio_rolls_collections_tab_enabled';
+export const WORKSPACE_PREFERENCES_CHANGED_EVENT = 'grainfolio:workspace-preferences-changed';
 
 export type RollsTabId = 'collections' | 'all' | 'loose';
 

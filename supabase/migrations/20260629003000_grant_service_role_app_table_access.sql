@@ -1,4 +1,4 @@
--- Filmory-Web: allow service_role clients to administer app tables in local/production maintenance flows.
+-- Grainfolio-Web: allow service_role clients to administer app tables in local/production maintenance flows.
 -- RLS bypass still depends on Supabase service role semantics; these are table-level privileges.
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.cameras TO service_role;

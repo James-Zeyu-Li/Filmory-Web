@@ -10,11 +10,11 @@ const repoRoot = resolve(__dirname, '../../..');
 const readRepoFile = (relativePath: string) => readFileSync(resolve(repoRoot, relativePath), 'utf8');
 
 describe('P0 Supabase storage security contract', () => {
-  it('keeps filmory-assets private and removes public read access in migrations', () => {
+  it('keeps grainfolio-assets private and removes public read access in migrations', () => {
     const initMigration = readRepoFile('supabase/migrations/20260619204530_init_schema.sql');
     const privateMigration = readRepoFile('supabase/migrations/20260629000000_private_storage_signed_urls.sql');
 
-    expect(initMigration).toMatch(/VALUES\s*\(\s*'filmory-assets'\s*,\s*'filmory-assets'\s*,\s*false\s*\)/);
+    expect(initMigration).toMatch(/VALUES\s*\(\s*'grainfolio-assets'\s*,\s*'grainfolio-assets'\s*,\s*false\s*\)/);
     expect(initMigration).not.toContain('CREATE POLICY "Public Read Access"');
     expect(initMigration).toContain('CREATE POLICY "Owner Read Access"');
     expect(initMigration).toContain('auth.uid() = owner');
@@ -26,7 +26,7 @@ describe('P0 Supabase storage security contract', () => {
   });
 
   it('generates signed URLs instead of public URLs for private bucket reads', async () => {
-    const storage = supabase.storage.from('filmory-assets');
+    const storage = supabase.storage.from('grainfolio-assets');
     const createSignedUrl = vi.mocked(storage.createSignedUrl);
 
     createSignedUrl.mockClear();
@@ -66,7 +66,7 @@ describe('P0 Supabase storage security contract', () => {
   });
 
   it('falls back to thumbnailUrl when signed URL generation fails', async () => {
-    const storage = supabase.storage.from('filmory-assets');
+    const storage = supabase.storage.from('grainfolio-assets');
     const createSignedUrl = vi.mocked(storage.createSignedUrl);
 
     createSignedUrl.mockResolvedValue({

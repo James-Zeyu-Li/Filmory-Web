@@ -107,8 +107,8 @@ export const AlbumDetails: React.FC<AlbumDetailsProps> = ({
     await db.photoAssets.update(photo.id!, { tags: tagsString });
 
     // 2. Sync to Backend if connected
-    const apiBaseUrl = localStorage.getItem('filmory_api_base_url');
-    const accessToken = localStorage.getItem('filmory_access_token');
+    const apiBaseUrl = localStorage.getItem('grainfolio_api_base_url');
+    const accessToken = localStorage.getItem('grainfolio_access_token');
     if (apiBaseUrl && accessToken) {
       try {
         await fetch(`${apiBaseUrl}/api/photos/${photo.id}`, {

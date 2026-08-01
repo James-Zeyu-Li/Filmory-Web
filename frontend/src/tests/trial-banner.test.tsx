@@ -38,7 +38,7 @@ describe('TrialBanner', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '关闭提示' }));
 
-    expect(window.sessionStorage.getItem('filmory_trial_banner_dismissed')).toBe('true');
+    expect(window.sessionStorage.getItem('grainfolio_trial_banner_dismissed')).toBe('true');
     expect(screen.queryByText('免费注册并开启云同步')).not.toBeInTheDocument();
 
     unmount();

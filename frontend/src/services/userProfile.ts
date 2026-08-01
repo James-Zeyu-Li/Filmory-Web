@@ -17,7 +17,7 @@ export const getDisplayNameValidationMessage = (value: string, t?: UserProfileTr
   const normalized = normalizeDisplayName(value);
   if (!normalized) {
     if (t) return t('auth.displayNameRequired');
-    return 'Enter a display name so this Filmory workspace is clearly labeled.';
+    return 'Enter a display name so this Grainfolio workspace is clearly labeled.';
   }
   if (normalized.length > DISPLAY_NAME_MAX_LENGTH) {
     if (t) return t('auth.displayNameTooLong', { max: DISPLAY_NAME_MAX_LENGTH });

@@ -7,7 +7,7 @@ async function loginIntoDigitalWorkspace(page: Page) {
   await resetBrowserData(page);
   await page.goto('/login', { waitUntil: 'domcontentloaded' });
   await page.evaluate(() => {
-    localStorage.setItem('filmory_enable_film_mode', 'false');
+    localStorage.setItem('grainfolio_enable_film_mode', 'false');
   });
   await page.getByRole('button', { name: /本机测试登录/ }).click();
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
@@ -16,7 +16,7 @@ async function loginIntoDigitalWorkspace(page: Page) {
 
 async function seedRollLimitScenario(page: Page, tier: 'regular' | 'vip') {
   await page.evaluate(async ({ tier, devUserId }) => {
-    const dbName = 'FilmoryDatabase';
+    const dbName = 'GrainfolioDatabase';
 
     const openDb = () => new Promise<IDBDatabase>((resolve, reject) => {
       const req = indexedDB.open(dbName);
@@ -72,7 +72,7 @@ async function seedRollLimitScenario(page: Page, tier: 'regular' | 'vip') {
 
 async function getRollCount(page: Page) {
   return page.evaluate(async () => {
-    const dbName = 'FilmoryDatabase';
+    const dbName = 'GrainfolioDatabase';
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const req = indexedDB.open(dbName);
       req.onsuccess = () => resolve(req.result);

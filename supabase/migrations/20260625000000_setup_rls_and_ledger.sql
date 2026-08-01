@@ -1,5 +1,5 @@
 -- =================================================================================
--- Filmory-Web: Epic 1 & 2 Supabase Schema Updates and RLS
+-- Grainfolio-Web: Epic 1 & 2 Supabase Schema Updates and RLS
 -- =================================================================================
 
 -- 1. ADD MISSING COLUMNS from Epic 1 (Status & Purchase Price)

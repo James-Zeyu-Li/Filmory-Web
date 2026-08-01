@@ -1,4 +1,4 @@
-# Filmory-Web Supabase 接口契约
+# Grainfolio-Web Supabase 接口契约
 
 本文档定义 Web 端与 Supabase 的目标契约。项目已废弃自建 Express/REST 后端口径；当前本地阶段业务数据通过 Dexie local-first 读写，Supabase Postgres、Auth、Storage 与同步层作为后续云同步/生产上线目标保留。
 
@@ -65,7 +65,7 @@
 
 ## 4. Storage 契约
 
-统一 bucket：`filmory-assets`。
+统一 bucket：`grainfolio-assets`。
 
 当前本地-only 阶段：照片可使用本地 blob/thumbnail fallback；P0 live security tests 已覆盖 private bucket、signed URL、匿名/跨用户读取失败等基础契约。真实 App sync UI smoke 已覆盖业务表写入；开启 Supabase Storage 原图上传后仍需做浏览器 UI smoke。
 

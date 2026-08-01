@@ -10,7 +10,7 @@ const mockLogout = vi.fn();
 const mockOnClose = vi.fn();
 
 const mockAuthState = {
-  user: { id: 'user-1', email: 'user@filmory.app', user_metadata: {} },
+  user: { id: 'user-1', email: 'user@grainfolio.app', user_metadata: {} },
   session: null,
   isLoading: false,
   authMode: 'supabase' as 'supabase' | 'dev-bypass' | 'trial',
@@ -100,7 +100,7 @@ describe('AccountCenterModal', () => {
     mockLogout.mockReset();
     mockLogout.mockResolvedValue(undefined);
     mockOnClose.mockReset();
-    mockAuthState.user = { id: 'user-1', email: 'user@filmory.app', user_metadata: {} };
+    mockAuthState.user = { id: 'user-1', email: 'user@grainfolio.app', user_metadata: {} };
     mockAuthState.authMode = 'supabase';
     mockAuthState.accountRole = 'user';
     mockAuthState.isAdmin = false;
@@ -139,7 +139,7 @@ describe('AccountCenterModal', () => {
     renderAccountCenter();
 
     expect(screen.getByText('Analog James')).toBeInTheDocument();
-    expect(screen.getByText('user@filmory.app')).toBeInTheDocument();
+    expect(screen.getByText('user@grainfolio.app')).toBeInTheDocument();
     expect(screen.getByText('免费版')).toBeInTheDocument();
     expect(screen.getByText('暂未开启')).toBeInTheDocument();
 

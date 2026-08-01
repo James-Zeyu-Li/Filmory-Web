@@ -5,7 +5,7 @@ const MOCK_COVER_SVG = [
   '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200">',
   '<rect width="320" height="200" fill="#f59e0b"/>',
   '<circle cx="160" cy="100" r="54" fill="#18181b" opacity="0.84"/>',
-  '<text x="160" y="108" text-anchor="middle" font-size="22" fill="#fff" font-family="serif">Filmory</text>',
+  '<text x="160" y="108" text-anchor="middle" font-size="22" fill="#fff" font-family="serif">Grainfolio</text>',
   '</svg>',
 ].join('');
 const MOCK_COVER_DATA_URL = `data:image/svg+xml;base64,${Buffer.from(MOCK_COVER_SVG).toString('base64')}`;
@@ -35,7 +35,7 @@ async function expectCoverBackground(locator: ReturnType<Page['locator']>) {
 async function attachLocalCoverToRoll(page: Page, rollName: string) {
   await page.evaluate(async ({ targetRollName, coverDataUrl }) => {
     const openDatabase = () => new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open('FilmoryDatabase');
+      const request = indexedDB.open('GrainfolioDatabase');
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve(request.result);
     });

@@ -189,7 +189,7 @@ export const LoginView: React.FC = () => {
           <ArrowLeft size={16} /> {t('auth.home')}
         </Link>
         <div className="login-header">
-          <img src="/logo.png" alt="Filmory Logo" className="login-logo-img" />
+          <img src="/logo.png" alt="Grainfolio Logo" className="login-logo-img" />
           <h2>{authTitle}</h2>
           <p>{authSubtitle}</p>
         </div>

@@ -76,14 +76,14 @@ describe('Auth frontend closure', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '立即注册' }));
     fireEvent.change(screen.getByLabelText('显示名称'), { target: { value: 'Analog James' } });
-    fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'new@filmory.app' } });
+    fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'new@grainfolio.app' } });
     fireEvent.change(screen.getByLabelText('密码'), { target: { value: 'Strongpass1' } });
     fireEvent.change(screen.getByLabelText('确认密码'), { target: { value: 'Strongpass1' } });
     fireEvent.click(screen.getByRole('button', { name: '创建账号' }));
 
     await waitFor(() => {
       expect(mockedAuth.signUp).toHaveBeenCalledWith({
-        email: 'new@filmory.app',
+        email: 'new@grainfolio.app',
         password: 'Strongpass1',
         options: {
           data: {
@@ -96,7 +96,7 @@ describe('Auth frontend closure', () => {
 
     await waitFor(() => {
       expect(screen.getByText('请检查邮箱')).toBeInTheDocument();
-      expect(screen.getByText(/目标邮箱：new@filmory\.app/)).toBeInTheDocument();
+      expect(screen.getByText(/目标邮箱：new@grainfolio\.app/)).toBeInTheDocument();
     });
   });
 
@@ -111,7 +111,7 @@ describe('Auth frontend closure', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '立即注册' }));
     fireEvent.change(screen.getByLabelText('显示名称'), { target: { value: 'Weak Case' } });
-    fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'weak@filmory.app' } });
+    fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'weak@grainfolio.app' } });
     fireEvent.change(screen.getByLabelText('密码'), { target: { value: 'weakpass' } });
     fireEvent.change(screen.getByLabelText('确认密码'), { target: { value: 'weakpass' } });
     fireEvent.click(screen.getByRole('button', { name: '创建账号' }));
@@ -134,13 +134,13 @@ describe('Auth frontend closure', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '立即注册' }));
     fireEvent.change(screen.getByLabelText('显示名称'), { target: { value: '   ' } });
-    fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'empty-name@filmory.app' } });
+    fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'empty-name@grainfolio.app' } });
     fireEvent.change(screen.getByLabelText('密码'), { target: { value: 'Strongpass1' } });
     fireEvent.change(screen.getByLabelText('确认密码'), { target: { value: 'Strongpass1' } });
     fireEvent.click(screen.getByRole('button', { name: '创建账号' }));
 
     await waitFor(() => {
-      expect(screen.getByText('请填写一个显示名称，用来标记这是谁的 Filmory 工作区。')).toBeInTheDocument();
+      expect(screen.getByText('请填写一个显示名称，用来标记这是谁的 Grainfolio 工作区。')).toBeInTheDocument();
     });
 
     expect(mockedAuth.signUp).not.toHaveBeenCalled();
@@ -160,7 +160,7 @@ describe('Auth frontend closure', () => {
       </MemoryRouter>
     );
 
-    fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'pending@filmory.app' } });
+    fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'pending@grainfolio.app' } });
     fireEvent.change(screen.getByLabelText('密码'), { target: { value: '12345678' } });
     fireEvent.click(screen.getByRole('button', { name: '登录' }));
 
@@ -173,7 +173,7 @@ describe('Auth frontend closure', () => {
     await waitFor(() => {
       expect(mockedAuth.resend).toHaveBeenCalledWith({
         type: 'signup',
-        email: 'pending@filmory.app',
+        email: 'pending@grainfolio.app',
         options: {
           emailRedirectTo: buildSignupEmailRedirectUrl(),
         },
@@ -195,7 +195,7 @@ describe('Auth frontend closure', () => {
       </MemoryRouter>
     );
 
-    fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'user@filmory.app' } });
+    fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'user@grainfolio.app' } });
     fireEvent.change(screen.getByLabelText('密码'), { target: { value: 'Wrongpass1' } });
     fireEvent.click(screen.getByRole('button', { name: '登录' }));
 
@@ -213,17 +213,17 @@ describe('Auth frontend closure', () => {
       </MemoryRouter>
     );
 
-    fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'reset@filmory.app' } });
+    fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'reset@grainfolio.app' } });
     fireEvent.click(screen.getByRole('button', { name: '发送重设密码邮件' }));
 
     await waitFor(() => {
-      expect(mockedAuth.resetPasswordForEmail).toHaveBeenCalledWith('reset@filmory.app', {
+      expect(mockedAuth.resetPasswordForEmail).toHaveBeenCalledWith('reset@grainfolio.app', {
         redirectTo: buildPasswordRecoveryRedirectUrl(),
       });
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/重设密码邮件已发送到 reset@filmory\.app/)).toBeInTheDocument();
+      expect(screen.getByText(/重设密码邮件已发送到 reset@grainfolio\.app/)).toBeInTheDocument();
     });
   });
 
@@ -241,8 +241,8 @@ describe('Auth frontend closure', () => {
   });
 
   it('reset password updates password and logs out when a recovery session is present', async () => {
-    mockUseAuthState.user = { id: 'user-1', email: 'recover@filmory.app' } as never;
-    mockUseAuthState.session = { user: { id: 'user-1', email: 'recover@filmory.app' } } as never;
+    mockUseAuthState.user = { id: 'user-1', email: 'recover@grainfolio.app' } as never;
+    mockUseAuthState.session = { user: { id: 'user-1', email: 'recover@grainfolio.app' } } as never;
 
     render(
       <MemoryRouter initialEntries={[AUTH_ROUTES.resetPassword]}>
@@ -267,8 +267,8 @@ describe('Auth frontend closure', () => {
   });
 
   it('reset password rejects weak password before updateUser', async () => {
-    mockUseAuthState.user = { id: 'user-1', email: 'recover@filmory.app' } as never;
-    mockUseAuthState.session = { user: { id: 'user-1', email: 'recover@filmory.app' } } as never;
+    mockUseAuthState.user = { id: 'user-1', email: 'recover@grainfolio.app' } as never;
+    mockUseAuthState.session = { user: { id: 'user-1', email: 'recover@grainfolio.app' } } as never;
 
     render(
       <MemoryRouter initialEntries={[AUTH_ROUTES.resetPassword]}>

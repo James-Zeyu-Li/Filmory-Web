@@ -46,7 +46,7 @@ export async function seedDatabaseIfNeeded(): Promise<void> {
 }
 
 async function seedDatabase(): Promise<void> {
-  const currentUserId = localStorage.getItem('filmory_user_id');
+  const currentUserId = localStorage.getItem('grainfolio_user_id');
   if (!currentUserId) return;
 
   const existingCameras = await db.cameras.toArray();
@@ -56,7 +56,7 @@ async function seedDatabase(): Promise<void> {
     return;
   }
 
-  console.info('Seeding initial Filmory database...');
+  console.info('Seeding initial Grainfolio database...');
 
   // 1. Seed Cameras
   const defaultCameras: Camera[] = [

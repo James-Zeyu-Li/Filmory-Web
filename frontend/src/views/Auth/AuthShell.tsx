@@ -33,7 +33,7 @@ export const AuthShell: React.FC<AuthShellProps> = ({
         <div className="login-header auth-header">
           <img
             src="/logo.png"
-            alt="Filmory Logo"
+            alt="Grainfolio Logo"
             className="login-logo-img"
             style={{ width: '64px', height: '64px', objectFit: 'contain', margin: '0 auto', display: 'block' }}
           />

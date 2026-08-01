@@ -6,9 +6,9 @@ import { AuthProvider } from './contexts/AuthContext.tsx'
 import { ThemeProvider } from './contexts/ThemeContext.tsx'
 import { LanguageProvider } from './contexts/LanguageContext.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
-import { registerFilmoryServiceWorker } from './services/pwaUpdateService.ts'
+import { registerGrainfolioServiceWorker } from './services/pwaUpdateService.ts'
 
-registerFilmoryServiceWorker()
+registerGrainfolioServiceWorker()
 
 import { BrowserRouter } from 'react-router-dom'
 

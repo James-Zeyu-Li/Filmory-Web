@@ -169,7 +169,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
   const getAvatarFullUrl = (url?: string | null) => {
     if (!url) return null;
-    const apiBaseUrl = localStorage.getItem('filmory_api_base_url') || 'http://localhost:8080';
+    const apiBaseUrl = localStorage.getItem('grainfolio_api_base_url') || 'http://localhost:8080';
     return (url.startsWith('http') || url.startsWith('data:')) ? url : `${apiBaseUrl}${url}`;
   };
 

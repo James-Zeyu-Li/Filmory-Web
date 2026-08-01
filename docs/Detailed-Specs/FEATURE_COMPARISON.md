@@ -1,4 +1,4 @@
-# Filmory 功能对比：原生端 vs Web
+# Grainfolio 功能对比：原生端 vs Web
 
 本文档只保留当前 Web 端真实状态和关键差异；详细执行顺序以 `docs/ROADMAP_TODO.md` 为准。
 

@@ -1,4 +1,4 @@
--- Filmory-Web: Create the user_profiles table.
+-- Grainfolio-Web: Create the user_profiles table.
 -- This migration MUST run before any ALTER TABLE public.user_profiles statements
 -- (e.g. 20260701000000_add_user_profile_roles.sql).
 --

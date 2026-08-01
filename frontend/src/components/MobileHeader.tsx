@@ -11,8 +11,8 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ onOpenSidebar }) => 
   return (
     <header className="mobile-header">
       <div className="mobile-brand">
-        <img src="/logo.png" alt="Filmory Logo" className="mobile-logo" />
-        <h2>Filmory</h2>
+        <img src="/logo.png" alt="Grainfolio Logo" className="mobile-logo" />
+        <h2>Grainfolio</h2>
       </div>
       <div className="mobile-header-actions">
         <SyncStatusBadge compact />

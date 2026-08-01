@@ -43,7 +43,7 @@ interface RollsViewProps {
   enableFilmMode: boolean;
 }
 
-const ROLLS_VIEW_LAYOUT_KEY = 'filmory_rolls_view_layout';
+const ROLLS_VIEW_LAYOUT_KEY = 'grainfolio_rolls_view_layout';
 
 const isViewLayout = (value: string | null): value is 'grid' | 'list' => {
   return value === 'grid' || value === 'list';

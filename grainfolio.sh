@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==========================================
-# 🎬 Filmory-Web 本地开发控制面板
+# 🎬 Grainfolio-Web 本地开发控制面板
 # 前端与本地 Supabase（Docker）按需独立管理
 # ==========================================
 
@@ -20,7 +20,7 @@ start_frontend() {
         return
     fi
 
-    osascript -e "tell application \"Terminal\" to do script \"cd \\\"$FRONTEND_DIR\\\" && echo '🚀 Filmory 前端日志' && npm run dev\""
+    osascript -e "tell application \"Terminal\" to do script \"cd \\\"$FRONTEND_DIR\\\" && echo '🚀 Grainfolio 前端日志' && npm run dev\""
     echo "✅ 前端启动命令已发送。访问：http://localhost:$FRONTEND_PORT"
 }
 
@@ -76,7 +76,7 @@ stop_local_supabase() {
 
 show_status() {
     echo ""
-    echo "================ Filmory 服务状态 ================"
+    echo "================ Grainfolio 服务状态 ================"
 
     if frontend_pids | grep -q .; then
         echo "前端：运行中（http://localhost:$FRONTEND_PORT）"
@@ -116,7 +116,7 @@ stop_local_stack() {
 show_menu() {
     echo ""
     echo "================================================="
-    echo "🕹️  Filmory-Web 本地开发控制"
+    echo "🕹️  Grainfolio-Web 本地开发控制"
     echo "================================================="
     echo "1) 🚀 启动前端"
     echo "2) 🛑 关闭前端"

@@ -1,8 +1,8 @@
 import type { Theme } from '../contexts/themeContextCore';
 
-export const THEME_STORAGE_KEY = 'filmory-theme';
-export const THEME_EXPLICIT_PREFERENCE_KEY = 'filmory-theme-explicit';
-export const THEME_SYNC_EVENT = 'filmory-theme-sync';
+export const THEME_STORAGE_KEY = 'grainfolio-theme';
+export const THEME_EXPLICIT_PREFERENCE_KEY = 'grainfolio-theme-explicit';
+export const THEME_SYNC_EVENT = 'grainfolio-theme-sync';
 
 export const getStoredTheme = (): Theme | null => {
   const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);

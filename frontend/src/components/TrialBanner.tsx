@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/useAuth';
 import { useLanguage } from '../contexts/useLanguage';
 import './TrialBanner.css';
 
-const TRIAL_BANNER_DISMISSED_KEY = 'filmory_trial_banner_dismissed';
+const TRIAL_BANNER_DISMISSED_KEY = 'grainfolio_trial_banner_dismissed';
 
 export const TrialBanner: React.FC = () => {
   const { isTrial } = useAuth();

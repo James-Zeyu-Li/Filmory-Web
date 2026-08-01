@@ -1,4 +1,4 @@
--- Filmory-Web: backend hard guard for regular membership active roll limit.
+-- Grainfolio-Web: backend hard guard for regular membership active roll limit.
 -- Product scope: only active shooting rolls are limited. Gear, film inventory,
 -- collections, and archived rolls remain unlimited.
 

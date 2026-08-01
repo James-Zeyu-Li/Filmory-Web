@@ -1,4 +1,4 @@
--- Filmory-Web: keep local manual VIP upgrade request status schema-aligned with user_profiles.
+-- Grainfolio-Web: keep local manual VIP upgrade request status schema-aligned with user_profiles.
 -- This does not require production payment integration; it only preserves the local/manual request
 -- state once sync is enabled in the future.
 

@@ -21,7 +21,7 @@ describeSyncSmoke('Supabase sync smoke with real Auth UI', () => {
 
   test.beforeEach(async ({ page }) => {
     const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    email = `sync-e2e-${stamp}@filmory.test`;
+    email = `sync-e2e-${stamp}@grainfolio.test`;
     const created = await admin.auth.admin.createUser({
       email,
       password,

@@ -7,7 +7,7 @@ export async function resetBrowserData(page: Page) {
     sessionStorage.clear();
 
     await new Promise<void>((resolve) => {
-      const request = indexedDB.deleteDatabase('FilmoryDatabase');
+      const request = indexedDB.deleteDatabase('GrainfolioDatabase');
       request.onsuccess = () => resolve();
       request.onerror = () => resolve();
       request.onblocked = () => resolve();

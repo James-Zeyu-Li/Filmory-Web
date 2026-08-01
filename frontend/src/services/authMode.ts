@@ -5,7 +5,7 @@ export type AuthMode = 'supabase' | 'dev-bypass' | 'trial';
 export type AccountRole = 'user' | 'admin';
 
 export const DEV_BYPASS_USER_ID = 'mock_uid_123';
-export const DEV_BYPASS_EMAIL = 'developer@filmory.app';
+export const DEV_BYPASS_EMAIL = 'developer@grainfolio.app';
 
 export const isDevBypassEnabled = () => (
   import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEV_AUTH !== 'false'

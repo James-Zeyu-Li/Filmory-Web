@@ -1,11 +1,11 @@
 -- ==========================================
--- FILMORY SEED DATA (Generated via Python)
+-- GRAINFOLIO SEED DATA (Generated via Python)
 -- ==========================================
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- 1. Inject Test Admin User for Local Development
-INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token, email_change_token_new, email_change) VALUES ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'admin@filmory.com', crypt('password123', gen_salt('bf')), current_timestamp, '{"provider":"email","providers":["email"]}', '{}', current_timestamp, current_timestamp, '', '', '', '') ON CONFLICT DO NOTHING;
-INSERT INTO auth.identities (id, user_id, provider_id, identity_data, provider, created_at, updated_at) VALUES ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', '{"sub":"00000000-0000-0000-0000-000000000000","email":"admin@filmory.com"}', 'email', current_timestamp, current_timestamp) ON CONFLICT DO NOTHING;
+INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token, email_change_token_new, email_change) VALUES ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'admin@grainfolio.com', crypt('password123', gen_salt('bf')), current_timestamp, '{"provider":"email","providers":["email"]}', '{}', current_timestamp, current_timestamp, '', '', '', '') ON CONFLICT DO NOTHING;
+INSERT INTO auth.identities (id, user_id, provider_id, identity_data, provider, created_at, updated_at) VALUES ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', '{"sub":"00000000-0000-0000-0000-000000000000","email":"admin@grainfolio.com"}', 'email', current_timestamp, current_timestamp) ON CONFLICT DO NOTHING;
 
 -- 2. Inject Film Stocks from Excel
 INSERT INTO public.film_stocks (id, user_id, brand, name, iso, color_type, format, is_system, stock_count) VALUES ('d8779ede-93d6-44fb-9837-8fac47b1a6c3', '00000000-0000-0000-0000-000000000000', 'lomo earl grey', 'lomo earl grey', 100.0, 'BW', '135', 0, 2);

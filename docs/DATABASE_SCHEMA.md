@@ -1,4 +1,4 @@
-# Filmory-Web 数据库架构
+# Grainfolio-Web 数据库架构
 
 本文档描述当前真实数据模型：前端以 Dexie/IndexedDB 为 local-first 主读写层。Supabase Postgres schema、RLS、Storage 与同步映射已作为后续云同步/生产上线准备，但当前日常开发可在不连接 Supabase API 的情况下运行。所有用户数据都必须携带 `userId/user_id`，本地查询和云端 RLS 均以该字段做租户隔离。
 
@@ -199,6 +199,6 @@
 - 所有 Supabase 业务表必须启用 RLS。
 - `authenticated` 角色需要表级 `SELECT/INSERT/UPDATE/DELETE` grant，RLS policy 再按 `auth.uid() = user_id` 收口。
 - 会员 active roll 后端硬限制由 `public.enforce_membership_active_roll_limit()` trigger 负责；不要用客户端前端状态作为唯一边界。
-- `filmory-assets` bucket 必须 `public=false`。
+- `grainfolio-assets` bucket 必须 `public=false`。
 - Storage 不允许 Public Read policy。
 - `delete_user()` RPC 只授予 `authenticated`，并显式 revoke `PUBLIC` 与 `anon`。

@@ -53,8 +53,8 @@ export const TagsManagement: React.FC = () => {
       });
 
       // 2. Synchronize to backend if connected
-      const apiBaseUrl = localStorage.getItem('filmory_api_base_url');
-      const accessToken = localStorage.getItem('filmory_access_token');
+      const apiBaseUrl = localStorage.getItem('grainfolio_api_base_url');
+      const accessToken = localStorage.getItem('grainfolio_access_token');
 
       if (apiBaseUrl && accessToken) {
         const response = await fetch(`${apiBaseUrl}/api/tags`, {
@@ -118,8 +118,8 @@ export const TagsManagement: React.FC = () => {
       }
 
       // 2. Delete from cloud if connected
-      const apiBaseUrl = localStorage.getItem('filmory_api_base_url');
-      const accessToken = localStorage.getItem('filmory_access_token');
+      const apiBaseUrl = localStorage.getItem('grainfolio_api_base_url');
+      const accessToken = localStorage.getItem('grainfolio_access_token');
 
       if (apiBaseUrl && accessToken) {
         await fetch(`${apiBaseUrl}/api/tags/${tag.id}`, {

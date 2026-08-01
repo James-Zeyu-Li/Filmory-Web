@@ -52,8 +52,8 @@ describe('trial theme default', () => {
   });
 
   it('keeps an existing explicit theme preference when trial starts', async () => {
-    storage.set('filmory-theme', 'light');
-    storage.set('filmory-theme-explicit', 'true');
+    storage.set('grainfolio-theme', 'light');
+    storage.set('grainfolio-theme-explicit', 'true');
 
     render(
       <ThemeProvider>

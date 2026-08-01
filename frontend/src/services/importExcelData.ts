@@ -77,7 +77,7 @@ export const downloadExcelTemplate = () => {
   XLSX.utils.book_append_sheet(wb, wsRolls, '拍摄任务');
 
   // 4. Trigger Download
-  XLSX.writeFile(wb, 'Filmory_Import_Template.xlsx');
+  XLSX.writeFile(wb, 'Grainfolio_Import_Template.xlsx');
 };
 
 export const importExcelDataFromFile = async (

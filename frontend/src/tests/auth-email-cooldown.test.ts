@@ -22,17 +22,17 @@ describe('auth email cooldown', () => {
   });
 
   it('persists cooldown per scope and email', () => {
-    startAuthEmailCooldown('password-recovery', 'User@Filmory.app', AUTH_EMAIL_SEND_COOLDOWN_MS, 1000);
+    startAuthEmailCooldown('password-recovery', 'User@Grainfolio.app', AUTH_EMAIL_SEND_COOLDOWN_MS, 1000);
 
-    expect(getAuthEmailCooldownSeconds('password-recovery', 'user@filmory.app', 1000)).toBe(300);
-    expect(getAuthEmailCooldownSeconds('signup-confirmation', 'user@filmory.app', 1000)).toBe(0);
+    expect(getAuthEmailCooldownSeconds('password-recovery', 'user@grainfolio.app', 1000)).toBe(300);
+    expect(getAuthEmailCooldownSeconds('signup-confirmation', 'user@grainfolio.app', 1000)).toBe(0);
   });
 
   it('returns remaining time and clears expired cooldowns', () => {
-    startAuthEmailCooldown('password-recovery', 'user@filmory.app', AUTH_EMAIL_SEND_COOLDOWN_MS, 1000);
+    startAuthEmailCooldown('password-recovery', 'user@grainfolio.app', AUTH_EMAIL_SEND_COOLDOWN_MS, 1000);
 
-    expect(getAuthEmailCooldownRemainingMs('password-recovery', 'user@filmory.app', 31_000)).toBe(270_000);
-    expect(getAuthEmailCooldownRemainingMs('password-recovery', 'user@filmory.app', 301_001)).toBe(0);
+    expect(getAuthEmailCooldownRemainingMs('password-recovery', 'user@grainfolio.app', 31_000)).toBe(270_000);
+    expect(getAuthEmailCooldownRemainingMs('password-recovery', 'user@grainfolio.app', 301_001)).toBe(0);
     expect(localStorage.removeItem).toHaveBeenCalled();
   });
 

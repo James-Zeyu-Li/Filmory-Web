@@ -20,7 +20,7 @@ describe('UpgradeModal manual request flow', () => {
     );
 
     fireEvent.change(await screen.findByLabelText('联系邮箱'), {
-      target: { value: 'member@filmory.app' },
+      target: { value: 'member@grainfolio.app' },
     });
     fireEvent.change(screen.getByLabelText('补充说明（可选）'), {
       target: { value: '希望本周内完成手动开通。' },
@@ -33,14 +33,14 @@ describe('UpgradeModal manual request flow', () => {
         userId: 'mock-user-id',
         tier: 'regular',
         membershipRequestStatus: 'pending',
-        membershipContactEmail: 'member@filmory.app',
+        membershipContactEmail: 'member@grainfolio.app',
         membershipRequestNote: '希望本周内完成手动开通。',
         membershipRequestSource: 'roll-limit',
       });
     });
 
     expect(openSpy).toHaveBeenCalledWith(
-      expect.stringContaining('mailto:filmory@example.com'),
+      expect.stringContaining('mailto:grainfolio@example.com'),
       '_blank'
     );
 

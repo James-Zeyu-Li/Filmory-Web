@@ -1,4 +1,4 @@
--- Filmory-Web: split development auth bypass from real admin accounts.
+-- Grainfolio-Web: split development auth bypass from real admin accounts.
 -- Dev bypass is frontend-local only; production admin mode is represented by user_profiles.role.
 
 ALTER TABLE public.user_profiles
@@ -14,5 +14,5 @@ ALTER TABLE public.user_profiles
 UPDATE public.user_profiles
 SET role = 'admin'
 WHERE user_id IN (
-  SELECT id FROM auth.users WHERE lower(email) = 'admin@filmory.com'
+  SELECT id FROM auth.users WHERE lower(email) = 'admin@grainfolio.com'
 );

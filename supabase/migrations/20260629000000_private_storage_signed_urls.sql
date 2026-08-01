@@ -1,8 +1,8 @@
--- Filmory-Web: lock storage bucket to private access and require signed URLs.
+-- Grainfolio-Web: lock storage bucket to private access and require signed URLs.
 
 UPDATE storage.buckets
 SET public = false
-WHERE id = 'filmory-assets';
+WHERE id = 'grainfolio-assets';
 
 DROP POLICY IF EXISTS "Public Read Access" ON storage.objects;
 DROP POLICY IF EXISTS "Owner Read Access" ON storage.objects;
@@ -13,14 +13,14 @@ DROP POLICY IF EXISTS "Authenticated Delete" ON storage.objects;
 CREATE POLICY "Owner Read Access"
 ON storage.objects FOR SELECT
 USING (
-  bucket_id = 'filmory-assets'
+  bucket_id = 'grainfolio-assets'
   AND auth.uid() = owner
 );
 
 CREATE POLICY "Authenticated Insert"
 ON storage.objects FOR INSERT
 WITH CHECK (
-  bucket_id = 'filmory-assets'
+  bucket_id = 'grainfolio-assets'
   AND auth.role() = 'authenticated'
   AND (storage.foldername(name))[1] = auth.uid()::text
 );
@@ -28,13 +28,13 @@ WITH CHECK (
 CREATE POLICY "Authenticated Update"
 ON storage.objects FOR UPDATE
 USING (
-  bucket_id = 'filmory-assets'
+  bucket_id = 'grainfolio-assets'
   AND auth.uid() = owner
 );
 
 CREATE POLICY "Authenticated Delete"
 ON storage.objects FOR DELETE
 USING (
-  bucket_id = 'filmory-assets'
+  bucket_id = 'grainfolio-assets'
   AND auth.uid() = owner
 );

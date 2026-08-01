@@ -1,4 +1,4 @@
--- Filmory-Web: add optional display_name to user_profiles and bootstrap it from auth metadata.
+-- Grainfolio-Web: add optional display_name to user_profiles and bootstrap it from auth metadata.
 
 ALTER TABLE public.user_profiles
   ADD COLUMN IF NOT EXISTS display_name text;

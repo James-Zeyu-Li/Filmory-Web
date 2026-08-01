@@ -4,7 +4,7 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-echo "🚀 Starting Filmory-Web Development Stack..."
+echo "🚀 Starting Grainfolio-Web Development Stack..."
 
 # 1. Verify Docker is running
 if ! docker info >/dev/null 2>&1; then

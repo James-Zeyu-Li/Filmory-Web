@@ -51,7 +51,7 @@ describeLive('Live Supabase sync integration', () => {
     localStorage.clear();
 
     const stamp = Date.now();
-    email = `sync-live-${stamp}@filmory.test`;
+    email = `sync-live-${stamp}@grainfolio.test`;
     const created = await admin.auth.admin.createUser({
       email,
       password,
@@ -65,7 +65,7 @@ describeLive('Live Supabase sync integration', () => {
     const signedIn = await supabase.auth.signInWithPassword({ email, password });
     expect(signedIn.error).toBeNull();
 
-    localStorage.setItem('filmory_user_id', userId);
+    localStorage.setItem('grainfolio_user_id', userId);
   });
 
   afterEach(async () => {
@@ -123,7 +123,7 @@ describeLive('Live Supabase sync integration', () => {
       .eq('user_id', userId);
 
     expect(remoteUpdate.error).toBeNull();
-    localStorage.setItem(`filmory_last_sync_${userId}`, new Date(0).toISOString());
+    localStorage.setItem(`grainfolio_last_sync_${userId}`, new Date(0).toISOString());
 
     await SyncService.pull();
 

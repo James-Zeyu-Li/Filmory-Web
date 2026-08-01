@@ -1,7 +1,7 @@
 import { db } from '../db/schema';
 import { TRIAL_USER_ID } from './trialPolicy';
 
-const TRIAL_MIGRATION_STORAGE_KEY = 'filmory_trial_migrated_to_user';
+const TRIAL_MIGRATION_STORAGE_KEY = 'grainfolio_trial_migrated_to_user';
 
 const USER_SCOPED_TABLES = [
   'cameras',

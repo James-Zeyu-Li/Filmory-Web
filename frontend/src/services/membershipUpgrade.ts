@@ -26,7 +26,7 @@ export interface MembershipRequestCopy {
   closing: string;
 }
 
-const DEFAULT_SUPPORT_EMAIL = 'filmory@example.com';
+const DEFAULT_SUPPORT_EMAIL = 'grainfolio@example.com';
 export const MEMBERSHIP_SUPPORT_EMAIL = String(
   import.meta.env.VITE_SUPPORT_EMAIL || DEFAULT_SUPPORT_EMAIL
 ).trim() || DEFAULT_SUPPORT_EMAIL;
@@ -40,8 +40,8 @@ const normalizeMultiline = (value?: string) => (
 );
 
 const DEFAULT_MEMBERSHIP_REQUEST_COPY: MembershipRequestCopy = {
-  subject: 'Filmory VIP 升级申请',
-  greeting: '您好，我想申请升级为 Filmory VIP。',
+  subject: 'Grainfolio VIP 升级申请',
+  greeting: '您好，我想申请升级为 Grainfolio VIP。',
   accountEmail: '账号邮箱',
   contactEmail: '联系邮箱',
   userId: '用户 ID',

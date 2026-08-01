@@ -1,5 +1,5 @@
 -- =================================================================================
--- Filmory-Web: Initial Supabase Schema, RLS, and Storage Bucket Setup
+-- Grainfolio-Web: Initial Supabase Schema, RLS, and Storage Bucket Setup
 -- =================================================================================
 
 -- 1. Enable UUID generation support (usually enabled by default in Supabase)
@@ -183,7 +183,7 @@ END $$;
 
 -- Insert the physical storage bucket definition
 INSERT INTO storage.buckets (id, name, public) 
-VALUES ('filmory-assets', 'filmory-assets', false) 
+VALUES ('grainfolio-assets', 'grainfolio-assets', false) 
 ON CONFLICT (id) DO NOTHING;
 
 -- RLS for Storage (Objects)
@@ -191,7 +191,7 @@ ON CONFLICT (id) DO NOTHING;
 CREATE POLICY "Owner Read Access" 
 ON storage.objects FOR SELECT 
 USING (
-  bucket_id = 'filmory-assets'
+  bucket_id = 'grainfolio-assets'
   AND auth.uid() = owner
 );
 
@@ -199,7 +199,7 @@ USING (
 CREATE POLICY "Authenticated Insert" 
 ON storage.objects FOR INSERT 
 WITH CHECK (
-  bucket_id = 'filmory-assets'
+  bucket_id = 'grainfolio-assets'
   AND auth.role() = 'authenticated'
   AND (storage.foldername(name))[1] = auth.uid()::text
 );
@@ -207,13 +207,13 @@ WITH CHECK (
 CREATE POLICY "Authenticated Update" 
 ON storage.objects FOR UPDATE 
 USING (
-  bucket_id = 'filmory-assets'
+  bucket_id = 'grainfolio-assets'
   AND auth.uid() = owner
 );
 
 CREATE POLICY "Authenticated Delete" 
 ON storage.objects FOR DELETE 
 USING (
-  bucket_id = 'filmory-assets'
+  bucket_id = 'grainfolio-assets'
   AND auth.uid() = owner
 );

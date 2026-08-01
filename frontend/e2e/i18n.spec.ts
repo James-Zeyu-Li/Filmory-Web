@@ -107,7 +107,7 @@ test.describe('Language preferences', () => {
 
   test('shows trial conversion prompts in English without layout overflow', async ({ page }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
-    await page.evaluate(() => localStorage.setItem('filmory_language', 'en-US'));
+    await page.evaluate(() => localStorage.setItem('grainfolio_language', 'en-US'));
     await page.reload({ waitUntil: 'domcontentloaded' });
 
     await page.getByRole('button', { name: 'Try it Now' }).click();
@@ -126,7 +126,7 @@ test.describe('Language preferences', () => {
 
   test('renders auth helper pages in English', async ({ page }) => {
     await page.goto('/logo.png', { waitUntil: 'domcontentloaded' });
-    await page.evaluate(() => localStorage.setItem('filmory_language', 'en-US'));
+    await page.evaluate(() => localStorage.setItem('grainfolio_language', 'en-US'));
 
     await page.goto('/auth/forgot-password', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Recover password' })).toBeVisible();
@@ -138,9 +138,9 @@ test.describe('Language preferences', () => {
     await expect(page.getByRole('link', { name: 'Request password reset email again' })).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
-    await page.goto('/auth/check-email?email=test%40filmory.app', { waitUntil: 'domcontentloaded' });
+    await page.goto('/auth/check-email?email=test%40grainfolio.app', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible();
-    await expect(page.getByText('Target email: test@filmory.app.')).toBeVisible();
+    await expect(page.getByText('Target email: test@grainfolio.app.')).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
     await page.goto('/auth/callback?error_description=Link%20expired', { waitUntil: 'domcontentloaded' });
@@ -156,14 +156,14 @@ test.describe('Language preferences', () => {
     test(`keeps translated landing and workspace layouts inside the viewport at ${viewport.width}px`, async ({ page }) => {
       await page.setViewportSize(viewport);
       await page.goto('/', { waitUntil: 'domcontentloaded' });
-      await page.evaluate(() => localStorage.setItem('filmory_language', 'en-US'));
+      await page.evaluate(() => localStorage.setItem('grainfolio_language', 'en-US'));
       await page.reload({ waitUntil: 'domcontentloaded' });
 
       await expect(page.getByRole('button', { name: 'Try it Now' })).toBeVisible();
       await expectNoHorizontalOverflow(page);
 
       await resetAndLogin(page);
-      await page.evaluate(() => localStorage.setItem('filmory_language', 'en-US'));
+      await page.evaluate(() => localStorage.setItem('grainfolio_language', 'en-US'));
       await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
       await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
       await expectNoHorizontalOverflow(page);

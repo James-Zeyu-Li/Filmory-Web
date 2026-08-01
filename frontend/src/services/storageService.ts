@@ -8,7 +8,7 @@ export interface UploadResult {
   thumbnailUrl: string;
 }
 
-const PHOTO_BUCKET = 'filmory-assets';
+const PHOTO_BUCKET = 'grainfolio-assets';
 const SIGNED_URL_TTL_SECONDS = 60 * 60;
 export const PHOTO_THUMBNAIL_MAX_EDGE = 400;
 export const PHOTO_THUMBNAIL_WEBP_QUALITY = 0.6;

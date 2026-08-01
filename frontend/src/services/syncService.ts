@@ -70,8 +70,8 @@ const tableMap: Record<string, string> = {
   userProfiles: 'user_profiles'
 };
 
-const getCurrentUserId = () => localStorage.getItem('filmory_user_id');
-const getSyncWatermarkKey = (userId: string) => `filmory_last_sync_${userId}`;
+const getCurrentUserId = () => localStorage.getItem('grainfolio_user_id');
+const getSyncWatermarkKey = (userId: string) => `grainfolio_last_sync_${userId}`;
 const queueBelongsToUser = (item: SyncQueueItem, userId: string) => (
   item.userId === userId ||
   (!item.userId && (item.payload?.userId === userId || item.payload?.user_id === userId))
@@ -83,8 +83,8 @@ const getUserQueue = async (userId: string) => {
 };
 
 const supabaseTables = Object.values(tableMap);
-export const LOCAL_CHANGE_EVENT = 'filmory-sync-request';
-export const SYNC_STATUS_EVENT = 'filmory-sync-status';
+export const LOCAL_CHANGE_EVENT = 'grainfolio-sync-request';
+export const SYNC_STATUS_EVENT = 'grainfolio-sync-status';
 export type SyncStatusState = 'local' | 'offline' | 'syncing' | 'synced' | 'error';
 const SYNC_DEBOUNCE_MS = 1500;
 const RESUME_SYNC_DEBOUNCE_MS = 400;
@@ -302,7 +302,7 @@ export class SyncService {
     const localStockCount = await db.filmStocks.where('userId').equals(userId).count();
     
     if (localStockCount > 0) {
-      const lastSyncStr = localStorage.getItem(getSyncWatermarkKey(userId)) || localStorage.getItem('filmory_last_sync');
+      const lastSyncStr = localStorage.getItem(getSyncWatermarkKey(userId)) || localStorage.getItem('grainfolio_last_sync');
       if (lastSyncStr) lastSync = new Date(lastSyncStr).toISOString();
       console.log(`[Sync Pull] Incremental pull since ${lastSync}`);
     } else {
@@ -312,7 +312,7 @@ export class SyncService {
     const newSyncTime = new Date().toISOString();
 
     // Enable silent mode so local hooks don't throw fetched data back into the queue
-    window.__filmory_is_pulling = true;
+    window.__grainfolio_is_pulling = true;
 
     let syncError: Error | null = null;
 
@@ -407,7 +407,7 @@ export class SyncService {
       console.error('Failed to pull from cloud:', err);
     } finally {
       // Disengage silent mode
-      window.__filmory_is_pulling = false;
+      window.__grainfolio_is_pulling = false;
     }
 
     if (syncError) {
@@ -470,7 +470,7 @@ export class SyncService {
     if (!userId || !this.isAutoSyncEnabled()) return;
 
     console.log('[Sync Realtime] Subscribing to postgres changes...');
-    let channel = supabase.channel(`filmory-user-${userId}`);
+    let channel = supabase.channel(`grainfolio-user-${userId}`);
 
     for (const table of supabaseTables) {
       channel = channel.on('postgres_changes', {

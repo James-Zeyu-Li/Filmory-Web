@@ -9,7 +9,7 @@ import {
   type TranslationKey,
 } from '../i18n/translations';
 
-const STORAGE_KEY = 'filmory_language';
+const STORAGE_KEY = 'grainfolio_language';
 
 const isLanguageCode = (value: string | null): value is LanguageCode => (
   LANGUAGE_OPTIONS.some(option => option.code === value)

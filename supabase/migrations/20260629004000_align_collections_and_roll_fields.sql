@@ -1,4 +1,4 @@
--- Filmory-Web: align Supabase schema with Dexie collections and roll relationships.
+-- Grainfolio-Web: align Supabase schema with Dexie collections and roll relationships.
 
 CREATE TABLE IF NOT EXISTS public.collections (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

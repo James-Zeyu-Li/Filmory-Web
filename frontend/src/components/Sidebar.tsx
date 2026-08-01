@@ -81,9 +81,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenAccountC
         }}
       >
       <div className="sidebar-brand">
-        <img src="/logo.png" alt="Filmory Logo" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
+        <img src="/logo.png" alt="Grainfolio Logo" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
         <div className="brand-text">
-          <h2>Filmory</h2>
+          <h2>Grainfolio</h2>
           <span>{t('nav.tagline')}</span>
         </div>
       </div>

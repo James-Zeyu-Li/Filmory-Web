@@ -1,6 +1,6 @@
-# Filmory Web 架构说明
+# Grainfolio Web 架构说明
 
-Filmory Web 当前是 React/Vite 单页应用，采用 Dexie local-first 数据层。项目不再维护自建 Node/Express API 层，也不再使用 MinIO/S3 作为主文档口径。Supabase BaaS 已作为后续云同步/生产上线目标保留 schema、服务代码和测试契约，但当前本地开发不要求连接 Supabase API。
+Grainfolio Web 当前是 React/Vite 单页应用，采用 Dexie local-first 数据层。项目不再维护自建 Node/Express API 层，也不再使用 MinIO/S3 作为主文档口径。Supabase BaaS 已作为后续云同步/生产上线目标保留 schema、服务代码和测试契约，但当前本地开发不要求连接 Supabase API。
 
 ## 1. 已实现模块
 
@@ -52,7 +52,7 @@ Supabase (cloud/production target)
 - **Auth**：登录、注册、session、邮件验证、密码找回。
 - **Postgres**：跨设备同步数据源。
 - **RLS**：防止平行越权。
-- **Storage**：`filmory-assets` private bucket。
+- **Storage**：`grainfolio-assets` private bucket。
 - **Signed URL**：短期照片访问，不使用 public URL。
 - **RPC**：`delete_user()` 用于账号自删除，并依赖 `ON DELETE CASCADE` 清理用户数据。
 
@@ -72,8 +72,8 @@ Supabase (cloud/production target)
 ## 5. PWA 与前端体验策略
 
 - `vite-plugin-pwa` 使用 `registerType: 'prompt'`，避免新 Service Worker 静默强制接管并刷新正在编辑的页面。
-- `registerFilmoryServiceWorker()` 负责注册 Service Worker、监听 `onNeedRefresh`，并定期触发 `registration.update()` 检查新版本。
-- 当新版本可用时，服务层派发 `filmory-pwa-update-ready` 事件；`PwaUpdatePrompt` 订阅事件并通过 Feedback Toast 展示“立即更新 / 稍后”。
+- `registerGrainfolioServiceWorker()` 负责注册 Service Worker、监听 `onNeedRefresh`，并定期触发 `registration.update()` 检查新版本。
+- 当新版本可用时，服务层派发 `grainfolio-pwa-update-ready` 事件；`PwaUpdatePrompt` 订阅事件并通过 Feedback Toast 展示“立即更新 / 稍后”。
 - 点击“立即更新”会调用 vite-plugin-pwa 提供的 update callback，向等待中的 Service Worker 发送 `SKIP_WAITING`，再进入新版本；点击“稍后”只关闭提示，不打断当前表单。
 - 全局反馈系统支持 `actions` 和 `durationMs: 0`，用于 PWA 更新这类需要用户明确决策的通知；普通保存/失败反馈继续使用自动消失的 toast。
 - UI 可访问性和一致性交互优先通过全局 CSS 解决：按钮/链接/summary 使用 `:focus-visible`，`.form-control` 统一 focus ring，移动端 modal footer 自动纵向堆叠。

@@ -98,6 +98,6 @@ export const BackupService = {
     const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    saveAs(data, `Filmory_Data_Export_${dateStr}.xlsx`);
+    saveAs(data, `Grainfolio_Data_Export_${dateStr}.xlsx`);
   }
 };

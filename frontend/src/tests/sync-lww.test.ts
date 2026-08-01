@@ -25,9 +25,9 @@ describe('SyncService LWW (Last-Write-Wins) Resolution', () => {
     await db.filmStocks.clear();
     localStorage.clear();
     // Simulate logged in user
-    localStorage.setItem('filmory_user_id', 'test_user');
+    localStorage.setItem('grainfolio_user_id', 'test_user');
     // Set a very old lastSync so pull() will trigger
-    localStorage.setItem('filmory_last_sync', new Date(0).toISOString());
+    localStorage.setItem('grainfolio_last_sync', new Date(0).toISOString());
     // Seed some data so it doesn't return early
     await db.filmStocks.add({ id: 'dummy', userId: 'test', isSystem: 0, stockCount: 1, createdAt: Date.now() } as any);
   });

@@ -11,7 +11,7 @@ const localServiceRoleKey = process.env.P0_SUPABASE_SERVICE_ROLE_KEY
 
 const describeLive = runLiveTests ? describe : describe.skip;
 const storageObjectUrl = (objectPath: string) =>
-  `${localSupabaseUrl}/storage/v1/object/filmory-assets/${objectPath}`;
+  `${localSupabaseUrl}/storage/v1/object/grainfolio-assets/${objectPath}`;
 
 describeLive('P0 live Supabase security integration', () => {
   it('enforces private storage, signed URL access, and cross-user read denial', async () => {
@@ -26,8 +26,8 @@ describeLive('P0 live Supabase security integration', () => {
     });
 
     const stamp = Date.now();
-    const emailA = `p0-storage-a-${stamp}@filmory.test`;
-    const emailB = `p0-storage-b-${stamp}@filmory.test`;
+    const emailA = `p0-storage-a-${stamp}@grainfolio.test`;
+    const emailB = `p0-storage-b-${stamp}@grainfolio.test`;
     const password = 'Password123!';
 
     const createdA = await admin.auth.admin.createUser({ email: emailA, password, email_confirm: true });
@@ -62,9 +62,9 @@ describeLive('P0 live Supabase security integration', () => {
       });
       expect(upload.ok).toBe(true);
 
-      const signed = await userA.storage.from('filmory-assets').createSignedUrl(objectPath, 60);
+      const signed = await userA.storage.from('grainfolio-assets').createSignedUrl(objectPath, 60);
       expect(signed.error).toBeNull();
-      expect(signed.data?.signedUrl).toContain('/storage/v1/object/sign/filmory-assets/');
+      expect(signed.data?.signedUrl).toContain('/storage/v1/object/sign/grainfolio-assets/');
 
       const anonDownload = await fetch(storageObjectUrl(objectPath), {
         headers: { apikey: localAnonKey }
@@ -97,7 +97,7 @@ describeLive('P0 live Supabase security integration', () => {
     });
 
     const stamp = Date.now();
-    const email = `p0-delete-${stamp}@filmory.test`;
+    const email = `p0-delete-${stamp}@grainfolio.test`;
     const password = 'Password123!';
     const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
     expect(created.error).toBeNull();

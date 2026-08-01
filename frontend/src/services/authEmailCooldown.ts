@@ -3,7 +3,7 @@ export type AuthEmailCooldownScope = 'password-recovery' | 'signup-confirmation'
 export const AUTH_EMAIL_SEND_COOLDOWN_MS = 5 * 60 * 1000;
 export const AUTH_EMAIL_RATE_LIMIT_COOLDOWN_MS = AUTH_EMAIL_SEND_COOLDOWN_MS;
 
-const STORAGE_PREFIX = 'filmory_auth_email_cooldown';
+const STORAGE_PREFIX = 'grainfolio_auth_email_cooldown';
 
 const getCooldownKey = (scope: AuthEmailCooldownScope, email: string) => (
   `${STORAGE_PREFIX}:${scope}:${encodeURIComponent(email.trim().toLowerCase())}`

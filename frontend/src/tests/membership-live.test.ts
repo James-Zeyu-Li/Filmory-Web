@@ -62,7 +62,7 @@ describeLive('Membership live Supabase active roll enforcement', () => {
     const password = 'Password123!';
     const { client, userId } = await createSignedInUser(
       admin,
-      `membership-regular-${stamp}@filmory.test`,
+      `membership-regular-${stamp}@grainfolio.test`,
       password
     );
 
@@ -94,7 +94,7 @@ describeLive('Membership live Supabase active roll enforcement', () => {
     const password = 'Password123!';
     const { client, userId } = await createSignedInUser(
       admin,
-      `membership-vip-${stamp}@filmory.test`,
+      `membership-vip-${stamp}@grainfolio.test`,
       password
     );
 

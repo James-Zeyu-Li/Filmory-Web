@@ -7,7 +7,7 @@ import subprocess
 BASE_DIR = pathlib.Path(__file__).resolve().parent
 SVG_DIR = BASE_DIR / "svg"
 PNG_DIR = BASE_DIR / "png"
-ASSETS_DIR = BASE_DIR.parent.parent / "Filmory" / "Assets.xcassets" / "FilmStockIcons"
+ASSETS_DIR = BASE_DIR.parent.parent / "Grainfolio" / "Assets.xcassets" / "FilmStockIcons"
 
 SVG_DIR.mkdir(parents=True, exist_ok=True)
 PNG_DIR.mkdir(parents=True, exist_ok=True)

@@ -1,4 +1,4 @@
--- Filmory-Web: model interchangeable 120 film backs as camera-system resources.
+-- Grainfolio-Web: model interchangeable 120 film backs as camera-system resources.
 
 CREATE TABLE IF NOT EXISTS public.camera_systems (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -4,7 +4,7 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-echo "🛑 Stopping Filmory-Web Stack..."
+echo "🛑 Stopping Grainfolio-Web Stack..."
 
 # 1. Kill backend and frontend processes running on local ports
 echo "🔌 Stopping node processes on ports 8080 and 5173..."

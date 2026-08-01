@@ -36,7 +36,7 @@ describe('SyncService schema parity', () => {
     await db.syncQueue.clear();
     localStorage.clear();
     vi.mocked(localStorage.getItem).mockImplementation((key: string) => (
-      key === 'filmory_user_id' ? 'user-1' : null
+      key === 'grainfolio_user_id' ? 'user-1' : null
     ));
     supabaseMock.upsert.mockClear();
     supabaseMock.update.mockClear();
@@ -283,7 +283,7 @@ describe('SyncService schema parity', () => {
         highResQuotaUsed: 0,
         membershipRequestStatus: 'pending',
         membershipRequestedAt: 1782864000000,
-        membershipContactEmail: 'member@filmory.app',
+        membershipContactEmail: 'member@grainfolio.app',
         membershipRequestNote: 'Please help me upgrade.',
         membershipRequestSource: 'roll-limit',
         updatedAt: 1782864000000,
@@ -300,7 +300,7 @@ describe('SyncService schema parity', () => {
         user_id: 'user-1',
         membership_request_status: 'pending',
         membership_requested_at: 1782864000000,
-        membership_contact_email: 'member@filmory.app',
+        membership_contact_email: 'member@grainfolio.app',
         membership_request_note: 'Please help me upgrade.',
         membership_request_source: 'roll-limit',
       }),
@@ -324,7 +324,7 @@ describe('SyncService schema parity', () => {
 
     const unsubscribe = SyncService.setupRealtimeSubscription();
 
-    expect(supabaseMock.channel).toHaveBeenCalledWith('filmory-user-user-1');
+    expect(supabaseMock.channel).toHaveBeenCalledWith('grainfolio-user-user-1');
     expect(supabaseMock.on).toHaveBeenCalledWith(
       'postgres_changes',
       expect.objectContaining({
@@ -353,8 +353,8 @@ describe('SyncService schema parity', () => {
       vi.runOnlyPendingTimers();
       syncSpy.mockClear();
 
-      window.dispatchEvent(new CustomEvent('filmory-sync-request'));
-      window.dispatchEvent(new CustomEvent('filmory-sync-request'));
+      window.dispatchEvent(new CustomEvent('grainfolio-sync-request'));
+      window.dispatchEvent(new CustomEvent('grainfolio-sync-request'));
 
       vi.advanceTimersByTime(1499);
       expect(syncSpy).not.toHaveBeenCalled();
@@ -395,7 +395,7 @@ describe('SyncService schema parity', () => {
       SyncService.stop();
 
       window.dispatchEvent(new Event('online'));
-      window.dispatchEvent(new CustomEvent('filmory-sync-request'));
+      window.dispatchEvent(new CustomEvent('grainfolio-sync-request'));
       document.dispatchEvent(new Event('visibilitychange'));
       vi.runAllTimers();
 

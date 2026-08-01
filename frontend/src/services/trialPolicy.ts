@@ -1,7 +1,7 @@
 import type { TranslationKey } from '../i18n/translations';
 
 export const TRIAL_USER_ID = 'trial_local_user';
-export const TRIAL_USER_EMAIL = 'trial@filmory.local';
+export const TRIAL_USER_EMAIL = 'trial@grainfolio.local';
 export const TRIAL_RESOURCE_LIMIT = 1;
 
 export type TrialResourceKey =

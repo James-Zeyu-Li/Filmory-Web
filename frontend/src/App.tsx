@@ -44,14 +44,14 @@ function AppContent() {
   const isSidebarOpen = sidebarOpenPath === location.pathname;
   
   const [enableFilmMode, setEnableFilmMode] = useState<boolean>(() => {
-    const saved = localStorage.getItem('filmory_enable_film_mode');
+    const saved = localStorage.getItem('grainfolio_enable_film_mode');
     return saved === null ? true : saved === 'true';
   });
   const [isLoading, setIsLoading] = useState(true);
 
   // Sync film mode preference to localStorage
   useEffect(() => {
-    localStorage.setItem('filmory_enable_film_mode', String(enableFilmMode));
+    localStorage.setItem('grainfolio_enable_film_mode', String(enableFilmMode));
   }, [enableFilmMode]);
 
   // Seed sample data only for the local developer bypass account.
@@ -104,7 +104,7 @@ function AppContent() {
     return (
       <div className="app-loading-screen">
         <Film className="loading-logo animate-pulse" size={64} />
-        <h2>Filmory</h2>
+        <h2>Grainfolio</h2>
         <span>正在打开你的胶片记录...</span>
       </div>
     );

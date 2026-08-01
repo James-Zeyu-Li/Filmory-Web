@@ -12,9 +12,9 @@ test.describe('Auth public UI flows', () => {
     await page.goto('/auth/reset-password', { waitUntil: 'domcontentloaded' });
     await expect(page.getByText('链接已失效或不可用')).toBeVisible();
 
-    await page.goto('/auth/check-email?email=test%40filmory.app', { waitUntil: 'domcontentloaded' });
+    await page.goto('/auth/check-email?email=test%40grainfolio.app', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: '请检查邮箱' })).toBeVisible();
-    await expect(page.getByText('目标邮箱：test@filmory.app')).toBeVisible();
+    await expect(page.getByText('目标邮箱：test@grainfolio.app')).toBeVisible();
   });
 
   test('renders callback error fallback when auth callback fails', async ({ page }) => {

@@ -1,4 +1,4 @@
--- Filmory-Web: allow authenticated clients to access RLS-protected app tables.
+-- Grainfolio-Web: allow authenticated clients to access RLS-protected app tables.
 -- RLS policies still enforce per-user isolation; these grants only expose table operations to the role.
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.cameras TO authenticated;

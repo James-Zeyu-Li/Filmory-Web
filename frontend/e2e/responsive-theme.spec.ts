@@ -8,7 +8,7 @@ test.describe('Theme & Mobile Responsive Tests', () => {
     // 2. We mock the auth state so we don't need real login, 
     // or just interact with the app if it lets us in. Since the app redirects to /login if not authed,
     // we need to set local storage mock or perform login.
-    // However, Filmory's login is using Supabase. For this UI test, we can inject a mock user into localStorage
+    // However, Grainfolio's login is using Supabase. For this UI test, we can inject a mock user into localStorage
     // Or we just test the DOM on whatever page is accessible. 
     // Wait, the Landing/Login pages also should react to theme toggle, but SettingsView is inside the authed area.
     
@@ -20,7 +20,7 @@ test.describe('Theme & Mobile Responsive Tests', () => {
     
     // Force a theme change via JS to simulate ThemeProvider
     await page.evaluate(() => {
-      localStorage.setItem('filmory-theme', 'light');
+      localStorage.setItem('grainfolio-theme', 'light');
       window.dispatchEvent(new Event('storage'));
       // The theme provider might not listen to 'storage' events from same window, so let's just reload
     });
@@ -31,7 +31,7 @@ test.describe('Theme & Mobile Responsive Tests', () => {
 
     // Force theme to dark
     await page.evaluate(() => {
-      localStorage.setItem('filmory-theme', 'dark');
+      localStorage.setItem('grainfolio-theme', 'dark');
     });
     await page.reload();
     

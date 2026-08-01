@@ -1,6 +1,6 @@
 import { registerSW } from 'virtual:pwa-register';
 
-export const PWA_UPDATE_READY_EVENT = 'filmory-pwa-update-ready';
+export const PWA_UPDATE_READY_EVENT = 'grainfolio-pwa-update-ready';
 const PWA_UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
 
 export interface PwaUpdateReadyDetail {
@@ -10,7 +10,7 @@ export interface PwaUpdateReadyDetail {
 let hasRegisteredServiceWorker = false;
 let updateCheckTimer: number | null = null;
 
-export const registerFilmoryServiceWorker = () => {
+export const registerGrainfolioServiceWorker = () => {
   if (hasRegisteredServiceWorker || !('serviceWorker' in navigator)) return;
   hasRegisteredServiceWorker = true;
 

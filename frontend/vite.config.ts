@@ -11,8 +11,8 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['favicon.svg', 'logo.png'],
       manifest: {
-        name: 'Filmory Web',
-        short_name: 'Filmory',
+        name: 'Grainfolio Web',
+        short_name: 'Grainfolio',
         description: 'Professional Film & Digital Photography Ledger',
         theme_color: '#000000',
         background_color: '#121212',
