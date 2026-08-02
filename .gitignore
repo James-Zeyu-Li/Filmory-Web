@@ -70,3 +70,4 @@ docs/auth-manual-checklist.md
 docs/audit_result/
 docs/Data/
 docs/supabase_schema.sql
+.agents/
