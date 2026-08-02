@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
-import { AlertCircle, CheckCircle2, KeyRound } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { AlertCircle, CheckCircle2, KeyRound, LoaderCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/useAuth';
 import { supabase } from '../../services/supabaseClient';
 import {
   AUTH_ROUTES,
+  clearPasswordRecoveryIntent,
   getAuthErrorMessage,
   getAuthErrorTranslationKey,
+  hasPasswordRecoveryIntent,
   getPasswordValidationMessage,
   PASSWORD_POLICY,
 } from '../../services/authFlow';
@@ -18,7 +20,7 @@ import './LoginView.css';
 
 export const ResetPasswordView: React.FC = () => {
   const navigate = useNavigate();
-  const { session, user, logout } = useAuth();
+  const { logout } = useAuth();
   const { t } = useLanguage();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -27,8 +29,36 @@ export const ResetPasswordView: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [recoveryState, setRecoveryState] = useState<'checking' | 'ready' | 'invalid'>('checking');
 
-  const canResetPassword = Boolean(session?.user || user);
+  useEffect(() => {
+    let cancelled = false;
+
+    const verifyRecoverySession = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        const currentUserId = data.session?.user.id;
+        const isValidRecovery = !error && currentUserId !== undefined && hasPasswordRecoveryIntent(currentUserId);
+
+        if (!isValidRecovery) {
+          clearPasswordRecoveryIntent();
+        }
+
+        if (!cancelled) {
+          setRecoveryState(isValidRecovery ? 'ready' : 'invalid');
+        }
+      } catch {
+        clearPasswordRecoveryIntent();
+        if (!cancelled) setRecoveryState('invalid');
+      }
+    };
+
+    void verifyRecoverySession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -51,6 +81,7 @@ export const ResetPasswordView: React.FC = () => {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
 
+      clearPasswordRecoveryIntent();
       await logout();
       setSuccessMsg(t('auth.resetSuccess'));
     } catch (error) {
@@ -91,7 +122,12 @@ export const ResetPasswordView: React.FC = () => {
         </div>
       )}
 
-      {!canResetPassword && !successMsg ? (
+      {recoveryState === 'checking' ? (
+        <div className="auth-state-panel auth-processing-panel">
+          <LoaderCircle size={24} className="auth-spinner" />
+          <p>{t('auth.callbackProcessing')}</p>
+        </div>
+      ) : recoveryState === 'invalid' && !successMsg ? (
         <div className="auth-state-panel">
           <h3>{t('auth.resetInvalidTitle')}</h3>
           <p>{t('auth.resetInvalidDesc')}</p>

@@ -13,6 +13,8 @@ export const AUTH_ROUTES = {
 
 type AuthIntent = 'signup' | 'recovery' | 'oauth';
 
+const PASSWORD_RECOVERY_INTENT_KEY = 'grainfolio:password-recovery-user-id';
+
 const buildCallbackUrl = (intent: AuthIntent, nextPath: string) => {
   const callbackUrl = new URL(AUTH_ROUTES.callback, window.location.origin);
   callbackUrl.searchParams.set('auth_intent', intent);
@@ -27,6 +29,20 @@ export const buildSignupEmailRedirectUrl = () => (
 export const buildPasswordRecoveryRedirectUrl = () => (
   buildCallbackUrl('recovery', AUTH_ROUTES.resetPassword)
 );
+
+// The marker is only a client-side route guard. Supabase owns the actual
+// recovery-token validation, session lifetime, and password update permission.
+export const markPasswordRecoveryIntent = (userId: string) => {
+  window.sessionStorage.setItem(PASSWORD_RECOVERY_INTENT_KEY, userId);
+};
+
+export const hasPasswordRecoveryIntent = (userId: string) => (
+  window.sessionStorage.getItem(PASSWORD_RECOVERY_INTENT_KEY) === userId
+);
+
+export const clearPasswordRecoveryIntent = () => {
+  window.sessionStorage.removeItem(PASSWORD_RECOVERY_INTENT_KEY);
+};
 
 export const buildOAuthRedirectUrl = () => (
   buildCallbackUrl('oauth', '/dashboard')

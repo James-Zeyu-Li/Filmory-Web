@@ -23,6 +23,7 @@ import {
 } from '../services/userProfile';
 import { ensureTrialDefaultTheme } from '../services/themePreference';
 import { migrateTrialDataToUser } from '../services/trialDataMigration';
+import { clearPasswordRecoveryIntent } from '../services/authFlow';
 
 const DEV_AUTH_STORAGE_KEY = 'grainfolio_dev_auth_bypass';
 const TRIAL_AUTH_STORAGE_KEY = 'grainfolio_trial_auth';
@@ -38,6 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearLocalAuthState = useCallback(() => {
     SyncService.stop();
+    clearPasswordRecoveryIntent();
     setUser(null);
     setSession(null);
     setAuthMode('supabase');

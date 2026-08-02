@@ -5,9 +5,11 @@ import { supabase } from '../../services/supabaseClient';
 import {
   AUTH_ROUTES,
   buildLoginUrl,
+  clearPasswordRecoveryIntent,
   getAuthErrorMessage,
   getAuthErrorTranslationKey,
   getAuthSuccessRedirectPath,
+  markPasswordRecoveryIntent,
   readAuthCallbackParams,
 } from '../../services/authFlow';
 import { AuthShell } from './AuthShell';
@@ -27,6 +29,7 @@ export const AuthCallbackView: React.FC = () => {
         code,
         accessToken,
         refreshToken,
+        intent,
         errorDescription,
         nextPath,
       } = readAuthCallbackParams(window.location.href);
@@ -40,19 +43,49 @@ export const AuthCallbackView: React.FC = () => {
       }
 
       try {
+        let recoveryUserId: string | undefined;
+        const hasCallbackCredential = Boolean(code || (accessToken && refreshToken));
+
+        if (intent === 'recovery' && !hasCallbackCredential) {
+          throw new Error('Authentication link expired');
+        }
+
         if (accessToken && refreshToken) {
-          const { error } = await supabase.auth.setSession({
+          const { data, error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
           });
           if (error) throw error;
+          recoveryUserId = data.session?.user.id;
         } else if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) throw error;
+          recoveryUserId = data.session?.user.id;
+        }
+
+        if (intent === 'recovery') {
+          if (!recoveryUserId) {
+            const { data, error } = await supabase.auth.getSession();
+            if (error) throw error;
+            recoveryUserId = data.session?.user.id;
+          }
+
+          if (!recoveryUserId) {
+            throw new Error('Authentication link expired');
+          }
+
+          markPasswordRecoveryIntent(recoveryUserId);
+        } else {
+          clearPasswordRecoveryIntent();
         }
 
         if (!cancelled) {
-          navigate(getAuthSuccessRedirectPath(nextPath), { replace: true });
+          navigate(
+            intent === 'recovery'
+              ? AUTH_ROUTES.resetPassword
+              : getAuthSuccessRedirectPath(nextPath),
+            { replace: true }
+          );
         }
       } catch (error) {
         if (!cancelled) {

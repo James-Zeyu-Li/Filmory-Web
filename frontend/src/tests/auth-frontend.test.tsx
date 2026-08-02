@@ -11,6 +11,7 @@ import {
   AUTH_ROUTES,
   buildPasswordRecoveryRedirectUrl,
   buildSignupEmailRedirectUrl,
+  hasPasswordRecoveryIntent,
 } from '../services/authFlow';
 
 const mockUseAuthState = {
@@ -38,6 +39,7 @@ const mockedAuth = supabase.auth as unknown as {
   resend: ReturnType<typeof vi.fn>;
   setSession: ReturnType<typeof vi.fn>;
   exchangeCodeForSession: ReturnType<typeof vi.fn>;
+  getSession: ReturnType<typeof vi.fn>;
 };
 
 describe('Auth frontend closure', () => {
@@ -53,6 +55,8 @@ describe('Auth frontend closure', () => {
     mockedAuth.resend.mockClear();
     mockedAuth.setSession.mockClear();
     mockedAuth.exchangeCodeForSession.mockClear();
+    mockedAuth.getSession.mockClear();
+    window.sessionStorage.clear();
 
     mockedAuth.signUp.mockResolvedValue({ data: {}, error: null });
     mockedAuth.signInWithPassword.mockResolvedValue({ data: {}, error: null });
@@ -62,6 +66,7 @@ describe('Auth frontend closure', () => {
     mockedAuth.resend.mockResolvedValue({ data: {}, error: null });
     mockedAuth.setSession.mockResolvedValue({ data: { session: null }, error: null });
     mockedAuth.exchangeCodeForSession.mockResolvedValue({ data: { session: null }, error: null });
+    mockedAuth.getSession.mockResolvedValue({ data: { session: null }, error: null });
   });
 
   it('register flow sends signup email redirect and navigates to check-email notice', async () => {
@@ -227,7 +232,7 @@ describe('Auth frontend closure', () => {
     });
   });
 
-  it('reset password page shows invalid-state notice when no recovery session exists', () => {
+  it('reset password page shows invalid-state notice when no recovery session exists', async () => {
     render(
       <MemoryRouter initialEntries={[AUTH_ROUTES.resetPassword]}>
         <Routes>
@@ -236,13 +241,16 @@ describe('Auth frontend closure', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText('链接已失效或不可用')).toBeInTheDocument();
+    expect(await screen.findByText('链接已失效或不可用')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '重新获取重设密码邮件' })).toBeInTheDocument();
   });
 
   it('reset password updates password and logs out when a recovery session is present', async () => {
-    mockUseAuthState.user = { id: 'user-1', email: 'recover@grainfolio.app' } as never;
-    mockUseAuthState.session = { user: { id: 'user-1', email: 'recover@grainfolio.app' } } as never;
+    mockedAuth.getSession.mockResolvedValue({
+      data: { session: { user: { id: 'user-1', email: 'recover@grainfolio.app' } } },
+      error: null,
+    });
+    window.sessionStorage.setItem('grainfolio:password-recovery-user-id', 'user-1');
 
     render(
       <MemoryRouter initialEntries={[AUTH_ROUTES.resetPassword]}>
@@ -252,6 +260,7 @@ describe('Auth frontend closure', () => {
       </MemoryRouter>
     );
 
+    await screen.findByLabelText('新密码');
     fireEvent.change(screen.getByLabelText('新密码'), { target: { value: 'Newpassword1' } });
     fireEvent.change(screen.getByLabelText('确认新密码'), { target: { value: 'Newpassword1' } });
     fireEvent.click(screen.getByRole('button', { name: '确认更新密码' }));
@@ -259,6 +268,7 @@ describe('Auth frontend closure', () => {
     await waitFor(() => {
       expect(mockedAuth.updateUser).toHaveBeenCalledWith({ password: 'Newpassword1' });
       expect(mockUseAuthState.logout).toHaveBeenCalled();
+      expect(hasPasswordRecoveryIntent('user-1')).toBe(false);
     });
 
     await waitFor(() => {
@@ -267,8 +277,11 @@ describe('Auth frontend closure', () => {
   });
 
   it('reset password rejects weak password before updateUser', async () => {
-    mockUseAuthState.user = { id: 'user-1', email: 'recover@grainfolio.app' } as never;
-    mockUseAuthState.session = { user: { id: 'user-1', email: 'recover@grainfolio.app' } } as never;
+    mockedAuth.getSession.mockResolvedValue({
+      data: { session: { user: { id: 'user-1', email: 'recover@grainfolio.app' } } },
+      error: null,
+    });
+    window.sessionStorage.setItem('grainfolio:password-recovery-user-id', 'user-1');
 
     render(
       <MemoryRouter initialEntries={[AUTH_ROUTES.resetPassword]}>
@@ -278,6 +291,7 @@ describe('Auth frontend closure', () => {
       </MemoryRouter>
     );
 
+    await screen.findByLabelText('新密码');
     fireEvent.change(screen.getByLabelText('新密码'), { target: { value: 'weakpass' } });
     fireEvent.change(screen.getByLabelText('确认新密码'), { target: { value: 'weakpass' } });
     fireEvent.click(screen.getByRole('button', { name: '确认更新密码' }));
@@ -290,6 +304,10 @@ describe('Auth frontend closure', () => {
   });
 
   it('auth callback exchanges code and redirects to the next path', async () => {
+    mockedAuth.exchangeCodeForSession.mockResolvedValue({
+      data: { session: { user: { id: 'user-1' } } },
+      error: null,
+    });
     window.history.pushState({}, '', `${AUTH_ROUTES.callback}?code=test-code&next=${encodeURIComponent(AUTH_ROUTES.resetPassword)}&auth_intent=recovery`);
 
     render(
@@ -308,9 +326,14 @@ describe('Auth frontend closure', () => {
     await waitFor(() => {
       expect(screen.getByText('Reset Route Reached')).toBeInTheDocument();
     });
+    expect(hasPasswordRecoveryIntent('user-1')).toBe(true);
   });
 
   it('auth callback stores implicit recovery session and routes to reset password', async () => {
+    mockedAuth.setSession.mockResolvedValue({
+      data: { session: { user: { id: 'user-1' } } },
+      error: null,
+    });
     window.history.pushState({}, '', `${AUTH_ROUTES.callback}#access_token=access-token&refresh_token=refresh-token&type=recovery`);
 
     render(
@@ -334,6 +357,24 @@ describe('Auth frontend closure', () => {
     await waitFor(() => {
       expect(screen.getByText('Reset Route Reached')).toBeInTheDocument();
     });
+    expect(hasPasswordRecoveryIntent('user-1')).toBe(true);
+  });
+
+  it('rejects a recovery callback without a Supabase callback credential', async () => {
+    window.history.pushState({}, '', `${AUTH_ROUTES.callback}?auth_intent=recovery`);
+
+    render(
+      <BrowserRouter>
+        <Routes>
+          <Route path={AUTH_ROUTES.callback} element={<AuthCallbackView />} />
+        </Routes>
+      </BrowserRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('认证链接已过期，请重新发起邮箱验证或密码重设流程。')).toBeInTheDocument();
+    });
+    expect(mockedAuth.getSession).not.toHaveBeenCalled();
   });
 
   it('auth callback stores implicit signup session and routes to verified status', async () => {
