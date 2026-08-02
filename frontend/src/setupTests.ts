@@ -38,6 +38,8 @@ vi.mock('./contexts/useAuth', () => ({
     user: { id: 'mock-user-id', email: 'test@grainfolio.app' },
     session: null,
     isLoading: false,
+    isAuthTransitioning: false,
+    authTransitionMode: null,
     authMode: 'supabase',
     accountRole: 'user',
     isAdmin: false,
@@ -46,7 +48,8 @@ vi.mock('./contexts/useAuth', () => ({
     startTrial: vi.fn(),
     signInMock: vi.fn(),
     logout: vi.fn(),
-    clearLocalAuthState: vi.fn()
+    clearLocalAuthState: vi.fn(),
+    completeSignedOutTransition: vi.fn()
   })
 }));
 

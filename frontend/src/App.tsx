@@ -21,6 +21,7 @@ import { FeedbackProvider } from './contexts/FeedbackContext';
 import { CurrencyProvider } from './contexts/CurrencyContext';
 import { TrialGateProvider } from './contexts/TrialGateContext';
 import { useAuth } from './contexts/useAuth';
+import { useLanguage } from './contexts/useLanguage';
 import { LoginView } from './views/Auth/LoginView';
 import { ForgotPasswordView } from './views/Auth/ForgotPasswordView';
 import { ResetPasswordView } from './views/Auth/ResetPasswordView';
@@ -33,7 +34,8 @@ import './App.css';
 function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, authMode, isLoading: authLoading } = useAuth();
+  const { user, authMode, isLoading: authLoading, isAuthTransitioning, authTransitionMode } = useAuth();
+  const { t } = useLanguage();
   const routeState = location.state as { skipPageTransition?: boolean } | null;
   const disablePageTransition = Boolean(routeState?.skipPageTransition);
   const userId = user?.id;
@@ -100,12 +102,21 @@ function AppContent() {
     };
   }, [authMode, userId]);
 
-  if (authLoading || isLoading) {
+  const loadingMessage = authTransitionMode === 'deletingAccount'
+    ? t('app.deletingAccount')
+    : authTransitionMode === 'loggingOut'
+      ? t('app.signingOut')
+      : t('app.openingWorkspace');
+
+  if (authLoading || isLoading || isAuthTransitioning) {
     return (
       <div className="app-loading-screen">
         <Film className="loading-logo animate-pulse" size={64} />
         <h2>Grainfolio</h2>
-        <span>正在打开你的胶片记录...</span>
+        <span>{loadingMessage}</span>
+        {authTransitionMode === 'deletingAccount' && (
+          <p className="app-loading-note">{t('app.deleteFarewell')}</p>
+        )}
       </div>
     );
   }

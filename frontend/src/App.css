@@ -28,6 +28,14 @@
   color: var(--text-secondary);
 }
 
+.app-loading-note {
+  max-width: 320px;
+  margin: -4px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-tertiary);
+}
+
 /* Pulse animation utility */
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;

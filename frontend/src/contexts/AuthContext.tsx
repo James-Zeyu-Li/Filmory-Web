@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../services/supabaseClient';
 import { AuthContext } from './authContextCore';
@@ -16,6 +16,7 @@ import {
 import { TRIAL_USER_ID } from '../services/trialPolicy';
 import { SyncService } from '../services/syncService';
 import { clearWorkspaceTabPreferences } from '../services/workspacePreferences';
+import type { AuthTransitionMode } from './authContextCore';
 import {
   buildLocalUserProfile,
   resolveUserProfileDisplayName,
@@ -32,6 +33,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authMode, setAuthMode] = useState<AuthMode>('supabase');
   const [accountRole, setAccountRole] = useState<AccountRole>('user');
   const [isLoading, setIsLoading] = useState(true);
+  const [authTransitionMode, setAuthTransitionMode] = useState<AuthTransitionMode | null>(null);
+  const authTransitionTimerRef = useRef<number | null>(null);
 
   const clearLocalAuthState = useCallback(() => {
     SyncService.stop();
@@ -44,6 +47,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem(DEV_AUTH_STORAGE_KEY);
     localStorage.removeItem(TRIAL_AUTH_STORAGE_KEY);
   }, []);
+
+  const clearAuthTransitionTimer = useCallback(() => {
+    if (authTransitionTimerRef.current !== null) {
+      window.clearTimeout(authTransitionTimerRef.current);
+      authTransitionTimerRef.current = null;
+    }
+  }, []);
+
+  const clearAuthTransitionState = useCallback(() => {
+    clearAuthTransitionTimer();
+    setAuthTransitionMode(null);
+  }, [clearAuthTransitionTimer]);
+
+  const completeSignedOutTransition = useCallback((mode: AuthTransitionMode) => {
+    clearAuthTransitionTimer();
+    setAuthTransitionMode(mode);
+    clearLocalAuthState();
+    authTransitionTimerRef.current = window.setTimeout(() => {
+      setAuthTransitionMode(null);
+      authTransitionTimerRef.current = null;
+    }, mode === 'deletingAccount' ? 1400 : 240);
+  }, [clearAuthTransitionTimer, clearLocalAuthState]);
 
   const persistLocalUserProfile = useCallback(async (
     nextUser: User,
@@ -119,6 +144,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAccountRole(nextRole);
 
     if (nextUser) {
+      clearAuthTransitionState();
+    }
+
+    if (nextUser) {
       await persistLocalUserProfile(nextUser, nextRole, nextMode);
     }
 
@@ -134,7 +163,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem(TRIAL_AUTH_STORAGE_KEY);
     }
     setIsLoading(false);
-  }, [persistLocalUserProfile, resolveAccountRole]);
+  }, [clearAuthTransitionState, persistLocalUserProfile, resolveAccountRole]);
 
   useEffect(() => {
     // Check active session on mount.
@@ -182,14 +211,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     return () => {
+      clearAuthTransitionTimer();
       subscription.unsubscribe();
     };
-  }, [applyAuthState]);
+  }, [applyAuthState, clearAuthTransitionTimer]);
 
   // Temporary mock signin for development if Supabase keys aren't set yet
   const signInMock = () => {
     if (!isDevBypassEnabled()) return;
     const mockUser = createDevBypassUser();
+    clearAuthTransitionState();
     localStorage.setItem(DEV_AUTH_STORAGE_KEY, 'true');
     localStorage.removeItem(TRIAL_AUTH_STORAGE_KEY);
     localStorage.setItem('grainfolio_user_id', mockUser.id);
@@ -206,6 +237,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const startTrial = () => {
     const trialUser = createTrialUser();
     ensureTrialDefaultTheme();
+    clearAuthTransitionState();
     localStorage.setItem(TRIAL_AUTH_STORAGE_KEY, 'true');
     localStorage.removeItem(DEV_AUTH_STORAGE_KEY);
     localStorage.setItem('grainfolio_user_id', trialUser.id);
@@ -220,12 +252,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    clearAuthTransitionTimer();
+    setAuthTransitionMode('loggingOut');
     try {
       await supabase.auth.signOut();
     } catch (error) {
       console.warn("Real signout failed, clearing local auth state", error);
     } finally {
-      clearLocalAuthState();
+      completeSignedOutTransition('loggingOut');
     }
   };
 
@@ -233,6 +267,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     session,
     isLoading,
+    isAuthTransitioning: authTransitionMode !== null,
+    authTransitionMode,
     authMode,
     accountRole,
     isAdmin: accountRole === 'admin',
@@ -242,6 +278,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signInMock,
     logout,
     clearLocalAuthState,
+    completeSignedOutTransition,
   };
 
   return (

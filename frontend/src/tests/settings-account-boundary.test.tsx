@@ -14,6 +14,7 @@ const mockAuthState = {
   user: { id: 'user-1', email: 'user@grainfolio.app' },
   logout: vi.fn(),
   clearLocalAuthState: vi.fn(),
+  completeSignedOutTransition: vi.fn(),
   accountRole: 'user' as const,
   isDevBypass: false,
   isAdmin: false,
@@ -75,6 +76,7 @@ describe('SettingsView account boundary', () => {
     mockSetEnableFilmMode.mockReset();
     mockAuthState.logout.mockReset();
     mockAuthState.clearLocalAuthState.mockReset();
+    mockAuthState.completeSignedOutTransition.mockReset();
     mockedSupabase.rpc.mockClear();
     mockedSupabase.rpc.mockResolvedValue({ data: null, error: null });
   });
@@ -104,14 +106,14 @@ describe('SettingsView account boundary', () => {
     );
 
     expect(screen.getByText('当前顺序')).toBeInTheDocument();
-    expect(screen.queryByText('显示项目集页签')).not.toBeInTheDocument();
+    expect(screen.queryByText('显示项目集与独立记录视图')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '展开' }));
 
-    expect(screen.getByText('显示项目集页签')).toBeInTheDocument();
+    expect(screen.getByText('显示项目集与独立记录视图')).toBeInTheDocument();
   });
 
-  it('clears local auth state after account deletion without calling logout again', async () => {
+  it('runs the signed-out transition after account deletion without calling logout again', async () => {
     mockConfirm.mockResolvedValue(true);
 
     render(
@@ -130,7 +132,7 @@ describe('SettingsView account boundary', () => {
 
     await waitFor(() => {
       expect(mockedSupabase.rpc).toHaveBeenCalledWith('delete_user');
-      expect(mockAuthState.clearLocalAuthState).toHaveBeenCalled();
+      expect(mockAuthState.completeSignedOutTransition).toHaveBeenCalledWith('deletingAccount');
     });
 
     expect(mockAuthState.logout).not.toHaveBeenCalled();

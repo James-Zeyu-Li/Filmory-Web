@@ -28,7 +28,7 @@ interface SettingsViewProps {
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setEnableFilmMode, onClose }) => {
-  const { user, logout, clearLocalAuthState, accountRole, isDevBypass, isAdmin } = useAuth();
+  const { user, logout, completeSignedOutTransition, accountRole, isDevBypass, isAdmin } = useAuth();
   const { theme, setTheme } = useTheme();
   const { currency, setCurrency, currencySymbol } = useCurrency();
   const { language, setLanguage, t } = useLanguage();
@@ -55,7 +55,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
     loose: t('settings.rollTabLoose'),
   };
   const visibleRollTabSummary = rollsTabOrder
-    .filter(tab => tab !== 'collections' || !enableFilmMode || rollsCollectionsEnabled)
+    .filter(tab => tab === 'all' || !enableFilmMode || rollsCollectionsEnabled)
     .map(tab => rollsTabLabels[tab])
     .join(' / ');
 
@@ -136,10 +136,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
           if (error) throw error;
         }
         
-        // delete_user removes the auth user, so the current token may already be invalid.
-        // Clear local state directly instead of calling signOut and producing a 403 logout.
-        clearLocalAuthState();
-        window.location.reload();
+        completeSignedOutTransition('deletingAccount');
+        onClose();
       } catch (error) {
         const message = error instanceof Error ? error.message : t('settings.unknownError');
         notify({
@@ -392,7 +390,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
 	                <div className="settings-rolls-order-list">
 	                  {rollsTabOrder.map((tab, index) => {
 	                    const collectionsLocked = tab === 'collections' && !enableFilmMode;
-	                    const collectionsHidden = tab === 'collections' && enableFilmMode && !rollsCollectionsEnabled;
+	                    const collectionsHidden = enableFilmMode && !rollsCollectionsEnabled && (tab === 'collections' || tab === 'loose');
 	                    return (
 	                      <div key={tab} className={`settings-rolls-order-item ${collectionsLocked ? 'locked' : ''} ${collectionsHidden ? 'hidden-tab' : ''}`}>
 	                        <div className="settings-rolls-order-copy">
