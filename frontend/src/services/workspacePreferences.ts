@@ -6,7 +6,7 @@ export const WORKSPACE_PREFERENCES_CHANGED_EVENT = 'grainfolio:workspace-prefere
 
 export type RollsTabId = 'collections' | 'all' | 'loose';
 
-export const DEFAULT_ROLLS_TAB_ORDER: RollsTabId[] = ['collections', 'all', 'loose'];
+export const DEFAULT_ROLLS_TAB_ORDER: RollsTabId[] = ['all', 'collections', 'loose'];
 
 const WORKSPACE_TAB_PREFERENCE_KEYS = [
   GEAR_SUB_TAB_KEY,
@@ -62,5 +62,9 @@ export const writeRollsCollectionsTabEnabled = (enabled: boolean) => {
 export const getVisibleRollsTabOrder = (enableFilmMode: boolean): RollsTabId[] => {
   const order = readRollsTabOrder();
   const collectionsVisible = !enableFilmMode || readRollsCollectionsTabEnabled();
-  return order.filter(tab => tab !== 'collections' || collectionsVisible);
+  return order.filter(tab => {
+    if (tab === 'all') return true;
+    if (!collectionsVisible) return false;
+    return true;
+  });
 };

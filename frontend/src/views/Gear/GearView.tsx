@@ -36,6 +36,7 @@ interface GearViewProps {
 }
 
 type SubTab = 'cameras' | 'lenses' | 'filmStocks' | 'otherEquipments';
+type AvatarActionEntity = 'cameras' | 'lenses' | 'filmStocks' | 'otherEquipments';
 
 const isSubTab = (value: string | null): value is SubTab => {
   return value === 'cameras' || value === 'lenses' || value === 'filmStocks' || value === 'otherEquipments';
@@ -51,6 +52,16 @@ const CAMERA_SYSTEM_PRESETS = [
 ];
 
 const COMMON_FILM_BACK_NAMES = ['A12 Back', 'A16 Back', '6x7 120 Back', '6x6 Back', '6x4.5 Back', 'Polaroid Back'];
+
+const createDefaultNewFilmDraft = (format: '135' | '120' = '135'): Partial<FilmStock> => ({
+  brand: '',
+  name: '',
+  iso: 400,
+  colorType: 'color',
+  format,
+  stockCount: 1,
+  pricePerRoll: undefined,
+});
 
 const getPlaceholderText = (name: string): string => {
   const trimmed = name.trim();
@@ -132,13 +143,13 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
   const [cameraBackNames, setCameraBackNames] = useState<string[]>(['Back 1']);
   const [newFilmBackName, setNewFilmBackName] = useState('');
   const [newLens, setNewLens] = useState<Partial<Lens>>({ name: '', focalLength: 50, maxAperture: 'f/1.8', type: 'prime' });
-  const [newFilm, setNewFilm] = useState<Partial<FilmStock>>({ brand: '', name: '', iso: 400, colorType: 'color', format: '135', stockCount: 0 });
+  const [newFilm, setNewFilm] = useState<Partial<FilmStock>>(createDefaultNewFilmDraft());
   const [newEquipment, setNewEquipment] = useState<Partial<OtherEquipment>>({ name: '', type: 'chemical', notes: '', purchaseDate: undefined, expiryDate: undefined });
   const [nowTimestamp] = useState(Date.now);
 
   // Upload and Lightbox states
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [activeUploadEntity, setActiveUploadEntity] = useState<{ id: string, type: 'cameras' | 'lenses' | 'filmStocks' | 'otherEquipments' } | null>(null);
+  const [activeUploadEntity, setActiveUploadEntity] = useState<{ id: string, type: AvatarActionEntity } | null>(null);
   const [uploadingEntityId, setUploadingEntityId] = useState<string | null>(null);
   const [previewAvatarUrl, setPreviewAvatarUrl] = useState<string | null>(null);
 
@@ -170,7 +181,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
   const getAvatarFullUrl = (url?: string | null) => {
     if (!url) return null;
     const apiBaseUrl = localStorage.getItem('grainfolio_api_base_url') || 'http://localhost:8080';
-    return (url.startsWith('http') || url.startsWith('data:')) ? url : `${apiBaseUrl}${url}`;
+    return (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) ? url : `${apiBaseUrl}${url}`;
   };
 
   useEffect(() => {
@@ -183,12 +194,26 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const triggerAvatarUpload = (id: string, type: 'cameras' | 'lenses' | 'filmStocks' | 'otherEquipments') => {
+  const triggerAvatarUpload = (id: string, type: AvatarActionEntity) => {
     setActiveUploadEntity({ id, type });
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
       fileInputRef.current.click();
     }
+  };
+
+  const openAvatarPreview = (avatarUrl?: string | null) => {
+    const avatarFullUrl = getAvatarFullUrl(avatarUrl);
+    if (avatarFullUrl) {
+      setPreviewAvatarUrl(avatarFullUrl);
+    }
+  };
+
+  const getAvatarUploadTitle = (type: AvatarActionEntity) => {
+    if (type === 'cameras') return t('gear.uploadCameraCover');
+    if (type === 'lenses') return t('gear.uploadLensCover');
+    if (type === 'filmStocks') return t('gear.uploadFilmCover');
+    return t('gear.uploadCover');
   };
 
   const updateEditingAvatarState = (
@@ -833,7 +858,10 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
     await db.transaction('rw', db.filmStocks, db.ledgerTransactions, async () => {
       const currentUserId = user?.id || 'offline';
-      const stockCount = Number(newFilm.stockCount) || 0;
+      const parsedStockCount = Number(newFilm.stockCount);
+      const stockCount = editingFilmId
+        ? (Number.isFinite(parsedStockCount) ? Math.max(0, parsedStockCount) : 0)
+        : (Number.isFinite(parsedStockCount) ? Math.max(1, parsedStockCount) : 1);
       const pricePerRoll = newFilm.pricePerRoll ? Number(newFilm.pricePerRoll) : undefined;
 
       if (editingFilmId) {
@@ -907,7 +935,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
       }
     });
 
-    setNewFilm({ brand: '', name: '', iso: 400, colorType: 'color', format: '135', stockCount: 0, pricePerRoll: undefined });
+    setNewFilm(createDefaultNewFilmDraft());
     setFilmDictSearch('');
     setIsDictDropdownOpen(false);
     setFilmFormatFilter('135');
@@ -1181,19 +1209,29 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
             <button
               type="button"
               className="secondary"
-              onClick={() => triggerAvatarUpload(id, type)}
+              onClick={() => avatarFullUrl ? openAvatarPreview(avatarFullUrl) : triggerAvatarUpload(id, type)}
               disabled={uploadingEntityId === id}
             >
-              {uploadingEntityId === id ? t('common.loading') : t('gear.changeCover')}
+              {uploadingEntityId === id ? t('common.loading') : avatarFullUrl ? t('gear.viewCover') : t('gear.uploadCover')}
             </button>
             {avatarFullUrl && (
-              <button
-                type="button"
-                className="danger"
-                onClick={() => handleRemoveAvatar(id, type, label)}
-              >
-                {t('gear.removeCover')}
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => triggerAvatarUpload(id, type)}
+                  disabled={uploadingEntityId === id}
+                >
+                  {t('gear.changeCover')}
+                </button>
+                <button
+                  type="button"
+                  className="danger"
+                  onClick={() => handleRemoveAvatar(id, type, label)}
+                >
+                  {t('gear.removeCover')}
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -1260,7 +1298,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
           {subTab === 'filmStocks' && enableFilmMode && (
             <button className="primary" onClick={() => {
               setEditingFilmId(null);
-              setNewFilm({ brand: '', name: '', iso: 400, colorType: 'color', format: '135', stockCount: 0 });
+              setNewFilm(createDefaultNewFilmDraft());
               setFilmDictSearch('');
               setIsDictDropdownOpen(false);
               setFilmFormatFilter('135');
@@ -1430,14 +1468,21 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                       <button
                         type="button"
                         className="camera-avatar-upload-overlay"
-                        onClick={(e) => { e.stopPropagation(); triggerAvatarUpload(camera.id!, 'cameras'); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (avatarFullUrl) {
+                            openAvatarPreview(avatarFullUrl);
+                            return;
+                          }
+                          triggerAvatarUpload(camera.id!, 'cameras');
+                        }}
                         disabled={uploadingEntityId === camera.id}
-                        title={t('gear.uploadCameraCover')}
+                        title={avatarFullUrl ? t('gear.previewCover') : getAvatarUploadTitle('cameras')}
                       >
                         {uploadingEntityId === camera.id ? (
                           <span className="avatar-loading-spinner" />
                         ) : (
-                          <Upload size={14} />
+                          avatarFullUrl ? <Search size={14} /> : <Upload size={14} />
                         )}
                       </button>
                     </div>
@@ -1499,15 +1544,18 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                 />
               </div>
             ) : (
-              displayLenses.map(lens => (
+              displayLenses.map(lens => {
+                const avatarFullUrl = getAvatarFullUrl(lens.avatarUrl);
+
+                return (
                 <div key={lens.id} className="gear-card lens-card-horizontal" onClick={(e) => { e.stopPropagation(); openEditLens(lens); }} style={{ cursor: "pointer" }}>
                   <div className="camera-avatar-container" style={{ width: '80px', height: '80px' }}>
-                    {getAvatarFullUrl(lens.avatarUrl) ? (
+                    {avatarFullUrl ? (
                       <img
-                        src={getAvatarFullUrl(lens.avatarUrl)!}
+                        src={avatarFullUrl}
                         alt={lens.name}
                         className="camera-avatar-img"
-                        onClick={(e) => { e.stopPropagation(); setPreviewAvatarUrl(getAvatarFullUrl(lens.avatarUrl)!); }}
+                        onClick={(e) => { e.stopPropagation(); setPreviewAvatarUrl(avatarFullUrl); }}
                         title={t('gear.previewCover')}
                         style={{ objectFit: 'cover' }}
                       />
@@ -1520,14 +1568,21 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                     <button
                       type="button"
                       className="camera-avatar-upload-overlay"
-                      onClick={(e) => { e.stopPropagation(); triggerAvatarUpload(lens.id!, 'lenses'); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (avatarFullUrl) {
+                          openAvatarPreview(avatarFullUrl);
+                          return;
+                        }
+                        triggerAvatarUpload(lens.id!, 'lenses');
+                      }}
                       disabled={uploadingEntityId === lens.id}
-                      title={t('gear.uploadLensCover')}
+                      title={avatarFullUrl ? t('gear.previewCover') : getAvatarUploadTitle('lenses')}
                     >
                       {uploadingEntityId === lens.id ? (
                         <span className="avatar-loading-spinner" />
                       ) : (
-                        <Upload size={14} />
+                        avatarFullUrl ? <Search size={14} /> : <Upload size={14} />
                       )}
                     </button>
                   </div>
@@ -1548,7 +1603,8 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                     </div>
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
         )}
@@ -1564,7 +1620,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                   description={t('gear.noFilmDesc')}
                   action={<button className="primary" onClick={() => {
                     setEditingFilmId(null);
-                    setNewFilm({ brand: '', name: '', iso: 400, colorType: 'color', format: '135', stockCount: 0 });
+                    setNewFilm(createDefaultNewFilmDraft());
                     setFilmDictSearch('');
                     setIsDictDropdownOpen(false);
                     setFilmFormatFilter('135');
@@ -1585,15 +1641,18 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                 />
               </div>
             ) : (
-              displayFilms.map(film => (
+              displayFilms.map(film => {
+                const avatarFullUrl = getAvatarFullUrl(film.avatarUrl);
+
+                return (
                 <div key={film.id} className="gear-card lens-card-horizontal" onClick={() => openEditFilm(film)} style={{ cursor: "pointer" }}>
                   <div className="camera-avatar-container" style={{ width: '80px', height: '80px' }}>
-                    {getAvatarFullUrl(film.avatarUrl) ? (
+                    {avatarFullUrl ? (
                       <img
-                        src={getAvatarFullUrl(film.avatarUrl)!}
+                        src={avatarFullUrl}
                         alt={film.name}
                         className="camera-avatar-img"
-                        onClick={(e) => { e.stopPropagation(); setPreviewAvatarUrl(getAvatarFullUrl(film.avatarUrl)!); }}
+                        onClick={(e) => { e.stopPropagation(); setPreviewAvatarUrl(avatarFullUrl); }}
                         title={t('gear.previewCover')}
                         style={{ objectFit: 'cover' }}
                       />
@@ -1606,14 +1665,21 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                     <button
                       type="button"
                       className="camera-avatar-upload-overlay"
-                      onClick={(e) => { e.stopPropagation(); triggerAvatarUpload(film.id!, 'filmStocks'); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (avatarFullUrl) {
+                          openAvatarPreview(avatarFullUrl);
+                          return;
+                        }
+                        triggerAvatarUpload(film.id!, 'filmStocks');
+                      }}
                       disabled={uploadingEntityId === film.id}
-                      title={t('gear.uploadFilmCover')}
+                      title={avatarFullUrl ? t('gear.previewCover') : getAvatarUploadTitle('filmStocks')}
                     >
                       {uploadingEntityId === film.id ? (
                         <span className="avatar-loading-spinner" />
                       ) : (
-                        <Upload size={14} />
+                        avatarFullUrl ? <Search size={14} /> : <Upload size={14} />
                       )}
                     </button>
                   </div>
@@ -1658,7 +1724,8 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                     </div>
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
         )}
@@ -2533,7 +2600,11 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                     type="button"
                     className="secondary btn-sm"
                     onClick={() => {
-                      setNewFilm({ brand: '', name: '', iso: 400, colorType: 'color', format: filmFormatFilter, stockCount: newFilm.stockCount, pricePerRoll: newFilm.pricePerRoll });
+                      setNewFilm({
+                        ...createDefaultNewFilmDraft(filmFormatFilter),
+                        stockCount: newFilm.stockCount,
+                        pricePerRoll: newFilm.pricePerRoll,
+                      });
                       setSelectedFilmBrand('');
                       setFilmBrandSearch('');
                       setFilmModelSearch('');
@@ -2742,12 +2813,12 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
             </div>
           )}
           <div className="form-group">
-            <label>{t('gear.initialStock')}</label>
+            <label>{editingFilmId ? t('gear.stockCount') : t('gear.addStockCount')}</label>
             <input
               type="number"
               className="form-control"
-              min="0"
-              placeholder={t('gear.initialStockPlaceholder')}
+              min={editingFilmId ? '0' : '1'}
+              placeholder={editingFilmId ? t('gear.stockCountPlaceholder') : t('gear.addStockCountPlaceholder')}
               value={newFilm.stockCount === undefined ? '' : newFilm.stockCount}
               onChange={e => setNewFilm({...newFilm, stockCount: e.target.value === '' ? undefined : parseInt(e.target.value, 10)})}
               onKeyDown={handleKeyDown}

@@ -21,6 +21,7 @@ import { usePhotoUrlMap } from '../../hooks/usePhotoUrlMap';
 import { EmptyState } from '../../components/EmptyState';
 import { Modal } from '../../components/Modal';
 import { Drawer } from '../../components/Drawer';
+import { Button } from '../../components/ui/Button';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getCompatibleFilmBacks, getLoadedFilmBackIds, isInterchangeable120Camera } from '../../services/filmBackService';
 import {
@@ -55,7 +56,8 @@ const getDefaultLibraryView = (
   shouldOpenAllRolls: boolean
 ): RollsTabId => {
   if (shouldOpenAllRolls) return visibleTabOrder.includes('all') ? 'all' : visibleTabOrder[0];
-  return visibleTabOrder.includes(savedView as RollsTabId) ? savedView as RollsTabId : visibleTabOrder[0];
+  if (visibleTabOrder.includes(savedView as RollsTabId)) return savedView as RollsTabId;
+  return visibleTabOrder.includes('all') ? 'all' : visibleTabOrder[0];
 };
 
 export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
@@ -928,6 +930,15 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
 
 
   const renderedRollCards = processedRolls.map(renderRollCard);
+  const renderNewRollEmptyAction = () => (
+    <Button
+      variant="primary"
+      icon={<Plus size={16} />}
+      onClick={() => setIsNewRollModalOpen(true)}
+    >
+      {t('rolls.newRoll')}
+    </Button>
+  );
 
   return (
     <div className="main-content" style={{ width: '100%', maxWidth: 'none', flex: 1 }}>
@@ -1123,7 +1134,8 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                     viewMode={viewLayout}
                     onCollectionSelect={(id) => {
                       setActiveCollectionId(id);
-                    }} 
+                    }}
+                    onCreateRoll={() => setIsNewRollModalOpen(true)}
                   />
                 </motion.div>
               )}
@@ -1140,7 +1152,12 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                     
                       {processedRolls.length === 0 ? (
                         <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
-                          <EmptyState icon={Film} title={t('rolls.noRolls')} description={t('rolls.noRollsDesc')} />
+                          <EmptyState
+                            icon={Film}
+                            title={t('rolls.noRolls')}
+                            description={t('rolls.noRollsDesc')}
+                            action={renderNewRollEmptyAction()}
+                          />
                         </motion.div>
                       ) : viewLayout === 'grid' ? (
                         <motion.div key="grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }} className="rolls-grid">
@@ -1168,7 +1185,12 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                     
                       {processedRolls.length === 0 ? (
                         <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
-                          <EmptyState icon={Film} title={t('rolls.noRolls')} description={t('rolls.noRollsDesc')} />
+                          <EmptyState
+                            icon={Film}
+                            title={t('rolls.noRolls')}
+                            description={t('rolls.noRollsDesc')}
+                            action={renderNewRollEmptyAction()}
+                          />
                         </motion.div>
                       ) : viewLayout === 'grid' ? (
                         <motion.div key="grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }} className="rolls-grid">

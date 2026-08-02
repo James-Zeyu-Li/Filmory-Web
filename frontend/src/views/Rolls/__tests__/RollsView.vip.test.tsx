@@ -69,13 +69,13 @@ describe('RollsView VIP Limitations', () => {
       </MemoryRouter>
     );
 
-    fireEvent.click(screen.getByText('全部胶卷记录'));
+    fireEvent.click(screen.getByRole('button', { name: '全部拍摄记录' }));
 
     await waitFor(() => {
       expect(screen.getByText('Roll 0')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('新建单卷记录'));
+    fireEvent.click(screen.getByText('新建拍摄记录'));
 
     const titleInput = await screen.findByPlaceholderText('例如: 2026春日踏青');
     fireEvent.change(titleInput, { target: { value: '6th Roll Regular' } });
@@ -129,7 +129,7 @@ describe('RollsView VIP Limitations', () => {
       </MemoryRouter>
     );
 
-    fireEvent.click(screen.getByText('全部胶卷记录'));
+    fireEvent.click(screen.getByRole('button', { name: '全部拍摄记录' }));
 
     // Wait for Dexie live queries to resolve
     await waitFor(() => {
@@ -138,10 +138,10 @@ describe('RollsView VIP Limitations', () => {
 
     // 4. Try to add a 6th roll
     await waitFor(() => {
-      expect(screen.getByText('新建单卷记录')).toBeInTheDocument();
+      expect(screen.getByText('新建拍摄记录')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('新建单卷记录'));
+    fireEvent.click(screen.getByText('新建拍摄记录'));
 
     const titleInput = await screen.findByPlaceholderText('例如: 2026春日踏青');
     fireEvent.change(titleInput, { target: { value: '6th Roll VIP' } });

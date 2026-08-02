@@ -61,9 +61,9 @@ test.describe('120 interchangeable film backs', () => {
     await expect(page.locator('.gear-card').filter({ hasText: 'Hasselblad Carl Zeiss Planar 80mm f/2.8 C' })).toBeVisible();
 
     await page.goto('/rolls', { waitUntil: 'domcontentloaded' });
-    await page.getByRole('button', { name: /全部胶卷记录|所有拍摄卷/ }).click();
-    await page.getByRole('button', { name: /新建单卷记录|新建独立拍摄卷/ }).click();
-    const rollModal = page.locator('.modal-content').filter({ hasText: '新建胶卷记录' });
+    await page.getByRole('button', { name: /全部拍摄记录|所有拍摄卷/ }).click();
+    await page.getByRole('button', { name: /新建拍摄记录|新建独立拍摄卷/ }).click();
+    const rollModal = page.locator('.modal-content').filter({ hasText: '新建拍摄记录' });
 
     await rollModal.getByPlaceholder('例如: 2026春日踏青').fill('E2E 120 Back Roll');
     await rollModal.locator('div').filter({ hasText: /^E2E Hasselblad 501CM$/ }).first().click();

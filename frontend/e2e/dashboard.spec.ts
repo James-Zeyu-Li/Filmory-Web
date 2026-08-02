@@ -26,7 +26,7 @@ test.describe('Dashboard film workspace', () => {
   test('opens the intended target for dashboard quick actions', async ({ page }) => {
     await page.getByRole('button', { name: /新建胶卷记录/ }).click();
     await expect(page).toHaveURL(/\/rolls$/);
-    await expect(page.locator('.modal-content').filter({ hasText: '新建胶卷记录' })).toBeVisible();
+    await expect(page.locator('.modal-content').filter({ hasText: '新建拍摄记录' })).toBeVisible();
     await expect(page.getByTestId('page-transition')).toHaveCSS('transform', 'none');
     await page.keyboard.press('Escape');
 
@@ -55,8 +55,8 @@ test.describe('Dashboard film workspace', () => {
 
   test('keeps rolls tab and list layout after refresh', async ({ page }) => {
     await page.goto('/rolls', { waitUntil: 'domcontentloaded' });
-    await page.locator('.view-header-actions').getByRole('button', { name: '新建项目' }).click();
-    const collectionModal = page.locator('.modal-content').filter({ hasText: '新建项目' });
+    await page.locator('.view-header-actions').getByRole('button', { name: '新建项目集' }).click();
+    const collectionModal = page.locator('.modal-content').filter({ hasText: '新建项目集' });
     await collectionModal.getByPlaceholder('例如：2026 东京旅拍').fill('测试项目集');
     await collectionModal.getByRole('button', { name: '保存' }).click();
 
@@ -69,9 +69,9 @@ test.describe('Dashboard film workspace', () => {
     });
     expect(collectionColumnCount).toBe(2);
 
-    await page.getByRole('button', { name: '全部胶卷记录' }).click();
+    await page.getByRole('button', { name: '全部拍摄记录' }).click();
 
-    await expect(page.getByRole('heading', { name: '全部胶卷记录' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '全部拍摄记录' })).toBeVisible();
     await expect(page.locator('.rolls-list')).toBeVisible();
 
     const columnCount = await page.locator('.rolls-list').first().evaluate((element) => {
@@ -80,7 +80,7 @@ test.describe('Dashboard film workspace', () => {
     expect(columnCount).toBe(2);
 
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { name: '全部胶卷记录' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '全部拍摄记录' })).toBeVisible();
     await expect(page.locator('.rolls-list')).toBeVisible();
   });
 });

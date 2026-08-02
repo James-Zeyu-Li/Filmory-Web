@@ -48,11 +48,11 @@ test.describe('Language preferences', () => {
 
     await page.getByRole('link', { name: 'Rolls' }).click();
     await expect(page.getByRole('heading', { name: 'Collections', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'New roll record' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'All roll records' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'New shooting record' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'All shooting records' })).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
-    await page.getByRole('button', { name: 'All roll records' }).click();
+    await page.getByRole('button', { name: 'All shooting records' }).click();
     const firstRollCard = page.locator('.roll-card, .roll-card-row').first();
     await expect(firstRollCard).toBeVisible();
     await firstRollCard.click();
@@ -66,7 +66,7 @@ test.describe('Language preferences', () => {
     await rollDrawer.locator('.drawer-header button.icon-btn').last().click();
 
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { name: 'All roll records', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'All shooting records', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Gear Library' })).toBeVisible();
     await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
     await expectNoHorizontalOverflow(page);

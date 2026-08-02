@@ -34,8 +34,8 @@ test.describe('Grainfolio UI smoke flows', () => {
     await page.getByRole('link', { name: /器材库/ }).click();
     await expect(page.getByRole('heading', { name: /相机/ })).toBeVisible();
 
-    await page.getByRole('link', { name: /胶卷记录/ }).click();
-    await expect(page.getByRole('heading', { name: /项目集|全部胶卷记录|散卷/ })).toBeVisible();
+    await page.getByRole('link', { name: /拍摄记录/ }).click();
+    await expect(page.getByRole('heading', { name: /项目集|全部拍摄记录|独立记录/ })).toBeVisible();
   });
 
   test('creates a camera and shows the unified duplicate confirmation', async ({ page }) => {
@@ -58,9 +58,9 @@ test.describe('Grainfolio UI smoke flows', () => {
   test('creates a roll through the current roll modal', async ({ page }) => {
     await page.goto('/rolls', { waitUntil: 'domcontentloaded' });
 
-    await page.getByRole('button', { name: /全部胶卷记录/ }).click();
-    await page.getByRole('button', { name: /新建单卷记录/ }).click();
-    const rollModal = page.locator('.modal-content').filter({ hasText: '新建胶卷记录' });
+    await page.getByRole('button', { name: /全部拍摄记录/ }).click();
+    await page.getByRole('button', { name: /新建拍摄记录/ }).click();
+    const rollModal = page.locator('.modal-content').filter({ hasText: '新建拍摄记录' });
 
     await page.getByPlaceholder('例如: 2026春日踏青').fill('E2E Smoke Roll');
     await rollModal.locator('div').filter({ hasText: /^Minolta X-700$/ }).first().click();
@@ -73,9 +73,9 @@ test.describe('Grainfolio UI smoke flows', () => {
   test('quick-add film opens above the roll modal and fills the selected film', async ({ page }) => {
     await page.goto('/rolls', { waitUntil: 'domcontentloaded' });
 
-    await page.getByRole('button', { name: /全部胶卷记录/ }).click();
-    await page.getByRole('button', { name: /新建单卷记录/ }).click();
-    const rollModal = page.locator('.modal-content').filter({ hasText: '新建胶卷记录' });
+    await page.getByRole('button', { name: /全部拍摄记录/ }).click();
+    await page.getByRole('button', { name: /新建拍摄记录/ }).click();
+    const rollModal = page.locator('.modal-content').filter({ hasText: '新建拍摄记录' });
 
     await rollModal.getByPlaceholder('例如: 2026春日踏青').fill('E2E Quick Film Roll');
     await rollModal.locator('div').filter({ hasText: /^Minolta X-700$/ }).first().click();

@@ -37,8 +37,8 @@ test.describe('Settings flows', () => {
     await resetAndLogin(page);
 
     await page.goto('/rolls', { waitUntil: 'domcontentloaded' });
-    await page.getByRole('button', { name: '散卷' }).click();
-    await expect(page.getByRole('heading', { name: '散卷' })).toBeVisible();
+    await page.getByRole('button', { name: '独立记录' }).click();
+    await expect(page.getByRole('heading', { name: '独立记录' })).toBeVisible();
 
     await page.getByRole('button', { name: /偏好设置/ }).click();
     await page.locator('.modal-content').filter({ hasText: '设置与数据保护' }).getByRole('button', { name: '退出登录' }).click();
@@ -47,7 +47,7 @@ test.describe('Settings flows', () => {
     await page.getByRole('button', { name: /本机测试登录/ }).click();
     await expect(page).toHaveURL(/\/dashboard$/);
 
-    await page.getByRole('link', { name: '胶卷记录' }).click();
+    await page.getByRole('link', { name: '拍摄记录' }).click();
     await expect(page.getByRole('heading', { name: '项目集' })).toBeVisible();
   });
 
@@ -55,13 +55,13 @@ test.describe('Settings flows', () => {
     await resetAndLogin(page);
 
     await page.getByRole('button', { name: /偏好设置/ }).click();
-    await page.getByRole('button', { name: '散卷 上移' }).click();
-    await page.getByRole('button', { name: '散卷 上移' }).click();
+    await page.getByRole('button', { name: '独立记录 上移' }).click();
+    await page.getByRole('button', { name: '独立记录 上移' }).click();
     await page.locator('label[for="rollsCollectionsToggle"]').click();
     await page.locator('.modal-content button.icon-btn').click();
 
-    await page.getByRole('link', { name: '胶卷记录' }).click();
-    await expect(page.getByRole('heading', { name: '散卷' })).toBeVisible();
+    await page.getByRole('link', { name: '拍摄记录' }).click();
+    await expect(page.getByRole('heading', { name: '独立记录' })).toBeVisible();
     await expect(page.getByRole('button', { name: '项目集' })).toHaveCount(0);
   });
 
@@ -77,7 +77,7 @@ test.describe('Settings flows', () => {
     await expect(page.locator('#rollsCollectionsToggle')).toBeDisabled();
 
     await page.locator('.modal-content button.icon-btn').click();
-    await page.getByRole('link', { name: '胶卷记录' }).click();
+    await page.getByRole('link', { name: '拍摄记录' }).click();
     await expect(page.getByRole('button', { name: '项目集' })).toBeVisible();
 
     await page.getByRole('button', { name: /偏好设置/ }).click();

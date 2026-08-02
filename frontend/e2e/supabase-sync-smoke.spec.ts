@@ -123,9 +123,9 @@ describeSyncSmoke('Supabase sync smoke with real Auth UI', () => {
     }, { timeout: 10000 }).not.toBe('');
 
     await page.goto('/rolls', { waitUntil: 'domcontentloaded' });
-    await page.getByRole('button', { name: /全部胶卷记录|所有拍摄卷/ }).click();
-    await page.getByRole('button', { name: /新建单卷记录|新建独立拍摄卷/ }).click();
-    const rollModal = page.locator('.modal-content').filter({ hasText: '新建胶卷记录' });
+    await page.getByRole('button', { name: /全部拍摄记录|所有拍摄卷/ }).click();
+    await page.getByRole('button', { name: /新建拍摄记录|新建独立拍摄卷/ }).click();
+    const rollModal = page.locator('.modal-content').filter({ hasText: '新建拍摄记录' });
     await rollModal.getByPlaceholder('例如: 2026春日踏青').fill(rollName);
     await rollModal.locator('div').filter({ hasText: new RegExp(`^${cameraName}$`) }).first().click();
     await rollModal.getByPlaceholder(/搜索胶卷库/).fill(`${filmBrand} ${filmName}`);

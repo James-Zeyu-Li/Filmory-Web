@@ -100,8 +100,8 @@ test.describe('VIP Limits UI Tests', () => {
     await page.reload({ waitUntil: 'domcontentloaded' });
     await expect.poll(() => getRollCount(page)).toBe(5);
 
-    await page.getByRole('button', { name: '新建单卷记录' }).click();
-    const rollModal = page.locator('.modal-content').filter({ hasText: '新建胶卷记录' });
+    await page.getByRole('button', { name: '新建拍摄记录' }).click();
+    const rollModal = page.locator('.modal-content').filter({ hasText: '新建拍摄记录' });
 
     await rollModal.getByPlaceholder('例如: 2026春日踏青').fill('6th Roll Regular');
     await expect(rollModal.getByText('Test Camera')).toBeVisible();
@@ -121,8 +121,8 @@ test.describe('VIP Limits UI Tests', () => {
     await page.reload({ waitUntil: 'domcontentloaded' });
     await expect.poll(() => getRollCount(page)).toBe(5);
 
-    await page.getByRole('button', { name: '新建单卷记录' }).click();
-    const rollModal = page.locator('.modal-content').filter({ hasText: '新建胶卷记录' });
+    await page.getByRole('button', { name: '新建拍摄记录' }).click();
+    const rollModal = page.locator('.modal-content').filter({ hasText: '新建拍摄记录' });
 
     await rollModal.getByPlaceholder('例如: 2026春日踏青').fill('6th Roll VIP');
     await expect(rollModal.getByText('Test Camera')).toBeVisible();
@@ -130,9 +130,9 @@ test.describe('VIP Limits UI Tests', () => {
     await expect(rollModal.getByRole('button', { name: '开始记录' })).toBeEnabled();
     await rollModal.getByRole('button', { name: '开始记录' }).click();
 
-    await expect(page.locator('.modal-content').filter({ hasText: '新建胶卷记录' })).not.toBeVisible();
+    await expect(page.locator('.modal-content').filter({ hasText: '新建拍摄记录' })).not.toBeVisible();
     await expect.poll(() => getRollCount(page)).toBe(6);
-    await page.getByRole('button', { name: '全部胶卷记录' }).click();
+    await page.getByRole('button', { name: '全部拍摄记录' }).click();
     await expect(page.getByText('6th Roll VIP')).toBeVisible();
   });
 });

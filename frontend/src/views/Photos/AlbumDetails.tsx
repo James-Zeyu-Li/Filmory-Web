@@ -689,7 +689,7 @@ const AddPhotosModal: React.FC<AddPhotosModalProps> = ({
             value={filterRollId}
             onChange={e => setFilterRollId(e.target.value)}
           >
-            <option value="all">🎞️ 全部胶卷记录</option>
+            <option value="all">全部拍摄记录</option>
             {archivedRolls
               .filter(r => filterCameraId === 'all' || (r.cameraIds || []).includes(filterCameraId))
               .map(r => {

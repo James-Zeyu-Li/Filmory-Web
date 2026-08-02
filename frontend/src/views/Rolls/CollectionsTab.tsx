@@ -15,10 +15,11 @@ import { useLanguage } from '../../contexts/useLanguage';
 
 interface CollectionsTabProps {
   onCollectionSelect: (collectionId: string) => void;
+  onCreateRoll: () => void;
   viewMode?: 'grid' | 'list';
 }
 
-export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSelect, viewMode = 'list' }) => {
+export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSelect, onCreateRoll, viewMode = 'list' }) => {
   const { user } = useAuth();
   const { confirm } = useConfirm();
   const { guardTrialResource } = useTrialGate();
@@ -272,9 +273,14 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
               title={t('collections.emptyTitle')}
               description={t('collections.emptyDesc')}
               action={
-                <Button variant="primary" onClick={() => handleOpenModal()}>
-                  {t('collections.new')}
-                </Button>
+                <>
+                  <Button variant="primary" onClick={() => handleOpenModal()}>
+                    {t('collections.new')}
+                  </Button>
+                  <Button variant="secondary" onClick={onCreateRoll}>
+                    {t('rolls.newRoll')}
+                  </Button>
+                </>
               }
             />
           </motion.div>
