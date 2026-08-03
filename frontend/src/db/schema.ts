@@ -53,7 +53,7 @@ export interface Camera {
   cameraSystemId?: string;
   backType?: 'fixed' | 'interchangeable';
   notes?: string;
-  avatarUrl?: string | null; // Camera profile image URL/relative path
+  avatarUrl?: string | null; // Display URL: data:, blob:, or signed HTTPS URL.
   purchasePrice?: number; // Price of the camera body
   status?: 'active' | 'archived';
   addedAt: number;

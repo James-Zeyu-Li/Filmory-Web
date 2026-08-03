@@ -4,6 +4,7 @@ import { Tag, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../../contexts/useAuth';
 import { useConfirm } from '../../contexts/useConfirm';
 import { useTagConfigs } from '../../hooks/useData';
+import { deleteTagAndClearPhotoTags } from '../../services/tagService';
 
 export const TagsManagement: React.FC = () => {
   const { user } = useAuth();
@@ -43,51 +44,16 @@ export const TagsManagement: React.FC = () => {
     }
 
     try {
-      // 1. Add locally to Dexie
-      const localId = crypto.randomUUID();
       await db.tagConfigs.add({
-        id: localId,
+        id: crypto.randomUUID(),
         userId: user?.id || 'offline',
         name: trimmedName,
         color: selectedColor
       });
 
-      // 2. Synchronize to backend if connected
-      const apiBaseUrl = localStorage.getItem('grainfolio_api_base_url');
-      const accessToken = localStorage.getItem('grainfolio_access_token');
-
-      if (apiBaseUrl && accessToken) {
-        const response = await fetch(`${apiBaseUrl}/api/tags`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({ name: trimmedName, color: selectedColor }),
-        });
-
-        if (!response.ok) {
-          const data = await response.json();
-          console.warn('Backend sync failed:', data?.error?.message || data?.error);
-        } else {
-          const cloudTag = await response.json();
-          // Update local ID to match cloud ID for consistent deletion references
-          if (cloudTag.id) {
-            // Delete local item and re-add with correct ID
-            await db.tagConfigs.delete(localId);
-            await db.tagConfigs.add({
-              id: cloudTag.id,
-              userId: user?.id || 'offline',
-              name: trimmedName,
-              color: selectedColor
-            });
-          }
-        }
-      }
-
       setTagName('');
       setSelectedColor('#3b82f6');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to add tag:', err);
     }
   };
@@ -102,34 +68,10 @@ export const TagsManagement: React.FC = () => {
     if (!confirmed) return;
 
     try {
-      // 1. Delete from Dexie
-      if (tag.id) {
-        await db.tagConfigs.delete(tag.id);
-      }
+      const currentUserId = user?.id || tag.userId || 'offline';
 
-      // Clean up tags inside photoAssets in Dexie
-      const photos = user ? await db.photoAssets.where('userId').equals(user.id).toArray() : [];
-      for (const p of photos) {
-        if (p.tags) {
-          const parsedTags = p.tags.split(',').filter((t: string) => t !== tag.name);
-          const updatedTags = parsedTags.length > 0 ? parsedTags.join(',') : undefined;
-          await db.photoAssets.update(p.id!, { tags: updatedTags });
-        }
-      }
-
-      // 2. Delete from cloud if connected
-      const apiBaseUrl = localStorage.getItem('grainfolio_api_base_url');
-      const accessToken = localStorage.getItem('grainfolio_access_token');
-
-      if (apiBaseUrl && accessToken) {
-        await fetch(`${apiBaseUrl}/api/tags/${tag.id}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-          }
-        });
-      }
-    } catch (err: any) {
+      await deleteTagAndClearPhotoTags(tag, currentUserId);
+    } catch (err: unknown) {
       console.error('Failed to delete tag:', err);
     }
   };

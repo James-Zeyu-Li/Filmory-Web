@@ -103,26 +103,7 @@ export const AlbumDetails: React.FC<AlbumDetailsProps> = ({
     }
     const tagsString = nextTags.length > 0 ? nextTags.join(',') : undefined;
     
-    // 1. Update Dexie
     await db.photoAssets.update(photo.id!, { tags: tagsString });
-
-    // 2. Sync to Backend if connected
-    const apiBaseUrl = localStorage.getItem('grainfolio_api_base_url');
-    const accessToken = localStorage.getItem('grainfolio_access_token');
-    if (apiBaseUrl && accessToken) {
-      try {
-        await fetch(`${apiBaseUrl}/api/photos/${photo.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`
-          },
-          body: JSON.stringify({ tags: tagsString || '' })
-        });
-      } catch (err) {
-        console.warn('Failed to sync photo tags update:', err);
-      }
-    }
   };
 
   const handleDeleteAlbum = async () => {
