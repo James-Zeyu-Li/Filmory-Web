@@ -12,7 +12,7 @@ import {
   type TrialResourceKey,
 } from '../services/trialPolicy';
 import { AUTH_ROUTES } from '../services/authFlow';
-import '../components/TrialRegistrationModal.css';
+import './TrialGate.css';
 
 export const TrialGateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
