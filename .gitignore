@@ -63,8 +63,14 @@ trace.zip
 *-debug.png
 before-click-*.png
 
-# Local-only planning, audit, and manual verification notes
+# 本机专用的规划、审查、人工验证与架构资料；包含 API Contract、
+# Database Schema、Web Architecture 及八篇代码导览，不进入 Git。
 .local-docs/
+# 已迁移到 `.local-docs/architecture/reference/` 的旧 Git 路径：
+# 保留工作区副本以避免误删，但不再重新纳入版本库。
+docs/DATABASE_SCHEMA.md
+docs/Detailed-Specs/API_CONTRACT.md
+docs/Detailed-Specs/WEB_ARCHITECTURE.md
 docs/ROADMAP_TODO.md
 docs/auth-manual-checklist.md
 docs/audit_result/
