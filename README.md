@@ -1,88 +1,69 @@
 # Grainfolio Web
 
-Grainfolio Web is a local-first film photography workspace for managing rolls, cameras, lenses, film stock, albums, finance records, and shooting notes.
+Grainfolio is a local-first workspace for film photographers. It tracks cameras, lenses, film inventory, shooting records, 120 film backs, notes, costs, and roll covers. The browser remains responsive offline through Dexie/IndexedDB; Supabase provides optional account, cloud sync, private photo storage, and row-level isolation.
 
-The app runs primarily in the browser with IndexedDB/Dexie for fast offline-first data access. Supabase migrations, Auth, RLS, private Storage, and sync code are kept in the repo for local integration testing and future cloud deployment.
+## Current Status
 
-## Tech Stack
+- Core workspace, gear catalog, 120 camera/back workflow, shooting records, Excel import/export, settings, VIP active-roll limit, and Chinese/English UI are implemented.
+- Supabase Cloud migrations, Auth email confirmation/password recovery/account deletion, private `grainfolio-assets` Storage, signed URLs, RLS, and Cloud sync have been smoke-tested with real accounts.
+- Cloud sync remains opt-in through `VITE_ENABLE_SUPABASE_SYNC=true`. The app still works entirely locally when it is `false`.
+- Production deployment, production-domain redirect URLs, OAuth providers, payment automation, and sync hardening for concurrent inventory changes remain roadmap work.
 
-- React 19 + TypeScript + Vite
-- Dexie / IndexedDB local-first data layer
-- Supabase for Auth, Postgres, Storage, RLS, and sync readiness
-- PWA support with user-controlled update prompts
-- Vitest + Testing Library for unit tests
-- Playwright for E2E tests
+## Stack
 
-## Project Structure
+- React 19, TypeScript, Vite
+- Dexie / IndexedDB for local-first reads and writes
+- Supabase Auth, Postgres, RLS, private Storage, Realtime, and migrations
+- PWA update prompt, Vitest, Testing Library, and Playwright
 
-```text
-Grainfolio-Web/
-├── frontend/      # React app, tests, catalog data, and browser data layer
-├── supabase/      # Local Supabase config and migrations
-├── docs/          # Shared implementation notes such as schema and architecture
-├── scripts/       # Helper scripts
-└── grainfolio.sh     # Local development control script
-```
-
-## Getting Started
-
-Install dependencies:
+## Run Locally
 
 ```bash
 cd frontend
 npm install
-```
-
-Start the frontend:
-
-```bash
 npm run dev
 ```
 
-Or use the root helper script for the local development menu:
+Run the checks from `frontend/`:
 
 ```bash
-./grainfolio.sh
-```
-
-`grainfolio.sh` keeps the frontend and local Supabase Docker environment independent: use the frontend-only actions for normal Cloud Supabase development, and start local Supabase only for local Auth, Mailpit, migration, RLS, or sync testing. The convenience “local full stack” actions start or stop both. It does not manage the legacy `docker-compose.yml` services.
-
-If local Supabase is started, Studio is available at `http://127.0.0.1:54323` and Mailpit is available at `http://127.0.0.1:54324` for auth emails such as signup confirmation and password reset.
-
-## Environment
-
-Use `frontend/.env.example` as the template for local environment variables.
-
-Local secrets and machine-specific files should stay in ignored files such as:
-
-```text
-frontend/.env.local
-.env.local
-supabase/.env.local
-```
-
-## Common Commands
-
-Run from `frontend/`:
-
-```bash
-npm run dev
 npm run lint
 npm run test
 npm run build
 npm run e2e
 ```
 
+`./grainfolio.sh` offers local frontend and Supabase CLI/Docker actions. Local Supabase is optional for normal Cloud development; use it when testing local migrations, Mailpit, RLS, or local sync.
+
+## Environment
+
+Copy `frontend/.env.example` to `frontend/.env.local`. Keep all local environment files and service-role keys out of Git.
+
+```dotenv
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=sb_publishable_your_key
+VITE_ENABLE_SUPABASE_SYNC=false
+```
+
+Set sync to `true` only with a valid Supabase project and a real authenticated account. A Cloud sync session starts with a per-user full pull when no local watermark exists, then uses normal push/pull cycles. Trial mode never starts Cloud sync.
+
+## Supabase Deployment
+
+Run migrations from the repository root after linking the intended project:
+
+```bash
+supabase db push
+```
+
+The migration history is versioned in `supabase/migrations/`. The `grainfolio-assets` bucket must stay private; object reads use signed URLs and RLS policies rather than public URLs.
+
 ## Documentation
 
-- Database model: [docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)
-- Supabase contract: [docs/Detailed-Specs/API_CONTRACT.md](docs/Detailed-Specs/API_CONTRACT.md)
-- Architecture notes: [docs/Detailed-Specs/WEB_ARCHITECTURE.md](docs/Detailed-Specs/WEB_ARCHITECTURE.md)
-- Agent and project rules: [.agents/AGENTS.md](.agents/AGENTS.md)
+- Local architecture specifications and code guide: `.local-docs/architecture/` (intentionally ignored by Git)
+- Local implementation roadmap: `docs/ROADMAP_TODO.md` (intentionally ignored by Git)
 
-## Development Notes
+## Repository Rules
 
-- Keep user data writes local-first through Dexie unless a task explicitly targets Supabase integration.
-- Keep schema changes in `supabase/migrations/` and update shared implementation docs when the data model changes.
-- Do not commit local credentials, generated build output, test artifacts, or one-off debugging screenshots.
-- Keep local roadmap, audit notes, and manual verification checklists in ignored local files.
+- UI components write business data through Dexie; `SyncService` owns cloud synchronization.
+- Add every Cloud schema change as a migration and update the relevant shared document.
+- Do not commit credentials, generated output, test artifacts, local checklists, or `.agents/`.
