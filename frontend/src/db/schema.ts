@@ -1,4 +1,5 @@
 import Dexie, { type Table } from 'dexie';
+import { requestSyncIntent } from '../services/syncEvents';
 
 declare global {
   interface Window {
@@ -15,8 +16,6 @@ export interface SyncQueueItem {
   payload?: any;
   timestamp: number;
 }
-
-const LOCAL_CHANGE_EVENT = 'grainfolio-sync-request';
 
 export interface LedgerTransaction {
   id?: string;
@@ -574,7 +573,7 @@ export class GrainfolioDatabase extends Dexie {
         const enqueue = () => {
           void this.syncQueue.add(item)
             .then(() => {
-              window.dispatchEvent(new CustomEvent(LOCAL_CHANGE_EVENT, { detail: { source: 'dexie-hook' } }));
+              requestSyncIntent('debounced', 'dexie-hook');
             })
             .catch(error => {
               console.error('Failed to enqueue local sync change:', error);

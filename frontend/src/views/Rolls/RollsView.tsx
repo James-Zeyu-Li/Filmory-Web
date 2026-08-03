@@ -36,6 +36,7 @@ import {
 import { useUserTier } from '../../hooks/useUserTier';
 import { UpgradeModal } from '../../components/UpgradeModal';
 import { canCreateActiveRoll } from '../../services/membershipPolicy';
+import { requestImmediateSync } from '../../services/syncEvents';
 
 import { CollectionsTab } from './CollectionsTab';
 import type { Roll } from '../../db/schema';
@@ -430,6 +431,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
         }
       }
     });
+    requestImmediateSync('roll-create');
 
     if (!keepModalOpen) {
       setIsNewRollModalOpen(false);
@@ -458,6 +460,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
         }
       }
     });
+    requestImmediateSync('rolls-add-to-collection');
     
     setIsAddExistingModalOpen(false);
     setSelectedExistingRollIds([]);
@@ -480,6 +483,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
         format: '135',
         addedAt: Date.now()
       });
+      requestImmediateSync('roll-quick-add-camera');
       setSelectedCameraIds(prev => [...prev, newId]);
     }
     setQaCameraName('');
@@ -510,6 +514,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
         isSystem: 0,
         addedAt: Date.now()
       });
+      requestImmediateSync('roll-quick-add-film');
       setSelectedFilmId(newId);
     }
     setFilmSearchText(filmLabel);
@@ -528,6 +533,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     });
     if (confirmed) {
       await db.rolls.update(id, { status: 'archived', endDate: Date.now() });
+      requestImmediateSync('roll-archive');
     }
   };
 
@@ -541,6 +547,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     });
     if (confirmed) {
       await db.rolls.delete(id);
+      requestImmediateSync('roll-delete');
       
       if (selectedRollId === id) {
         setIsDrawerOpen(false);
@@ -558,6 +565,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     });
     if (confirmed) {
       await db.rolls.update(id, { collectionId: undefined });
+      requestImmediateSync('roll-remove-from-collection');
     }
   };
 
@@ -599,6 +607,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
           await db.ledgerTransactions.delete(existingTx.id);
         }
     });
+    requestImmediateSync('roll-details-save');
     notify({
       type: 'success',
       title: t('rolls.detailsSaved')
@@ -665,6 +674,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                  }
              }
         }
+        requestImmediateSync('roll-cover-upload');
     } catch(e) {
         console.error(e);
     }

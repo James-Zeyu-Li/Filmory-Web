@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '../db/schema';
 import { SyncService } from '../services/syncService';
+import { LOCAL_CHANGE_EVENT } from '../services/syncEvents';
 
 const supabaseMock = vi.hoisted(() => ({
   upsert: vi.fn().mockResolvedValue({ data: null, error: null }),
@@ -371,7 +372,7 @@ describe('SyncService schema parity', () => {
         requestSyncSpy.mockClear();
 
         vi.advanceTimersByTime(60_000);
-        expect(requestSyncSpy).toHaveBeenCalledWith('visible-fallback-poll');
+        expect(requestSyncSpy).toHaveBeenCalledWith('visible-fallback-poll', 0);
         requestSyncSpy.mockClear();
       }
 
@@ -393,7 +394,7 @@ describe('SyncService schema parity', () => {
     }
   });
 
-  it('coalesces local sync requests into a single throttled sync when auto sync is enabled', () => {
+  it('debounces ordinary local edits into one sync after 500ms', () => {
     vi.useFakeTimers();
     vi.stubEnv('VITE_ENABLE_SUPABASE_SYNC', 'true');
     vi.stubEnv('VITE_SUPABASE_URL', 'http://127.0.0.1:54321');
@@ -406,13 +407,68 @@ describe('SyncService schema parity', () => {
       vi.runOnlyPendingTimers();
       syncSpy.mockClear();
 
-      window.dispatchEvent(new CustomEvent('grainfolio-sync-request'));
-      window.dispatchEvent(new CustomEvent('grainfolio-sync-request'));
+      window.dispatchEvent(new CustomEvent(LOCAL_CHANGE_EVENT));
+      window.dispatchEvent(new CustomEvent(LOCAL_CHANGE_EVENT));
 
-      vi.advanceTimersByTime(1499);
+      vi.advanceTimersByTime(499);
       expect(syncSpy).not.toHaveBeenCalled();
 
       vi.advanceTimersByTime(1);
+      expect(syncSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      SyncService.stop();
+      syncSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it('wakes sync immediately after an explicit submission without waiting for the edit debounce', () => {
+    vi.useFakeTimers();
+    vi.stubEnv('VITE_ENABLE_SUPABASE_SYNC', 'true');
+    vi.stubEnv('VITE_SUPABASE_URL', 'http://127.0.0.1:54321');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'eyJ.local-dev-jwt');
+
+    const syncSpy = vi.spyOn(SyncService, 'sync').mockResolvedValue(undefined);
+
+    try {
+      SyncService.start();
+      vi.advanceTimersByTime(0);
+      syncSpy.mockClear();
+
+      window.dispatchEvent(new CustomEvent(LOCAL_CHANGE_EVENT, {
+        detail: { intent: 'immediate', source: 'roll-create' },
+      }));
+
+      expect(syncSpy).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(0);
+      expect(syncSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      SyncService.stop();
+      syncSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it('coalesces several immediate submissions into one sync cycle', () => {
+    vi.useFakeTimers();
+    vi.stubEnv('VITE_ENABLE_SUPABASE_SYNC', 'true');
+    vi.stubEnv('VITE_SUPABASE_URL', 'http://127.0.0.1:54321');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'eyJ.local-dev-jwt');
+
+    const syncSpy = vi.spyOn(SyncService, 'sync').mockResolvedValue(undefined);
+
+    try {
+      SyncService.start();
+      vi.advanceTimersByTime(0);
+      syncSpy.mockClear();
+
+      for (const source of ['camera-save', 'film-stock-save', 'roll-create']) {
+        window.dispatchEvent(new CustomEvent(LOCAL_CHANGE_EVENT, {
+          detail: { intent: 'immediate', source },
+        }));
+      }
+
+      vi.advanceTimersByTime(0);
       expect(syncSpy).toHaveBeenCalledTimes(1);
     } finally {
       SyncService.stop();
@@ -449,7 +505,7 @@ describe('SyncService schema parity', () => {
       requestSyncSpy.mockClear();
 
       vi.advanceTimersByTime(60_000);
-      expect(requestSyncSpy).toHaveBeenCalledWith('visible-fallback-poll');
+      expect(requestSyncSpy).toHaveBeenCalledWith('visible-fallback-poll', 0);
 
       requestSyncSpy.mockClear();
       SyncService.stop();

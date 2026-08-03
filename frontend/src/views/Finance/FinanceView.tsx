@@ -7,6 +7,7 @@ import { useFeedback } from '../../contexts/useFeedback';
 import { useCurrency } from '../../contexts/useCurrency';
 import { useLanguage } from '../../contexts/useLanguage';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { requestImmediateSync } from '../../services/syncEvents';
 import { useCameras, useLenses, useRolls } from '../../hooks/useData';
 import { Wallet, TrendingUp, TrendingDown, Plus, Camera as CameraIcon, AlertTriangle } from 'lucide-react';
 import { Modal } from '../../components/Modal';
@@ -100,6 +101,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
       notes: newTx.notes,
       addedAt: Date.now()
     });
+    requestImmediateSync('finance-transaction-create');
 
     setNewTx(createEmptyTransactionDraft());
     setIsModalOpen(false);
@@ -118,6 +120,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
         return;
       }
       await db.ledgerTransactions.delete(id);
+      requestImmediateSync('finance-transaction-delete');
     }
   };
 

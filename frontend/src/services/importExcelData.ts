@@ -1,4 +1,5 @@
 import { db } from '../db/schema';
+import { requestImmediateSync } from './syncEvents';
 import * as XLSX from 'xlsx';
 import type { TranslationKey } from '../i18n/translations';
 
@@ -310,6 +311,8 @@ export const importExcelDataFromFile = async (
             }
           }
         });
+
+        requestImmediateSync('excel-import');
 
         resolve(summary);
 

@@ -31,6 +31,7 @@ import {
 import { removeGearAvatar, type GearAvatarTableName } from '../../services/gearAvatarService';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { GEAR_SUB_TAB_KEY } from '../../services/workspacePreferences';
+import { requestImmediateSync } from '../../services/syncEvents';
 interface GearViewProps {
   enableFilmMode: boolean;
 }
@@ -250,6 +251,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
       // Save directly to Local Database based on entity type
       const table = (db as any)[activeUploadEntity.type];
       await table.update(activeUploadEntity.id, { avatarUrl: base64DataUrl });
+      requestImmediateSync('gear-cover-upload');
       updateEditingAvatarState(activeUploadEntity.id, activeUploadEntity.type, base64DataUrl);
 
     } catch (err) {
@@ -279,6 +281,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
     try {
       await removeGearAvatar(type, id);
+      requestImmediateSync('gear-cover-remove');
       updateEditingAvatarState(id, type, null);
       notify({
         type: 'success',
@@ -447,6 +450,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
       status: 'active',
       addedAt: nowTimestamp
     });
+    requestImmediateSync('film-back-create');
     setNewFilmBackName('');
   };
 
@@ -539,6 +543,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
   const handleArchiveFilmBack = async (id: string) => {
     await db.filmBacks.update(id, { status: 'archived' });
+    requestImmediateSync('film-back-archive');
   };
 
   const handleSaveCamera = async (e: React.FormEvent) => {
@@ -709,6 +714,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
         }
       }
     });
+    requestImmediateSync('camera-save');
 
     setNewCamera({ name: '', type: 'film', format: '135', purchasePrice: undefined });
     setCameraSystemMode('new');
@@ -817,6 +823,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
         }
       }
     });
+    requestImmediateSync('lens-save');
 
     setNewLens({ name: '', focalLength: 50, maxAperture: 'f/1.8', type: 'prime', purchasePrice: undefined });
     setLensDictSearch('');
@@ -933,6 +940,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
         }
       }
     });
+    requestImmediateSync('film-stock-save');
 
     setNewFilm(createDefaultNewFilmDraft());
     setFilmDictSearch('');
@@ -1047,6 +1055,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
         }
       }
     });
+    requestImmediateSync('other-equipment-save');
 
     setNewEquipment({ name: '', type: 'chemical', notes: '', purchaseDate: undefined, expiryDate: undefined, purchasePrice: undefined });
     setEditingEquipmentId(null);
@@ -1062,6 +1071,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     });
     if (confirmed) {
       await db.cameras.delete(id);
+      requestImmediateSync('camera-delete');
     }
   };
 
@@ -1074,6 +1084,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     });
     if (confirmed) {
       await db.lenses.delete(id);
+      requestImmediateSync('lens-delete');
     }
   };
 
@@ -1107,6 +1118,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
         });
       }
     });
+    requestImmediateSync('gear-archive');
 
     setArchiveTarget(null);
     setArchivePrice('');
@@ -1121,12 +1133,14 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     });
     if (confirmed) {
       await db.filmStocks.delete(id);
+      requestImmediateSync('film-stock-delete');
     }
   };
 
   const handleUpdateStock = async (id: string, current: number, change: number) => {
     const next = Math.max(0, current + change);
     await db.filmStocks.update(id, { stockCount: next });
+    requestImmediateSync('film-stock-adjust');
   };
 
   const handleDeleteEquipment = async (id: string) => {
@@ -1138,6 +1152,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     });
     if (confirmed) {
       await db.otherEquipments.delete(id);
+      requestImmediateSync('other-equipment-delete');
     }
   };
 

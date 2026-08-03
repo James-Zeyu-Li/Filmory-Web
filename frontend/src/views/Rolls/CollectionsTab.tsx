@@ -12,6 +12,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { Modal } from '../../components/Modal';
 import { usePhotoUrlMap } from '../../hooks/usePhotoUrlMap';
 import { useLanguage } from '../../contexts/useLanguage';
+import { requestImmediateSync } from '../../services/syncEvents';
 
 interface CollectionsTabProps {
   onCollectionSelect: (collectionId: string) => void;
@@ -91,6 +92,7 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
         addedAt: Date.now()
       });
     }
+    requestImmediateSync('collection-save');
     setIsModalOpen(false);
   };
   
@@ -113,6 +115,7 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
           await db.rolls.update(roll.id, { collectionId: undefined });
         }
       }
+      requestImmediateSync('collection-delete');
     }
   }, [confirm, t, user]);
 

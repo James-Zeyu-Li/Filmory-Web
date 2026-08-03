@@ -1,5 +1,10 @@
 import { supabase } from './supabaseClient';
 import { db, type SyncQueueItem } from '../db/schema';
+import {
+  getSyncIntentFromEvent,
+  LOCAL_CHANGE_EVENT,
+  type SyncIntent,
+} from './syncEvents';
 
 const isLocalSupabaseUrl = (url: string) => (
   url.includes('127.0.0.1:54321') || url.includes('localhost:54321')
@@ -83,18 +88,23 @@ const getUserQueue = async (userId: string) => {
 };
 
 const supabaseTables = Object.values(tableMap);
-export const LOCAL_CHANGE_EVENT = 'grainfolio-sync-request';
+export { LOCAL_CHANGE_EVENT } from './syncEvents';
 export const SYNC_STATUS_EVENT = 'grainfolio-sync-status';
 export type SyncStatusState = 'local' | 'offline' | 'syncing' | 'synced' | 'error';
 type SyncPullResult = {
   remoteUserProfileFound: boolean;
 };
-const SYNC_DEBOUNCE_MS = 1500;
+const SYNC_DEBOUNCE_MS = 500;
 const RESUME_SYNC_DEBOUNCE_MS = 400;
 const RETRY_SYNC_DELAY_MS = 5000;
 const VISIBLE_FALLBACK_POLL_INTERVAL_MS = 60_000;
 const REALTIME_SUBSCRIBED_STATUS = 'SUBSCRIBED';
 const REALTIME_RETRY_STATUSES = new Set(['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED']);
+const SYNC_INTENT_DELAYS: Record<SyncIntent, number> = {
+  debounced: SYNC_DEBOUNCE_MS,
+  immediate: 0,
+  background: RESUME_SYNC_DEBOUNCE_MS,
+};
 let currentSyncStatus: SyncStatusState = 'local';
 
 const dispatchSyncStatus = (status: SyncStatusState) => {
@@ -146,7 +156,7 @@ export class SyncService {
     const unsubscribeRealtime = this.setupRealtimeSubscription(userId, lifecycleId);
 
     const handleOnline = () => {
-      this.requestSync('online', 0);
+      this.requestSyncIntent('background', 'online', 0);
       this.updateVisibleFallbackPolling();
     };
 
@@ -157,13 +167,13 @@ export class SyncService {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        this.requestSync('visibility', 0);
+        this.requestSyncIntent('background', 'visibility', 0);
       }
       this.updateVisibleFallbackPolling();
     };
 
-    const handleLocalChange = () => {
-      this.requestSync('local-change', SYNC_DEBOUNCE_MS);
+    const handleLocalChange = (event: Event) => {
+      this.requestSyncIntent(getSyncIntentFromEvent(event), 'local-change');
     };
 
     window.addEventListener('online', handleOnline);
@@ -186,7 +196,7 @@ export class SyncService {
     }
 
     dispatchSyncStatus('syncing');
-    this.requestSync('start', 0);
+    this.requestSyncIntent('background', 'start', 0);
   }
 
   static stop(): void {
@@ -231,7 +241,7 @@ export class SyncService {
     if (this.visiblePollTimer !== null) return;
 
     this.visiblePollTimer = setInterval(() => {
-      this.requestSync('visible-fallback-poll');
+      this.requestSyncIntent('background', 'visible-fallback-poll', 0);
     }, VISIBLE_FALLBACK_POLL_INTERVAL_MS);
   }
 
@@ -253,7 +263,7 @@ export class SyncService {
       this.isRealtimeSubscribed = true;
       this.isRealtimeFallbackRequired = false;
       this.stopVisibleFallbackPolling();
-      this.requestSync('realtime-subscribed', 0);
+      this.requestSyncIntent('background', 'realtime-subscribed', 0);
       return;
     }
 
@@ -263,7 +273,11 @@ export class SyncService {
     this.isRealtimeFallbackRequired = true;
     console.warn('[Sync Realtime] Subscription unavailable; starting visible-page fallback.', status, error);
     this.updateVisibleFallbackPolling();
-    this.requestSync('realtime-unavailable', 0);
+    this.requestSyncIntent('background', 'realtime-unavailable', 0);
+  }
+
+  static requestSyncIntent(intent: SyncIntent, reason: string = intent, delayMs = SYNC_INTENT_DELAYS[intent]): void {
+    this.requestSync(reason, delayMs);
   }
 
   static requestSync(reason = 'manual', delayMs = 0): void {
@@ -550,14 +564,14 @@ export class SyncService {
         if (this.activeUserId) {
           this.retryTimer = setTimeout(() => {
             this.retryTimer = null;
-            this.requestSync('retry', 0);
+            this.requestSyncIntent('background', 'retry', 0);
           }, RETRY_SYNC_DELAY_MS);
         }
       } finally {
         this.inFlightSync = null;
         if (this.shouldRunAgain && this.activeUserId) {
           this.shouldRunAgain = false;
-          this.requestSync('follow-up', RESUME_SYNC_DEBOUNCE_MS);
+          this.requestSyncIntent('background', 'follow-up');
         }
       }
     })();
@@ -585,7 +599,7 @@ export class SyncService {
         filter: `user_id=eq.${userId}`,
       }, (payload) => {
         console.log('[Sync Realtime] Cloud mutated!', payload);
-        this.requestSync('realtime', RESUME_SYNC_DEBOUNCE_MS);
+        this.requestSyncIntent('background', 'realtime');
       });
     }
 

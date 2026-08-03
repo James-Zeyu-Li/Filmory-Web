@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/useAuth';
 import { useConfirm } from '../../contexts/useConfirm';
 import { useTagConfigs } from '../../hooks/useData';
 import { deleteTagAndClearPhotoTags } from '../../services/tagService';
+import { requestImmediateSync } from '../../services/syncEvents';
 
 export const TagsManagement: React.FC = () => {
   const { user } = useAuth();
@@ -50,6 +51,7 @@ export const TagsManagement: React.FC = () => {
         name: trimmedName,
         color: selectedColor
       });
+      requestImmediateSync('tag-create');
 
       setTagName('');
       setSelectedColor('#3b82f6');
@@ -71,6 +73,7 @@ export const TagsManagement: React.FC = () => {
       const currentUserId = user?.id || tag.userId || 'offline';
 
       await deleteTagAndClearPhotoTags(tag, currentUserId);
+      requestImmediateSync('tag-delete');
     } catch (err: unknown) {
       console.error('Failed to delete tag:', err);
     }

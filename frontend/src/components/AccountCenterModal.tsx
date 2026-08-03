@@ -28,6 +28,7 @@ import {
   normalizeDisplayName,
 } from '../services/userProfile';
 import { supabase } from '../services/supabaseClient';
+import { requestImmediateSync } from '../services/syncEvents';
 import './AccountCenterModal.css';
 
 interface AccountCenterModalProps {
@@ -102,6 +103,7 @@ export const AccountCenterModal: React.FC<AccountCenterModalProps> = ({ isOpen, 
         existingProfile: existingProfile || undefined,
         displayName: normalizedDisplayName,
       }));
+      requestImmediateSync('profile-save');
       setDisplayNameDraft(null);
 
       if (!isDevBypass && !isTrial) {
