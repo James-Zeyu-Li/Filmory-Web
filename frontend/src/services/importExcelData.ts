@@ -14,7 +14,7 @@ export interface ImportExcelSummary {
 type ImportExcelTranslator = (key: TranslationKey, values?: Record<string, string | number>) => string;
 type ExcelRow = Record<string, unknown>;
 type SheetName = '相机机身' | '镜头' | '胶卷库存' | '拍摄任务';
-type NumberParseResult = { value: number | undefined } | { error: string };
+type NumberParseResult = { value: number | undefined } | { error: TranslationKey };
 
 const CAMERA_TYPES = new Set(['film', 'digital']);
 const CAMERA_FORMATS = new Set(['135', '120', 'digital']);
@@ -39,7 +39,7 @@ const asOptionalNumber = (value: unknown): NumberParseResult => {
   const text = asText(value);
   if (!text) return { value: undefined };
   const number = Number(text);
-  return Number.isFinite(number) ? { value: number } : { error: '必须是有效数字' };
+  return Number.isFinite(number) ? { value: number } : { error: 'excel.reasonValidNumber' };
 };
 
 const asNonNegativeNumber = (value: unknown, integer = false): NumberParseResult => {
@@ -47,13 +47,22 @@ const asNonNegativeNumber = (value: unknown, integer = false): NumberParseResult
   if ('error' in parsed) return parsed;
   if (parsed.value === undefined) return parsed;
   if (parsed.value < 0 || (integer && !Number.isInteger(parsed.value))) {
-    return { error: integer ? '必须是非负整数' : '必须是非负数字' };
+    return { error: integer ? 'excel.reasonNonNegativeInteger' : 'excel.reasonNonNegativeNumber' };
   }
   return parsed;
 };
 
-const addRowError = (summary: ImportExcelSummary, sheet: SheetName, row: number, field: string, reason: string) => {
-  summary.errors.push(`${sheet} 第 ${row} 行，「${field}」${reason}`);
+const addRowError = (
+  summary: ImportExcelSummary,
+  t: ImportExcelTranslator | undefined,
+  sheet: SheetName,
+  row: number,
+  field: string,
+  reasonKey: TranslationKey,
+  values?: Record<string, string | number>
+) => {
+  const reason = importText(t, reasonKey, '', values);
+  summary.errors.push(importText(t, 'excel.rowError', '{{sheet}} 第 {{row}} 行，「{{field}}」{{reason}}', { sheet, row, field, reason }));
 };
 
 const getRows = (workbook: XLSX.WorkBook, sheetName: SheetName): ExcelRow[] => {
@@ -125,12 +134,12 @@ export const importExcelDataFromFile = async (
       const rawType = asText(row['类型 (film/digital)']).toLowerCase();
       const rawFormat = asText(row['画幅 (135/120/digital)']).toLowerCase();
       const price = asNonNegativeNumber(row['购入价格 (选填)']);
-      if (!name) { addRowError(summary, '相机机身', rowNumber, '相机名称', '为必填项'); continue; }
-      if (rawType && !CAMERA_TYPES.has(rawType)) { addRowError(summary, '相机机身', rowNumber, '类型', '必须是 film 或 digital'); continue; }
-      if (rawFormat && !CAMERA_FORMATS.has(rawFormat)) { addRowError(summary, '相机机身', rowNumber, '画幅', '必须是 135、120 或 digital'); continue; }
-      if ('error' in price) { addRowError(summary, '相机机身', rowNumber, '购入价格', price.error); continue; }
-      if (rawType === 'digital' && rawFormat && rawFormat !== 'digital') { addRowError(summary, '相机机身', rowNumber, '画幅', '数码相机必须使用 digital'); continue; }
-      if (rawType !== 'digital' && rawFormat === 'digital') { addRowError(summary, '相机机身', rowNumber, '画幅', '胶片相机不能使用 digital'); continue; }
+      if (!name) { addRowError(summary, t, '相机机身', rowNumber, '相机名称', 'excel.reasonRequired'); continue; }
+      if (rawType && !CAMERA_TYPES.has(rawType)) { addRowError(summary, t, '相机机身', rowNumber, '类型', 'excel.reasonCameraType'); continue; }
+      if (rawFormat && !CAMERA_FORMATS.has(rawFormat)) { addRowError(summary, t, '相机机身', rowNumber, '画幅', 'excel.reasonCameraFormat'); continue; }
+      if ('error' in price) { addRowError(summary, t, '相机机身', rowNumber, '购入价格', price.error); continue; }
+      if (rawType === 'digital' && rawFormat && rawFormat !== 'digital') { addRowError(summary, t, '相机机身', rowNumber, '画幅', 'excel.reasonDigitalFormat'); continue; }
+      if (rawType !== 'digital' && rawFormat === 'digital') { addRowError(summary, t, '相机机身', rowNumber, '画幅', 'excel.reasonFilmCameraFormat'); continue; }
       if (!await findCameraByNameForUser(name, userId)) {
         await db.cameras.add({ id: crypto.randomUUID(), userId, name, type: rawType === 'digital' ? 'digital' : 'film', format: rawFormat || (rawType === 'digital' ? 'digital' : '135'), purchasePrice: price.value, addedAt: Date.now() });
         summary.camerasAdded++;
@@ -143,10 +152,10 @@ export const importExcelDataFromFile = async (
       const focalLength = asNonNegativeNumber(row['焦段mm']);
       const rawType = asText(row['类型 (prime/zoom)']).toLowerCase();
       const price = asNonNegativeNumber(row['购入价格 (选填)']);
-      if (!name) { addRowError(summary, '镜头', rowNumber, '镜头名称', '为必填项'); continue; }
-      if ('error' in focalLength || (focalLength.value !== undefined && focalLength.value <= 0)) { addRowError(summary, '镜头', rowNumber, '焦段mm', '必须是大于 0 的数字'); continue; }
-      if (rawType && !LENS_TYPES.has(rawType)) { addRowError(summary, '镜头', rowNumber, '类型', '必须是 prime 或 zoom'); continue; }
-      if ('error' in price) { addRowError(summary, '镜头', rowNumber, '购入价格', price.error); continue; }
+      if (!name) { addRowError(summary, t, '镜头', rowNumber, '镜头名称', 'excel.reasonRequired'); continue; }
+      if ('error' in focalLength || (focalLength.value !== undefined && focalLength.value <= 0)) { addRowError(summary, t, '镜头', rowNumber, '焦段mm', 'excel.reasonPositiveNumber'); continue; }
+      if (rawType && !LENS_TYPES.has(rawType)) { addRowError(summary, t, '镜头', rowNumber, '类型', 'excel.reasonLensType'); continue; }
+      if ('error' in price) { addRowError(summary, t, '镜头', rowNumber, '购入价格', price.error); continue; }
       if (!await findLensByNameForUser(name, userId)) {
         await db.lenses.add({ id: crypto.randomUUID(), userId, name, focalLength: focalLength.value ?? 50, maxAperture: asText(row['最大光圈 (例如 f/2)']) || 'f/2', type: rawType || 'prime', purchasePrice: price.value, addedAt: Date.now() });
         summary.lensesAdded++;
@@ -162,13 +171,13 @@ export const importExcelDataFromFile = async (
       const price = asNonNegativeNumber(row['单卷均价 (选填)']);
       const rawType = asText(row['类型 (color/bw)']).toLowerCase();
       const rawFormat = asText(row['画幅 (135/120)']).toLowerCase();
-      if (!brand) { addRowError(summary, '胶卷库存', rowNumber, '品牌', '为必填项'); continue; }
-      if (!name) { addRowError(summary, '胶卷库存', rowNumber, '型号名称', '为必填项'); continue; }
-      if ('error' in iso || iso.value === undefined || iso.value <= 0) { addRowError(summary, '胶卷库存', rowNumber, 'ISO', '必须是大于 0 的整数'); continue; }
-      if ('error' in stockCount) { addRowError(summary, '胶卷库存', rowNumber, '初始库存数量', stockCount.error); continue; }
-      if ('error' in price) { addRowError(summary, '胶卷库存', rowNumber, '单卷均价', price.error); continue; }
-      if (rawType && !FILM_TYPES.has(rawType)) { addRowError(summary, '胶卷库存', rowNumber, '类型', '必须是 color 或 bw'); continue; }
-      if (rawFormat && !FILM_FORMATS.has(rawFormat)) { addRowError(summary, '胶卷库存', rowNumber, '画幅', '必须是 135 或 120'); continue; }
+      if (!brand) { addRowError(summary, t, '胶卷库存', rowNumber, '品牌', 'excel.reasonRequired'); continue; }
+      if (!name) { addRowError(summary, t, '胶卷库存', rowNumber, '型号名称', 'excel.reasonRequired'); continue; }
+      if ('error' in iso || iso.value === undefined || iso.value <= 0) { addRowError(summary, t, '胶卷库存', rowNumber, 'ISO', 'excel.reasonPositiveInteger'); continue; }
+      if ('error' in stockCount) { addRowError(summary, t, '胶卷库存', rowNumber, '初始库存数量', stockCount.error); continue; }
+      if ('error' in price) { addRowError(summary, t, '胶卷库存', rowNumber, '单卷均价', price.error); continue; }
+      if (rawType && !FILM_TYPES.has(rawType)) { addRowError(summary, t, '胶卷库存', rowNumber, '类型', 'excel.reasonFilmType'); continue; }
+      if (rawFormat && !FILM_FORMATS.has(rawFormat)) { addRowError(summary, t, '胶卷库存', rowNumber, '画幅', 'excel.reasonFilmFormat'); continue; }
       if (!await findFilmByBrandNameForUser(brand, name, userId)) {
         const id = crypto.randomUUID();
         await db.filmStocks.add({ id, userId, brand, name, iso: iso.value, colorType: rawType === 'bw' ? 'bw' : 'color', format: rawFormat || '135', stockCount: stockCount.value ?? 0, pricePerRoll: price.value, isSystem: 0, addedAt: Date.now() });
@@ -184,19 +193,19 @@ export const importExcelDataFromFile = async (
       const name = asText(row['拍摄主题名称 (必填)']);
       const cameraName = asText(row['相机名称 (必填)']);
       const developmentCost = asNonNegativeNumber(row['冲洗花费 (选填)']);
-      if (!name) { addRowError(summary, '拍摄任务', rowNumber, '拍摄主题名称', '为必填项'); continue; }
-      if (!cameraName) { addRowError(summary, '拍摄任务', rowNumber, '相机名称', '为必填项'); continue; }
-      if ('error' in developmentCost) { addRowError(summary, '拍摄任务', rowNumber, '冲洗花费', developmentCost.error); continue; }
+      if (!name) { addRowError(summary, t, '拍摄任务', rowNumber, '拍摄主题名称', 'excel.reasonRequired'); continue; }
+      if (!cameraName) { addRowError(summary, t, '拍摄任务', rowNumber, '相机名称', 'excel.reasonRequired'); continue; }
+      if ('error' in developmentCost) { addRowError(summary, t, '拍摄任务', rowNumber, '冲洗花费', developmentCost.error); continue; }
       const camera = await findCameraByNameForUser(cameraName, userId);
-      if (!camera?.id) { addRowError(summary, '拍摄任务', rowNumber, '相机名称', `未找到「${cameraName}」，请先在相机机身 Sheet 中添加`); continue; }
+      if (!camera?.id) { addRowError(summary, t, '拍摄任务', rowNumber, '相机名称', 'excel.reasonMissingCamera', { camera: cameraName }); continue; }
 
       let filmId: string | undefined;
       if (camera.type === 'film') {
         const brand = asText(row['胶卷品牌 (仅胶片)']);
         const filmName = asText(row['胶卷型号 (仅胶片)']);
-        if (!brand || !filmName) { addRowError(summary, '拍摄任务', rowNumber, '胶卷', '胶片相机必须填写胶卷品牌和型号'); continue; }
+        if (!brand || !filmName) { addRowError(summary, t, '拍摄任务', rowNumber, '胶卷', 'excel.reasonFilmRequired'); continue; }
         const film = await findFilmByBrandNameForUser(brand, filmName, userId);
-        if (!film?.id) { addRowError(summary, '拍摄任务', rowNumber, '胶卷', `未找到「${brand} ${filmName}」，请先在胶卷库存 Sheet 中添加`); continue; }
+        if (!film?.id) { addRowError(summary, t, '拍摄任务', rowNumber, '胶卷', 'excel.reasonMissingFilm', { film: `${brand} ${filmName}` }); continue; }
         filmId = film.id;
       }
 

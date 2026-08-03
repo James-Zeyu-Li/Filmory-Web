@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import * as XLSX from 'xlsx';
 import { db } from '../db/schema';
+import { translations, type TranslationKey } from '../i18n/translations';
 import { importExcelDataFromFile } from '../services/importExcelData';
 
 const createImportFile = (sheets: Record<string, Record<string, unknown>[]>) => {
@@ -12,6 +13,10 @@ const createImportFile = (sheets: Record<string, Record<string, unknown>[]>) => 
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   });
 };
+
+const englishImportText = (key: TranslationKey, values?: Record<string, string | number>) => (
+  translations['en-US'][key].replace(/\{\{(\w+)\}\}/g, (_, valueKey: string) => String(values?.[valueKey] ?? ''))
+);
 
 describe('Excel import validation', () => {
   beforeEach(async () => {
@@ -52,5 +57,15 @@ describe('Excel import validation', () => {
       '相机机身': [{ '相机名称 (必填)': 'Leica M6' }],
     }), '')).rejects.toThrow('valid user identity');
     expect(await db.cameras.count()).toBe(0);
+  });
+
+  it('localizes row-level validation reasons through the supplied translator', async () => {
+    const summary = await importExcelDataFromFile(createImportFile({
+      '相机机身': [{ '相机名称 (必填)': 'Unknown Type', '类型 (film/digital)': 'instant' }],
+    }), 'user-1', englishImportText);
+
+    expect(summary.errors).toEqual([
+      expect.stringContaining('相机机身 row 2, “类型”: must be film or digital'),
+    ]);
   });
 });

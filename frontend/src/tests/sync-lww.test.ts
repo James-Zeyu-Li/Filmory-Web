@@ -108,4 +108,28 @@ describe('SyncService LWW (Last-Write-Wins) Resolution', () => {
     const localCamera = await db.cameras.get(cameraId);
     expect(localCamera?.name).toBe('Cloud New Edit');
   });
+
+  it('does not treat an invalid cloud timestamp as newer than a local record', async () => {
+    const cameraId = 'cam-invalid-timestamp';
+    await db.cameras.add({
+      id: cameraId,
+      userId: 'test_user',
+      name: 'Local Camera',
+      brand: 'Nikon',
+      format: '135',
+      updatedAt: new Date('2026-01-01T10:00:00.000Z').getTime()
+    });
+
+    mockSupabaseData.data = [{
+      id: cameraId,
+      name: 'Invalid Cloud Timestamp',
+      updated_at: 'not-a-date',
+      brand: 'Nikon',
+      format: '135'
+    }] as any;
+
+    await SyncService.pull();
+
+    expect((await db.cameras.get(cameraId))?.name).toBe('Local Camera');
+  });
 });

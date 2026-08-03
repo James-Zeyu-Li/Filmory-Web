@@ -13,7 +13,7 @@ export interface SyncQueueItem {
   tableName: string;
   action: 'upsert' | 'delete';
   recordId: string;
-  payload?: any;
+  payload?: Record<string, unknown>;
   timestamp: number;
   attemptCount?: number;
   failureKind?: 'retryable' | 'needs_attention';

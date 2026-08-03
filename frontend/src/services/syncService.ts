@@ -97,7 +97,10 @@ const getSyncTable = (tableName: SyncTableName): Table<SyncRow, string> => (
 const getString = (value: unknown) => typeof value === 'string' ? value : undefined;
 const getTimestamp = (value: unknown) => {
   if (typeof value === 'number') return value;
-  if (typeof value === 'string') return new Date(value).getTime();
+  if (typeof value === 'string') {
+    const timestamp = new Date(value).getTime();
+    return Number.isFinite(timestamp) ? timestamp : 0;
+  }
   return 0;
 };
 
