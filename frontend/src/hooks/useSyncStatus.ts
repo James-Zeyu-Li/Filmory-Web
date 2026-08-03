@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import { SYNC_STATUS_EVENT, SyncService, type SyncStatusState } from '../services/syncService';
 
-const getInitialStatus = (): SyncStatusState => {
-  if (!SyncService.isAutoSyncEnabled()) return 'local';
-  return navigator.onLine ? 'synced' : 'offline';
-};
+const getInitialStatus = (): SyncStatusState => SyncService.getStatus();
 
 export const useSyncStatus = () => {
   const [status, setStatus] = useState<SyncStatusState>(getInitialStatus);

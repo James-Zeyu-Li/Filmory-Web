@@ -14,6 +14,16 @@ describe('SyncStatusBadge', () => {
     vi.restoreAllMocks();
   });
 
+  it('shows syncing while the initial cloud pull has not finished', () => {
+    vi.spyOn(SyncService, 'isAutoSyncEnabled').mockReturnValue(true);
+
+    render(<SyncStatusBadge />);
+
+    expect(screen.getByText('同步中')).toBeInTheDocument();
+
+    vi.restoreAllMocks();
+  });
+
   it('updates visible copy when sync status events arrive', () => {
     vi.spyOn(SyncService, 'isAutoSyncEnabled').mockReturnValue(true);
 

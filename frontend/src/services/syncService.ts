@@ -86,11 +86,17 @@ const supabaseTables = Object.values(tableMap);
 export const LOCAL_CHANGE_EVENT = 'grainfolio-sync-request';
 export const SYNC_STATUS_EVENT = 'grainfolio-sync-status';
 export type SyncStatusState = 'local' | 'offline' | 'syncing' | 'synced' | 'error';
+type SyncPullResult = {
+  remoteUserProfileFound: boolean;
+};
 const SYNC_DEBOUNCE_MS = 1500;
 const RESUME_SYNC_DEBOUNCE_MS = 400;
 const RETRY_SYNC_DELAY_MS = 5000;
+const VISIBLE_POLL_INTERVAL_MS = 30_000;
+let currentSyncStatus: SyncStatusState = 'local';
 
 const dispatchSyncStatus = (status: SyncStatusState) => {
+  currentSyncStatus = status;
   window.dispatchEvent(new CustomEvent(SYNC_STATUS_EVENT, { detail: status }));
 };
 
@@ -99,11 +105,18 @@ export class SyncService {
   private static activeCleanup: (() => void) | null = null;
   private static scheduledSyncTimer: ReturnType<typeof setTimeout> | null = null;
   private static retryTimer: ReturnType<typeof setTimeout> | null = null;
+  private static visiblePollTimer: ReturnType<typeof setInterval> | null = null;
   private static inFlightSync: Promise<void> | null = null;
   private static shouldRunAgain = false;
 
   static isAutoSyncEnabled(): boolean {
     return hasAutoSyncFlag() && hasValidSupabaseKeyPair();
+  }
+
+  static getStatus(): SyncStatusState {
+    if (!this.isAutoSyncEnabled()) return 'local';
+    if (!navigator.onLine) return 'offline';
+    return currentSyncStatus === 'local' ? 'syncing' : currentSyncStatus;
   }
 
   static start(): void {
@@ -144,10 +157,17 @@ export class SyncService {
       this.requestSync('local-change', SYNC_DEBOUNCE_MS);
     };
 
+    const pollWhileVisible = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) {
+        this.requestSync('visible-poll');
+      }
+    };
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener(LOCAL_CHANGE_EVENT, handleLocalChange as EventListener);
+    this.visiblePollTimer = setInterval(pollWhileVisible, VISIBLE_POLL_INTERVAL_MS);
 
     this.activeCleanup = () => {
       unsubscribeRealtime?.();
@@ -155,6 +175,10 @@ export class SyncService {
       window.removeEventListener('offline', handleOffline);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener(LOCAL_CHANGE_EVENT, handleLocalChange as EventListener);
+      if (this.visiblePollTimer) {
+        clearInterval(this.visiblePollTimer);
+        this.visiblePollTimer = null;
+      }
     };
 
     if (!navigator.onLine) {
@@ -162,6 +186,7 @@ export class SyncService {
       return;
     }
 
+    dispatchSyncStatus('syncing');
     this.requestSync('start', 0);
   }
 
@@ -181,6 +206,13 @@ export class SyncService {
       clearTimeout(this.retryTimer);
       this.retryTimer = null;
     }
+
+    if (this.visiblePollTimer) {
+      clearInterval(this.visiblePollTimer);
+      this.visiblePollTimer = null;
+    }
+
+    dispatchSyncStatus('local');
   }
 
   static requestSync(reason = 'manual', delayMs = 0): void {
@@ -294,19 +326,19 @@ export class SyncService {
   /**
    * PULL: Fetch remote changes since last sync and apply locally
    */
-  static async pull(): Promise<void> {
+  static async pull({ preferRemoteUserProfile = false }: { preferRemoteUserProfile?: boolean } = {}): Promise<SyncPullResult> {
     const userId = getCurrentUserId();
-    if (!userId) return;
+    if (!userId) return { remoteUserProfileFound: false };
 
     let lastSync = new Date(0).toISOString();
-    const localStockCount = await db.filmStocks.where('userId').equals(userId).count();
-    
-    if (localStockCount > 0) {
-      const lastSyncStr = localStorage.getItem(getSyncWatermarkKey(userId)) || localStorage.getItem('grainfolio_last_sync');
-      if (lastSyncStr) lastSync = new Date(lastSyncStr).toISOString();
+    const lastSyncStr = localStorage.getItem(getSyncWatermarkKey(userId));
+    const isInitialPull = !lastSyncStr;
+
+    if (!isInitialPull) {
+      lastSync = new Date(lastSyncStr).toISOString();
       console.log(`[Sync Pull] Incremental pull since ${lastSync}`);
     } else {
-      console.log('📦 [Sync Pull] Local Dexie is completely empty, forcing a FULL PULL from Supabase...');
+      console.log('📦 [Sync Pull] No user sync watermark, forcing a FULL PULL from Supabase...');
     }
 
     const newSyncTime = new Date().toISOString();
@@ -315,10 +347,12 @@ export class SyncService {
     window.__grainfolio_is_pulling = true;
 
     let syncError: Error | null = null;
+    let remoteUserProfileFound = false;
 
     try {
-      for (const [dexieTable, supaTable] of Object.entries(tableMap)) {
-        // Fetch rows updated since last sync
+      // Fetch all independent tables concurrently. Applying them remains sequential so
+      // Dexie conflict resolution and queued writes keep deterministic behavior.
+      const remoteChanges = await Promise.all(Object.entries(tableMap).map(async ([dexieTable, supaTable]) => {
         const { data, error } = await supabase
           .from(supaTable)
           .select('*')
@@ -326,9 +360,16 @@ export class SyncService {
           .gt('updated_at', lastSync);
 
         if (error) throw new Error(`[Sync Pull] ${supaTable}: ${error.message}`);
-        if (!data || data.length === 0) continue;
+        return { dexieTable, supaTable, data: data || [] };
+      }));
+
+      for (const { dexieTable, supaTable, data } of remoteChanges) {
+        if (data.length === 0) continue;
 
         console.log(`[Sync Pull] Downloaded ${data.length} new/updated records for ${supaTable}`);
+
+        const shouldPreferRemoteProfile = preferRemoteUserProfile && dexieTable === 'userProfiles';
+        if (shouldPreferRemoteProfile) remoteUserProfileFound = true;
 
         const table = (db as any)[dexieTable];
 
@@ -369,7 +410,7 @@ export class SyncService {
           const pendingTime = pendingSyncMap.get(row.id) || 0;
           localTime = Math.max(localTime, pendingTime);
 
-          if (remoteTime >= localTime) {
+          if (shouldPreferRemoteProfile || remoteTime >= localTime) {
             if (row.deleted_at) {
               toDelete.push(row.id);
             } else {
@@ -399,7 +440,7 @@ export class SyncService {
         if (toDelete.length > 0) await table.bulkDelete(toDelete);
       }
 
-      // Update the sync watermark on success
+      // Update the user-scoped sync watermark only after every table succeeds.
       localStorage.setItem(getSyncWatermarkKey(userId), newSyncTime);
 
     } catch (err) {
@@ -413,6 +454,8 @@ export class SyncService {
     if (syncError) {
       throw syncError;
     }
+
+    return { remoteUserProfileFound };
   }
 
   /**
@@ -439,8 +482,17 @@ export class SyncService {
 
     this.inFlightSync = (async () => {
       try {
-        await this.push();
-        await this.pull();
+        const userId = getCurrentUserId();
+        const isInitialSync = userId && !localStorage.getItem(getSyncWatermarkKey(userId));
+
+        if (isInitialSync) {
+          // A new browser must import the account profile before its local default can queue a write.
+          await this.pull({ preferRemoteUserProfile: true });
+          await this.push();
+        } else {
+          await this.push();
+          await this.pull();
+        }
         dispatchSyncStatus('synced');
       } catch {
         dispatchSyncStatus('error');

@@ -368,6 +368,76 @@ describe('SyncService schema parity', () => {
     }
   });
 
+  it('runs a visible-page fallback sync and stops it with the service', () => {
+    vi.useFakeTimers();
+    vi.stubEnv('VITE_ENABLE_SUPABASE_SYNC', 'true');
+    vi.stubEnv('VITE_SUPABASE_URL', 'http://127.0.0.1:54321');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'eyJ.local-dev-jwt');
+
+    const syncSpy = vi.spyOn(SyncService, 'sync').mockResolvedValue(undefined);
+
+    try {
+      SyncService.start();
+      vi.runOnlyPendingTimers();
+      syncSpy.mockClear();
+
+      vi.advanceTimersByTime(30_000);
+      expect(syncSpy).toHaveBeenCalledTimes(1);
+
+      syncSpy.mockClear();
+      SyncService.stop();
+      vi.advanceTimersByTime(30_000);
+      expect(syncSpy).not.toHaveBeenCalled();
+    } finally {
+      SyncService.stop();
+      syncSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it('pulls before pushing when a user has no sync watermark', async () => {
+    vi.stubEnv('VITE_ENABLE_SUPABASE_SYNC', 'true');
+    vi.stubEnv('VITE_SUPABASE_URL', 'http://127.0.0.1:54321');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'eyJ.local-dev-jwt');
+
+    const pullSpy = vi.spyOn(SyncService, 'pull').mockResolvedValue({ remoteUserProfileFound: true });
+    const pushSpy = vi.spyOn(SyncService, 'push').mockResolvedValue(undefined);
+
+    try {
+      await SyncService.sync();
+
+      expect(pullSpy).toHaveBeenCalledWith({ preferRemoteUserProfile: true });
+      expect(pushSpy).toHaveBeenCalledTimes(1);
+      expect(pullSpy.mock.invocationCallOrder[0]).toBeLessThan(pushSpy.mock.invocationCallOrder[0]);
+    } finally {
+      pullSpy.mockRestore();
+      pushSpy.mockRestore();
+    }
+  });
+
+  it('pushes before pulling after a user watermark exists', async () => {
+    vi.stubEnv('VITE_ENABLE_SUPABASE_SYNC', 'true');
+    vi.stubEnv('VITE_SUPABASE_URL', 'http://127.0.0.1:54321');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'eyJ.local-dev-jwt');
+    vi.mocked(localStorage.getItem).mockImplementation((key: string) => (
+      key === 'grainfolio_user_id' ? 'user-1' : key === 'grainfolio_last_sync_user-1' ? new Date(0).toISOString() : null
+    ));
+
+    const pullSpy = vi.spyOn(SyncService, 'pull').mockResolvedValue({ remoteUserProfileFound: false });
+    const pushSpy = vi.spyOn(SyncService, 'push').mockResolvedValue(undefined);
+
+    try {
+      await SyncService.sync();
+
+      expect(pushSpy).toHaveBeenCalledTimes(1);
+      expect(pullSpy).toHaveBeenCalledWith();
+      expect(pushSpy.mock.invocationCallOrder[0]).toBeLessThan(pullSpy.mock.invocationCallOrder[0]);
+    } finally {
+      pullSpy.mockRestore();
+      pushSpy.mockRestore();
+    }
+  });
+
   it('stops lifecycle listeners and realtime cleanup when sync service stops', () => {
     vi.useFakeTimers();
     vi.stubEnv('VITE_ENABLE_SUPABASE_SYNC', 'true');

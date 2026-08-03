@@ -35,6 +35,8 @@ describeLive('P0 live Supabase security integration', () => {
     expect(createdA.error).toBeNull();
     expect(createdB.error).toBeNull();
 
+    let objectPath: string | null = null;
+
     try {
       const signInA = await userA.auth.signInWithPassword({ email: emailA, password });
       const signInB = await userB.auth.signInWithPassword({ email: emailB, password });
@@ -44,7 +46,7 @@ describeLive('P0 live Supabase security integration', () => {
       const userAId = signInA.data.user?.id;
       expect(userAId).toBeTruthy();
 
-      const objectPath = `${userAId}/live-test/${stamp}.txt`;
+      objectPath = `${userAId}/live-test/${stamp}.txt`;
       const userAToken = signInA.data.session?.access_token;
       const userBToken = signInB.data.session?.access_token;
       expect(userAToken).toBeTruthy();
@@ -66,6 +68,9 @@ describeLive('P0 live Supabase security integration', () => {
       expect(signed.error).toBeNull();
       expect(signed.data?.signedUrl).toContain('/storage/v1/object/sign/grainfolio-assets/');
 
+      const crossUserSigned = await userB.storage.from('grainfolio-assets').createSignedUrl(objectPath, 60);
+      expect(crossUserSigned.error).not.toBeNull();
+
       const anonDownload = await fetch(storageObjectUrl(objectPath), {
         headers: { apikey: localAnonKey }
       });
@@ -80,6 +85,7 @@ describeLive('P0 live Supabase security integration', () => {
       expect(crossUserDownload.ok).toBe(false);
 
     } finally {
+      if (objectPath) await admin.storage.from('grainfolio-assets').remove([objectPath]);
       if (createdA.data.user?.id) await admin.auth.admin.deleteUser(createdA.data.user.id);
       if (createdB.data.user?.id) await admin.auth.admin.deleteUser(createdB.data.user.id);
     }
