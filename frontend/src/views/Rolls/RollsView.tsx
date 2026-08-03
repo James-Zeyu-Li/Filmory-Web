@@ -37,6 +37,7 @@ import { useUserTier } from '../../hooks/useUserTier';
 import { UpgradeModal } from '../../components/UpgradeModal';
 import { canCreateActiveRoll } from '../../services/membershipPolicy';
 import { requestImmediateSync } from '../../services/syncEvents';
+import { adjustFilmStock, createRollWithInventory } from '../../services/inventoryOperationService';
 
 import { CollectionsTab } from './CollectionsTab';
 import type { Roll } from '../../db/schema';
@@ -403,35 +404,23 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
       userId: user?.id || 'offline'
     };
 
-    await db.transaction('rw', db.rolls, db.filmStocks, db.ledgerTransactions, async () => {
-      await db.rolls.add(newRoll);
+    const film = enableFilmMode && finalFilmId ? await db.filmStocks.get(finalFilmId) : undefined;
+    const expenseCost = generateFilmExpense && film
+      ? (rollFilmPrice ? Number(rollFilmPrice) : (film.pricePerRoll || 0))
+      : 0;
+    const ledger = expenseCost > 0 ? {
+      id: crypto.randomUUID(),
+      userId: newRoll.userId,
+      amount: -expenseCost,
+      date: nowTimestamp,
+      type: 'expense' as const,
+      category: 'film' as const,
+      relatedEntityId: newRoll.id,
+      notes: t('rolls.consumeFilmLedgerNote', { film: `${film?.brand} ${film?.name}` }),
+      addedAt: nowTimestamp
+    } : undefined;
 
-      if (enableFilmMode && finalFilmId) {
-        const film = await db.filmStocks.get(finalFilmId);
-        if (film) {
-          const currentStock = film.stockCount || 0;
-          await db.filmStocks.update(finalFilmId, { stockCount: Math.max(0, currentStock - 1) });
-          
-          if (generateFilmExpense) {
-            const expenseCost = rollFilmPrice ? Number(rollFilmPrice) : (film.pricePerRoll || 0);
-            if (expenseCost > 0) {
-              await db.ledgerTransactions.add({
-                id: crypto.randomUUID(),
-                userId: user.id,
-                amount: -expenseCost,
-                date: Date.now(),
-                type: 'expense',
-                category: 'film',
-                relatedEntityId: newRoll.id,
-                notes: t('rolls.consumeFilmLedgerNote', { film: `${film.brand} ${film.name}` }),
-                addedAt: Date.now()
-              });
-            }
-          }
-        }
-      }
-    });
-    requestImmediateSync('roll-create');
+    await createRollWithInventory({ roll: newRoll, ledger });
 
     if (!keepModalOpen) {
       setIsNewRollModalOpen(false);
@@ -510,11 +499,11 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
         iso: 400,
         colorType: 'color',
         format: qaFilmFormat,
-        stockCount: 1,
+        stockCount: 0,
         isSystem: 0,
         addedAt: Date.now()
       });
-      requestImmediateSync('roll-quick-add-film');
+      await adjustFilmStock({ id: newId, userId: user?.id || 'offline', stockCount: 0 }, 1);
       setSelectedFilmId(newId);
     }
     setFilmSearchText(filmLabel);

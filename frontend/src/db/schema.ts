@@ -7,13 +7,11 @@ declare global {
   }
 }
 
-export interface SyncQueueItem {
+export type InventoryOperationType = 'create_roll_with_inventory' | 'adjust_film_stock';
+
+interface SyncQueueBase {
   id?: number;
   userId?: string;
-  tableName: string;
-  action: 'upsert' | 'delete';
-  recordId: string;
-  payload?: Record<string, unknown>;
   timestamp: number;
   attemptCount?: number;
   failureKind?: 'retryable' | 'needs_attention';
@@ -22,6 +20,46 @@ export interface SyncQueueItem {
   lastAttemptAt?: number;
   nextRetryAt?: number;
 }
+
+export interface SyncRecordQueueItem extends SyncQueueBase {
+  kind?: 'record';
+  tableName: string;
+  action: 'upsert' | 'delete';
+  recordId: string;
+  payload?: Record<string, unknown>;
+}
+
+export interface SyncOperationQueueItem extends SyncQueueBase {
+  kind: 'operation';
+  operationId: string;
+  operationType: InventoryOperationType;
+  operationPayload: Record<string, unknown>;
+}
+
+export type SyncQueueItem = SyncRecordQueueItem | SyncOperationQueueItem;
+
+export const isSyncRecordQueueItem = (item: SyncQueueItem): item is SyncRecordQueueItem => (
+  item.kind !== 'operation'
+);
+
+export const isSyncOperationQueueItem = (item: SyncQueueItem): item is SyncOperationQueueItem => (
+  item.kind === 'operation'
+);
+
+const suppressedSyncRecordTransactions = new WeakSet<object>();
+
+export const suppressSyncRecordsForCurrentTransaction = (): void => {
+  const transaction = Dexie.currentTransaction;
+  if (!transaction) {
+    throw new Error('Inventory operations must run inside a Dexie transaction.');
+  }
+  suppressedSyncRecordTransactions.add(transaction);
+};
+
+const shouldEnqueueSyncRecord = () => (
+  !window.__grainfolio_is_pulling &&
+  (!Dexie.currentTransaction || !suppressedSyncRecordTransactions.has(Dexie.currentTransaction))
+);
 
 export interface LedgerTransaction {
   id?: string;
@@ -592,9 +630,28 @@ export class GrainfolioDatabase extends Dexie {
       collections: 'id, userId, name, date, addedAt'
     });
 
+    // Version 24: Store atomic inventory operations beside ordinary record sync work.
+    this.version(24).stores({
+      cameras: 'id, userId, name, type, format, cameraSystemId, backType, avatarUrl, addedAt',
+      cameraSystems: 'id, userId, name, mountKey, addedAt',
+      filmBacks: 'id, userId, cameraSystemId, name, format, status, addedAt',
+      lenses: 'id, userId, name, focalLength, maxAperture, type, mountKey, addedAt',
+      filmStocks: 'id, userId, brand, name, iso, colorType, format, isSystem, systemKey, addedAt',
+      rolls: 'id, userId, name, *cameraIds, *lensIds, filmBackId, filmStockId, status, startDate, endDate, rating, location, developNotes, collectionId',
+      photoAssets: 'id, userId, rollId, originalFileName, fileSize, thumbnailUrl, previewUrl, storageKey, addedAt, isPinned, rating, tags, orderIndex',
+      otherEquipments: 'id, userId, name, type, notes, purchaseDate, expiryDate, addedAt',
+      albums: 'id, userId, name, description, coverPhotoId, addedAt',
+      albumPhotos: 'id, userId, albumId, photoId, addedAt',
+      tagConfigs: 'id, userId, &[userId+name], color',
+      syncQueue: '++id, userId, kind, operationId, operationType, tableName, action, recordId, timestamp, failureKind, nextRetryAt',
+      ledgerTransactions: 'id, userId, amount, date, type, category, relatedEntityId, addedAt',
+      userProfiles: 'id, userId, tier, displayName, membershipRequestStatus, membershipRequestedAt',
+      collections: 'id, userId, name, date, addedAt'
+    });
+
     // Auto-inject userId and track sync changes on creation
     this.on('ready', () => {
-      const enqueueSyncChange = (item: SyncQueueItem) => {
+      const enqueueSyncChange = (item: SyncRecordQueueItem) => {
         const enqueue = () => {
           void this.syncQueue.add(item)
             .then(() => {
@@ -630,7 +687,7 @@ export class GrainfolioDatabase extends Dexie {
             assignedId = obj.id;
           }
 
-          if (!window.__grainfolio_is_pulling) {
+          if (shouldEnqueueSyncRecord()) {
             enqueueSyncChange({
               userId: obj.userId || currentUserId,
               tableName: table.name,
@@ -647,7 +704,7 @@ export class GrainfolioDatabase extends Dexie {
         });
 
         table.hook('updating', (modifications, primKey, obj) => {
-          if (!window.__grainfolio_is_pulling) {
+          if (shouldEnqueueSyncRecord()) {
             const updatedObj = { ...obj, ...modifications };
             const currentUserId = updatedObj.userId || localStorage.getItem('grainfolio_user_id') || 'mock_uid_123';
             enqueueSyncChange({
@@ -661,9 +718,12 @@ export class GrainfolioDatabase extends Dexie {
           }
         });
 
-        table.hook('deleting', (primKey, obj: any) => {
-          if (!window.__grainfolio_is_pulling) {
-            const currentUserId = obj?.userId || localStorage.getItem('grainfolio_user_id') || 'mock_uid_123';
+        table.hook('deleting', (primKey, obj: unknown) => {
+          if (shouldEnqueueSyncRecord()) {
+            const record = typeof obj === 'object' && obj !== null ? obj as Record<string, unknown> : undefined;
+            const currentUserId = typeof record?.userId === 'string'
+              ? record.userId
+              : localStorage.getItem('grainfolio_user_id') || 'mock_uid_123';
             enqueueSyncChange({
               userId: currentUserId,
               tableName: table.name,

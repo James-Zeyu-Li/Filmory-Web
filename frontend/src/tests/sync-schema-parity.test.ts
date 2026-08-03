@@ -12,6 +12,7 @@ const supabaseMock = vi.hoisted(() => ({
   removeChannel: vi.fn(),
   on: vi.fn(),
   subscribe: vi.fn(),
+  rpc: vi.fn(),
 }));
 
 vi.mock('../services/supabaseClient', () => ({
@@ -19,6 +20,7 @@ vi.mock('../services/supabaseClient', () => ({
     from: supabaseMock.from,
     channel: supabaseMock.channel,
     removeChannel: supabaseMock.removeChannel,
+    rpc: supabaseMock.rpc,
   },
 }));
 
@@ -47,6 +49,7 @@ describe('SyncService schema parity', () => {
     supabaseMock.removeChannel.mockClear();
     supabaseMock.on.mockClear();
     supabaseMock.subscribe.mockClear();
+    supabaseMock.rpc.mockClear();
     supabaseMock.from.mockReturnValue({
       upsert: supabaseMock.upsert,
       update: supabaseMock.update,
@@ -145,6 +148,44 @@ describe('SyncService schema parity', () => {
         added_at: 1782864000000,
       }),
     ]);
+  });
+
+  it('sends inventory operations through RPC and applies the server stock result locally', async () => {
+    await db.filmStocks.add({
+      id: 'film-operation-1',
+      userId: 'user-1',
+      brand: 'Kodak',
+      name: 'Gold 200',
+      iso: 200,
+      colorType: 'color',
+      format: '135',
+      isSystem: 0,
+      stockCount: 1,
+      addedAt: 1782864000000,
+    });
+    await db.syncQueue.clear();
+    await db.syncQueue.add({
+      kind: 'operation',
+      userId: 'user-1',
+      operationId: 'operation-1',
+      operationType: 'adjust_film_stock',
+      operationPayload: { filmStockId: 'film-operation-1', delta: -1 },
+      timestamp: 1782864000000,
+    });
+    supabaseMock.rpc.mockResolvedValue({
+      data: { operationId: 'operation-1', filmStockId: 'film-operation-1', stockCount: 0 },
+      error: null,
+    });
+
+    await SyncService.push();
+
+    expect(supabaseMock.rpc).toHaveBeenCalledWith('adjust_film_stock', {
+      p_operation_id: 'operation-1',
+      p_film_stock_id: 'film-operation-1',
+      p_delta: -1,
+    });
+    expect((await db.filmStocks.get('film-operation-1'))?.stockCount).toBe(0);
+    expect(await db.syncQueue.count()).toBe(0);
   });
 
   it('marks RLS failures as needing attention and excludes them from automatic retries', async () => {

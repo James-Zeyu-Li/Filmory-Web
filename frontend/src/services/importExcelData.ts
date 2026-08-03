@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
-import { db } from '../db/schema';
+import { db, type LedgerTransaction, type Roll } from '../db/schema';
+import { adjustFilmStock, createRollWithInventory } from './inventoryOperationService';
 import { requestImmediateSync } from './syncEvents';
 import type { TranslationKey } from '../i18n/translations';
 
@@ -126,6 +127,8 @@ export const importExcelDataFromFile = async (
 
   const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
   const summary: ImportExcelSummary = { camerasAdded: 0, lensesAdded: 0, filmsAdded: 0, rollsAdded: 0, errors: [] };
+  const initialStockAdjustments: Array<{ id: string; userId: string; stockCount: number; delta: number }> = [];
+  const pendingRolls: Array<{ roll: Roll; ledger?: LedgerTransaction }> = [];
 
   await db.transaction('rw', [db.cameras, db.lenses, db.filmStocks, db.rolls, db.ledgerTransactions], async () => {
     for (const [index, row] of getRows(workbook, '相机机身').entries()) {
@@ -180,8 +183,11 @@ export const importExcelDataFromFile = async (
       if (rawFormat && !FILM_FORMATS.has(rawFormat)) { addRowError(summary, t, '胶卷库存', rowNumber, '画幅', 'excel.reasonFilmFormat'); continue; }
       if (!await findFilmByBrandNameForUser(brand, name, userId)) {
         const id = crypto.randomUUID();
-        await db.filmStocks.add({ id, userId, brand, name, iso: iso.value, colorType: rawType === 'bw' ? 'bw' : 'color', format: rawFormat || '135', stockCount: stockCount.value ?? 0, pricePerRoll: price.value, isSystem: 0, addedAt: Date.now() });
+        await db.filmStocks.add({ id, userId, brand, name, iso: iso.value, colorType: rawType === 'bw' ? 'bw' : 'color', format: rawFormat || '135', stockCount: 0, pricePerRoll: price.value, isSystem: 0, addedAt: Date.now() });
         summary.filmsAdded++;
+        if ((stockCount.value ?? 0) > 0) {
+          initialStockAdjustments.push({ id, userId, stockCount: 0, delta: stockCount.value! });
+        }
         if ((price.value ?? 0) > 0 && (stockCount.value ?? 0) > 0) {
           await db.ledgerTransactions.add({ id: crypto.randomUUID(), userId, amount: -(price.value! * stockCount.value!), date: Date.now(), type: 'expense', category: 'film', relatedEntityId: id, notes: importText(t, 'excel.ledgerStockNote', 'Batch imported stock: {{film}} ({{count}} rolls)', { film: `${brand} ${name}`, count: stockCount.value! }), addedAt: Date.now() });
         }
@@ -210,17 +216,38 @@ export const importExcelDataFromFile = async (
       }
 
       const id = crypto.randomUUID();
-      await db.rolls.add({ id, userId, name, cameraIds: [camera.id], filmStockId: filmId || 'digital-placeholder', status: 'active', startDate: Date.now(), location: asText(row['拍摄地点 (选填)']) || undefined });
+      const roll: Roll = {
+        id,
+        userId,
+        name,
+        cameraIds: [camera.id],
+        filmStockId: filmId || 'digital-placeholder',
+        status: 'active',
+        startDate: Date.now(),
+        location: asText(row['拍摄地点 (选填)']) || undefined,
+      };
       summary.rollsAdded++;
-      if (filmId) {
-        const film = await db.filmStocks.get(filmId);
-        if (film) await db.filmStocks.update(filmId, { stockCount: Math.max(0, (film.stockCount || 0) - 1) });
-      }
-      if ((developmentCost.value ?? 0) > 0) {
-        await db.ledgerTransactions.add({ id: crypto.randomUUID(), userId, amount: -developmentCost.value!, date: Date.now(), type: 'expense', category: 'develop', relatedEntityId: id, notes: importText(t, 'excel.ledgerDevelopNote', 'Imported roll development cost: {{roll}}', { roll: name }), addedAt: Date.now() });
-      }
+      const ledger = (developmentCost.value ?? 0) > 0 ? {
+        id: crypto.randomUUID(),
+        userId,
+        amount: -developmentCost.value!,
+        date: Date.now(),
+        type: 'expense' as const,
+        category: 'develop' as const,
+        relatedEntityId: id,
+        notes: importText(t, 'excel.ledgerDevelopNote', 'Imported roll development cost: {{roll}}', { roll: name }),
+        addedAt: Date.now(),
+      } : undefined;
+      pendingRolls.push({ roll, ledger });
     }
   });
+
+  for (const adjustment of initialStockAdjustments) {
+    await adjustFilmStock(adjustment, adjustment.delta);
+  }
+  for (const pendingRoll of pendingRolls) {
+    await createRollWithInventory(pendingRoll);
+  }
 
   requestImmediateSync('excel-import');
   return summary;

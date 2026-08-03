@@ -1,5 +1,13 @@
 import { supabase } from './supabaseClient';
-import { db, type SyncQueueItem } from '../db/schema';
+import {
+  db,
+  isSyncOperationQueueItem,
+  isSyncRecordQueueItem,
+  suppressSyncRecordsForCurrentTransaction,
+  type SyncOperationQueueItem,
+  type SyncQueueItem,
+  type SyncRecordQueueItem,
+} from '../db/schema';
 import type { Table } from 'dexie';
 import {
   getSyncIntentFromEvent,
@@ -108,7 +116,7 @@ const getCurrentUserId = () => localStorage.getItem('grainfolio_user_id');
 const getSyncWatermarkKey = (userId: string) => `grainfolio_last_sync_${userId}`;
 const queueBelongsToUser = (item: SyncQueueItem, userId: string) => (
   item.userId === userId ||
-  (!item.userId && (item.payload?.userId === userId || item.payload?.user_id === userId))
+  (isSyncRecordQueueItem(item) && !item.userId && (item.payload?.userId === userId || item.payload?.user_id === userId))
 );
 
 const getUserQueue = async (userId: string) => {
@@ -169,6 +177,17 @@ type SyncFailure = {
   code: string;
   message: string;
 };
+
+type InventoryOperationResult = {
+  filmStockId?: string;
+  stockCount?: number;
+};
+
+const isInventoryOperationResult = (value: unknown): value is InventoryOperationResult => (
+  isSyncRecord(value) &&
+  (value.filmStockId === undefined || typeof value.filmStockId === 'string') &&
+  (value.stockCount === undefined || typeof value.stockCount === 'number')
+);
 
 class SyncPushError extends Error {
   readonly nextRetryAt: number | null;
@@ -487,6 +506,56 @@ export class SyncService {
     }, Math.max(0, delayMs));
   }
 
+  private static async applyInventoryOperationResult(result: InventoryOperationResult): Promise<void> {
+    if (!result.filmStockId || typeof result.stockCount !== 'number') return;
+
+    await db.transaction('rw', db.filmStocks, async () => {
+      suppressSyncRecordsForCurrentTransaction();
+      await db.filmStocks.update(result.filmStockId, { stockCount: result.stockCount });
+    });
+  }
+
+  private static async pushInventoryOperation(item: SyncOperationQueueItem): Promise<void> {
+    const payload = item.operationPayload;
+    let data: unknown;
+    let error: unknown;
+
+    if (item.operationType === 'create_roll_with_inventory') {
+      const roll = payload.roll;
+      if (!isSyncRecord(roll)) {
+        throw new Error('Invalid create-roll inventory operation payload.');
+      }
+      const response = await supabase.rpc('create_roll_with_inventory', {
+        p_operation_id: item.operationId,
+        p_roll: roll,
+        p_consume_inventory: payload.consumeInventory === true,
+        p_ledger: isSyncRecord(payload.ledger) ? payload.ledger : null,
+      });
+      data = response.data;
+      error = response.error;
+    } else {
+      const filmStockId = getString(payload.filmStockId);
+      const delta = payload.delta;
+      if (!filmStockId || typeof delta !== 'number' || !Number.isInteger(delta)) {
+        throw new Error('Invalid film-stock adjustment operation payload.');
+      }
+      const response = await supabase.rpc('adjust_film_stock', {
+        p_operation_id: item.operationId,
+        p_film_stock_id: filmStockId,
+        p_delta: delta,
+      });
+      data = response.data;
+      error = response.error;
+    }
+
+    if (error) throw error;
+    if (!isInventoryOperationResult(data)) {
+      throw new Error('Inventory operation returned an invalid result.');
+    }
+
+    await this.applyInventoryOperationResult(data);
+  }
+
   /**
    * PUSH: Consume the local sync queue and send changes to Supabase
    */
@@ -499,12 +568,17 @@ export class SyncService {
     const queue = await getReadyUserQueue(userId);
     if (queue.length === 0) return;
 
-    // 2. Group by table name to optimize network calls
-    const grouped = queue.reduce((acc, item) => {
+    // Record sync runs first so an operation can safely reference a newly-created
+    // film stock. Operations then execute one at a time through idempotent RPCs.
+    const recordQueue = queue.filter(isSyncRecordQueueItem);
+    const operationQueue = queue.filter(isSyncOperationQueueItem);
+
+    // 2. Group ordinary record work by table name to optimize network calls.
+    const grouped = recordQueue.reduce((acc, item) => {
       if (!acc[item.tableName]) acc[item.tableName] = [];
       acc[item.tableName].push(item);
       return acc;
-    }, {} as Record<string, SyncQueueItem[]>);
+    }, {} as Record<string, SyncRecordQueueItem[]>);
 
     // 3. Process each table
     for (const [tableName, items] of Object.entries(grouped)) {
@@ -514,7 +588,7 @@ export class SyncService {
 
       // Deduplicate: If multiple updates for same record, only keep the latest
       // For deletes, if deleted, we shouldn't upsert.
-      const latestOps = new Map<string, SyncQueueItem>();
+      const latestOps = new Map<string, typeof recordQueue[number]>();
       items.forEach(item => latestOps.set(item.recordId, item));
 
       const upserts: SyncRecord[] = [];
@@ -526,6 +600,12 @@ export class SyncService {
         if (op.action === 'upsert' && op.payload) {
           const snakePayload = convertKeysToSnakeCase(op.payload);
           if (!isSyncRecord(snakePayload)) continue;
+          // Inventory values are changed only by idempotent RPC operations. A
+          // normal film-stock edit may still update metadata, but must never
+          // overwrite a newer server-side stock count with an LWW snapshot.
+          if (tableName === 'filmStocks') {
+            delete snakePayload.stock_count;
+          }
           // Ensure user_id is injected just in case
           snakePayload.user_id = userId;
           upserts.push(snakePayload);
@@ -568,6 +648,21 @@ export class SyncService {
           earliestRetryAt = earliestRetryAt === null ? retryAt : Math.min(earliestRetryAt, retryAt);
         }
         console.error('Failed to push sync queue batch:', err);
+      }
+    }
+
+    for (const operation of operationQueue) {
+      if (operation.id === undefined) continue;
+      try {
+        await this.pushInventoryOperation(operation);
+        await db.syncQueue.delete(operation.id);
+      } catch (err) {
+        const failure = classifySyncFailure(err);
+        const retryAt = await this.markQueueFailure([operation.id], [operation], failure);
+        if (retryAt !== null) {
+          earliestRetryAt = earliestRetryAt === null ? retryAt : Math.min(earliestRetryAt, retryAt);
+        }
+        console.error('Failed to push inventory sync operation:', err);
       }
     }
 
@@ -639,7 +734,8 @@ export class SyncService {
         });
 
         // Fetch pending sync items to get the TRUE local last modified time
-        const pendingSyncs = await db.syncQueue.where('recordId').anyOf(recordIds).toArray();
+        const pendingSyncs = (await db.syncQueue.where('recordId').anyOf(recordIds).toArray())
+          .filter(isSyncRecordQueueItem);
         const pendingSyncMap = new Map<string, number>();
         pendingSyncs.forEach(syncItem => {
           const existing = pendingSyncMap.get(syncItem.recordId) || 0;
@@ -677,8 +773,9 @@ export class SyncService {
             
             // Critical: Drop any pending sync items that were overridden by cloud
             const pendingForRecord = (await db.syncQueue.where('recordId').equals(rowId).toArray())
-              .filter((s: SyncQueueItem) => queueBelongsToUser(s, userId) || localMap.get(s.recordId)?.userId === userId)
-              .map((s: SyncQueueItem) => s.id)
+              .filter(isSyncRecordQueueItem)
+              .filter(s => queueBelongsToUser(s, userId) || localMap.get(s.recordId)?.userId === userId)
+              .map(s => s.id)
               .filter((id): id is number => typeof id === 'number');
             if (pendingForRecord.length > 0) {
               await db.syncQueue.bulkDelete(pendingForRecord);

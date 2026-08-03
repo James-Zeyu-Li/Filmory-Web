@@ -32,6 +32,7 @@ import { removeGearAvatar, updateGearAvatar, type GearAvatarTableName } from '..
 import { useLocation, useNavigate } from 'react-router-dom';
 import { GEAR_SUB_TAB_KEY } from '../../services/workspacePreferences';
 import { requestImmediateSync } from '../../services/syncEvents';
+import { adjustFilmStock } from '../../services/inventoryOperationService';
 interface GearViewProps {
   enableFilmMode: boolean;
 }
@@ -860,7 +861,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
       }
     }
 
-    await db.transaction('rw', db.filmStocks, db.ledgerTransactions, async () => {
+    const stockAdjustment = await db.transaction('rw', db.filmStocks, db.ledgerTransactions, async (): Promise<{ film: Pick<FilmStock, 'id' | 'userId' | 'stockCount'>; delta: number } | null> => {
       const currentUserId = user?.id || 'offline';
       const parsedStockCount = Number(newFilm.stockCount);
       const stockCount = editingFilmId
@@ -869,16 +870,18 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
       const pricePerRoll = newFilm.pricePerRoll ? Number(newFilm.pricePerRoll) : undefined;
 
       if (editingFilmId) {
-        // Find existing to get old stockCount if needed, or just overwrite (since we don't allow modifying stockCount freely via Edit normally, but if they do, we accept it)
+        const existingFilm = await db.filmStocks.get(editingFilmId);
+        if (!existingFilm) return null;
+        const currentStock = existingFilm.stockCount || 0;
         await db.filmStocks.update(editingFilmId, {
           brand: newFilm.brand!,
           name: newFilm.name!,
           iso: Number(newFilm.iso) || 400,
           colorType: newFilm.colorType as 'color' | 'bw',
           format: newFilm.format || '135',
-          stockCount,
           pricePerRoll,
         });
+        const adjustment = { film: existingFilm, delta: stockCount - currentStock };
 
         const existingTx = await db.ledgerTransactions
           .where('relatedEntityId')
@@ -907,6 +910,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
         } else if (existingTx && existingTx.id) {
           await db.ledgerTransactions.delete(existingTx.id);
         }
+        return adjustment;
       } else {
         const id = crypto.randomUUID();
         await db.filmStocks.add({
@@ -918,7 +922,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
           colorType: newFilm.colorType as 'color' | 'bw',
           format: newFilm.format || '135',
           isSystem: 0,
-          stockCount,
+          stockCount: 0,
           pricePerRoll,
           addedAt: Date.now()
         });
@@ -936,9 +940,16 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
             addedAt: Date.now()
           });
         }
+        return {
+          film: { id, userId: currentUserId, stockCount: 0 },
+          delta: stockCount,
+        };
       }
     });
     requestImmediateSync('film-stock-save');
+    if (stockAdjustment) {
+      await adjustFilmStock(stockAdjustment.film, stockAdjustment.delta);
+    }
 
     setNewFilm(createDefaultNewFilmDraft());
     setFilmDictSearch('');
@@ -1135,10 +1146,10 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     }
   };
 
-  const handleUpdateStock = async (id: string, current: number, change: number) => {
-    const next = Math.max(0, current + change);
-    await db.filmStocks.update(id, { stockCount: next });
-    requestImmediateSync('film-stock-adjust');
+  const handleUpdateStock = async (id: string, change: number) => {
+    const film = filmStocks.find(stock => stock.id === id);
+    if (!film) return;
+    await adjustFilmStock(film, change);
   };
 
   const handleDeleteEquipment = async (id: string) => {
@@ -1719,7 +1730,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                             className="secondary"
                             style={{ padding: '2px 8px', fontSize: '11px', minWidth: '22px', height: '22px', width: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                             title={t('gear.decreaseStock')}
-                            onClick={() => handleUpdateStock(film.id!, film.stockCount || 0, -1)}
+                            onClick={() => handleUpdateStock(film.id!, -1)}
                           >
                             -
                           </button>
@@ -1727,7 +1738,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                             className="secondary"
                             style={{ padding: '2px 8px', fontSize: '11px', minWidth: '22px', height: '22px', width: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                             title={t('gear.increaseStock')}
-                            onClick={() => handleUpdateStock(film.id!, film.stockCount || 0, 1)}
+                            onClick={() => handleUpdateStock(film.id!, 1)}
                           >
                             +
                           </button>
