@@ -92,7 +92,9 @@ type SyncPullResult = {
 const SYNC_DEBOUNCE_MS = 1500;
 const RESUME_SYNC_DEBOUNCE_MS = 400;
 const RETRY_SYNC_DELAY_MS = 5000;
-const VISIBLE_POLL_INTERVAL_MS = 30_000;
+const VISIBLE_FALLBACK_POLL_INTERVAL_MS = 60_000;
+const REALTIME_SUBSCRIBED_STATUS = 'SUBSCRIBED';
+const REALTIME_RETRY_STATUSES = new Set(['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED']);
 let currentSyncStatus: SyncStatusState = 'local';
 
 const dispatchSyncStatus = (status: SyncStatusState) => {
@@ -108,6 +110,9 @@ export class SyncService {
   private static visiblePollTimer: ReturnType<typeof setInterval> | null = null;
   private static inFlightSync: Promise<void> | null = null;
   private static shouldRunAgain = false;
+  private static realtimeLifecycleId = 0;
+  private static isRealtimeSubscribed = false;
+  private static isRealtimeFallbackRequired = false;
 
   static isAutoSyncEnabled(): boolean {
     return hasAutoSyncFlag() && hasValidSupabaseKeyPair();
@@ -136,38 +141,35 @@ export class SyncService {
 
     this.stop();
     this.activeUserId = userId;
+    const lifecycleId = this.realtimeLifecycleId;
 
-    const unsubscribeRealtime = this.setupRealtimeSubscription();
+    const unsubscribeRealtime = this.setupRealtimeSubscription(userId, lifecycleId);
 
     const handleOnline = () => {
-      this.requestSync('online', RESUME_SYNC_DEBOUNCE_MS);
+      this.requestSync('online', 0);
+      this.updateVisibleFallbackPolling();
     };
 
     const handleOffline = () => {
       dispatchSyncStatus('offline');
+      this.stopVisibleFallbackPolling();
     };
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        this.requestSync('visibility', RESUME_SYNC_DEBOUNCE_MS);
+        this.requestSync('visibility', 0);
       }
+      this.updateVisibleFallbackPolling();
     };
 
     const handleLocalChange = () => {
       this.requestSync('local-change', SYNC_DEBOUNCE_MS);
     };
 
-    const pollWhileVisible = () => {
-      if (document.visibilityState === 'visible' && navigator.onLine) {
-        this.requestSync('visible-poll');
-      }
-    };
-
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener(LOCAL_CHANGE_EVENT, handleLocalChange as EventListener);
-    this.visiblePollTimer = setInterval(pollWhileVisible, VISIBLE_POLL_INTERVAL_MS);
 
     this.activeCleanup = () => {
       unsubscribeRealtime?.();
@@ -175,10 +177,7 @@ export class SyncService {
       window.removeEventListener('offline', handleOffline);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener(LOCAL_CHANGE_EVENT, handleLocalChange as EventListener);
-      if (this.visiblePollTimer) {
-        clearInterval(this.visiblePollTimer);
-        this.visiblePollTimer = null;
-      }
+      this.stopVisibleFallbackPolling();
     };
 
     if (!navigator.onLine) {
@@ -191,9 +190,12 @@ export class SyncService {
   }
 
   static stop(): void {
+    this.realtimeLifecycleId += 1;
     this.activeCleanup?.();
     this.activeCleanup = null;
     this.activeUserId = null;
+    this.isRealtimeSubscribed = false;
+    this.isRealtimeFallbackRequired = false;
     this.shouldRunAgain = false;
     this.inFlightSync = null;
 
@@ -207,12 +209,61 @@ export class SyncService {
       this.retryTimer = null;
     }
 
-    if (this.visiblePollTimer) {
-      clearInterval(this.visiblePollTimer);
-      this.visiblePollTimer = null;
-    }
+    this.stopVisibleFallbackPolling();
 
     dispatchSyncStatus('local');
+  }
+
+  private static updateVisibleFallbackPolling(): void {
+    const shouldPoll =
+      this.isAutoSyncEnabled() &&
+      Boolean(this.activeUserId) &&
+      !this.isRealtimeSubscribed &&
+      this.isRealtimeFallbackRequired &&
+      navigator.onLine &&
+      document.visibilityState === 'visible';
+
+    if (!shouldPoll) {
+      this.stopVisibleFallbackPolling();
+      return;
+    }
+
+    if (this.visiblePollTimer !== null) return;
+
+    this.visiblePollTimer = setInterval(() => {
+      this.requestSync('visible-fallback-poll');
+    }, VISIBLE_FALLBACK_POLL_INTERVAL_MS);
+  }
+
+  private static stopVisibleFallbackPolling(): void {
+    if (this.visiblePollTimer === null) return;
+    clearInterval(this.visiblePollTimer);
+    this.visiblePollTimer = null;
+  }
+
+  private static handleRealtimeStatus(
+    status: string,
+    userId: string,
+    lifecycleId: number,
+    error?: Error
+  ): void {
+    if (this.activeUserId !== userId || this.realtimeLifecycleId !== lifecycleId) return;
+
+    if (status === REALTIME_SUBSCRIBED_STATUS) {
+      this.isRealtimeSubscribed = true;
+      this.isRealtimeFallbackRequired = false;
+      this.stopVisibleFallbackPolling();
+      this.requestSync('realtime-subscribed', 0);
+      return;
+    }
+
+    if (!REALTIME_RETRY_STATUSES.has(status)) return;
+
+    this.isRealtimeSubscribed = false;
+    this.isRealtimeFallbackRequired = true;
+    console.warn('[Sync Realtime] Subscription unavailable; starting visible-page fallback.', status, error);
+    this.updateVisibleFallbackPolling();
+    this.requestSync('realtime-unavailable', 0);
   }
 
   static requestSync(reason = 'manual', delayMs = 0): void {
@@ -517,8 +568,10 @@ export class SyncService {
   /**
    * Setup WebSocket listener for real-time cloud changes
    */
-  static setupRealtimeSubscription() {
-    const userId = getCurrentUserId();
+  static setupRealtimeSubscription(
+    userId = getCurrentUserId(),
+    lifecycleId = this.realtimeLifecycleId
+  ) {
     if (!userId || !this.isAutoSyncEnabled()) return;
 
     console.log('[Sync Realtime] Subscribing to postgres changes...');
@@ -536,7 +589,9 @@ export class SyncService {
       });
     }
 
-    channel.subscribe();
+    channel.subscribe((status, error) => {
+      this.handleRealtimeStatus(status, userId, lifecycleId, error);
+    });
 
     return () => {
       supabase.removeChannel(channel);

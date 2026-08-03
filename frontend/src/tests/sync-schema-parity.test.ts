@@ -334,10 +334,63 @@ describe('SyncService schema parity', () => {
       }),
       expect.any(Function)
     );
-    expect(supabaseMock.subscribe).toHaveBeenCalled();
+    expect(supabaseMock.subscribe).toHaveBeenCalledWith(expect.any(Function));
 
     unsubscribe?.();
     expect(supabaseMock.removeChannel).toHaveBeenCalled();
+  });
+
+  it('uses a visible-page fallback only while realtime is unavailable', () => {
+    vi.useFakeTimers();
+    vi.stubEnv('VITE_ENABLE_SUPABASE_SYNC', 'true');
+    vi.stubEnv('VITE_SUPABASE_URL', 'http://127.0.0.1:54321');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'eyJ.local-dev-jwt');
+
+    const originalVisibilityState = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'visible',
+    });
+
+    let requestSyncSpy: ReturnType<typeof vi.spyOn> | undefined;
+
+    try {
+      SyncService.start();
+      vi.advanceTimersByTime(0);
+      requestSyncSpy = vi.spyOn(SyncService, 'requestSync').mockImplementation(() => undefined);
+
+      const statusCallback = supabaseMock.subscribe.mock.calls[0]?.[0];
+      expect(statusCallback).toEqual(expect.any(Function));
+
+      vi.advanceTimersByTime(60_000);
+      expect(requestSyncSpy).not.toHaveBeenCalled();
+
+      for (const status of ['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED']) {
+        statusCallback(status, new Error(status));
+        expect(requestSyncSpy).toHaveBeenCalledWith('realtime-unavailable', 0);
+        requestSyncSpy.mockClear();
+
+        vi.advanceTimersByTime(60_000);
+        expect(requestSyncSpy).toHaveBeenCalledWith('visible-fallback-poll');
+        requestSyncSpy.mockClear();
+      }
+
+      statusCallback('SUBSCRIBED');
+      expect(requestSyncSpy).toHaveBeenCalledWith('realtime-subscribed', 0);
+      requestSyncSpy.mockClear();
+
+      vi.advanceTimersByTime(60_000);
+      expect(requestSyncSpy).not.toHaveBeenCalled();
+    } finally {
+      SyncService.stop();
+      requestSyncSpy?.mockRestore();
+      if (originalVisibilityState) {
+        Object.defineProperty(document, 'visibilityState', originalVisibilityState);
+      } else {
+        delete (document as { visibilityState?: DocumentVisibilityState }).visibilityState;
+      }
+      vi.useRealTimers();
+    }
   });
 
   it('coalesces local sync requests into a single throttled sync when auto sync is enabled', () => {
@@ -368,29 +421,48 @@ describe('SyncService schema parity', () => {
     }
   });
 
-  it('runs a visible-page fallback sync and stops it with the service', () => {
+  it('starts fallback polling only after realtime reports an unavailable state', () => {
     vi.useFakeTimers();
     vi.stubEnv('VITE_ENABLE_SUPABASE_SYNC', 'true');
     vi.stubEnv('VITE_SUPABASE_URL', 'http://127.0.0.1:54321');
     vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'eyJ.local-dev-jwt');
 
-    const syncSpy = vi.spyOn(SyncService, 'sync').mockResolvedValue(undefined);
+    const originalVisibilityState = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'visible',
+    });
+
+    let requestSyncSpy: ReturnType<typeof vi.spyOn> | undefined;
 
     try {
       SyncService.start();
-      vi.runOnlyPendingTimers();
-      syncSpy.mockClear();
+      vi.advanceTimersByTime(0);
+      requestSyncSpy = vi.spyOn(SyncService, 'requestSync').mockImplementation(() => undefined);
 
-      vi.advanceTimersByTime(30_000);
-      expect(syncSpy).toHaveBeenCalledTimes(1);
+      vi.advanceTimersByTime(60_000);
+      expect(requestSyncSpy).not.toHaveBeenCalled();
 
-      syncSpy.mockClear();
+      const statusCallback = supabaseMock.subscribe.mock.calls[0]?.[0];
+      statusCallback('TIMED_OUT', new Error('timeout'));
+      expect(requestSyncSpy).toHaveBeenCalledWith('realtime-unavailable', 0);
+      requestSyncSpy.mockClear();
+
+      vi.advanceTimersByTime(60_000);
+      expect(requestSyncSpy).toHaveBeenCalledWith('visible-fallback-poll');
+
+      requestSyncSpy.mockClear();
       SyncService.stop();
-      vi.advanceTimersByTime(30_000);
-      expect(syncSpy).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(60_000);
+      expect(requestSyncSpy).not.toHaveBeenCalled();
     } finally {
       SyncService.stop();
-      syncSpy.mockRestore();
+      requestSyncSpy?.mockRestore();
+      if (originalVisibilityState) {
+        Object.defineProperty(document, 'visibilityState', originalVisibilityState);
+      } else {
+        delete (document as { visibilityState?: DocumentVisibilityState }).visibilityState;
+      }
       vi.useRealTimers();
     }
   });
@@ -438,7 +510,7 @@ describe('SyncService schema parity', () => {
     }
   });
 
-  it('stops lifecycle listeners and realtime cleanup when sync service stops', () => {
+  it('syncs immediately on page or network recovery and ignores stale realtime channels', () => {
     vi.useFakeTimers();
     vi.stubEnv('VITE_ENABLE_SUPABASE_SYNC', 'true');
     vi.stubEnv('VITE_SUPABASE_URL', 'http://127.0.0.1:54321');
@@ -446,28 +518,60 @@ describe('SyncService schema parity', () => {
 
     const syncSpy = vi.spyOn(SyncService, 'sync').mockResolvedValue(undefined);
     const originalVisibilityState = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+    let visibilityState: DocumentVisibilityState = 'visible';
 
     Object.defineProperty(document, 'visibilityState', {
       configurable: true,
-      value: 'visible',
+      get: () => visibilityState,
     });
 
     try {
       SyncService.start();
-      vi.runOnlyPendingTimers();
+      vi.advanceTimersByTime(0);
+      syncSpy.mockClear();
+
+      const firstStatusCallback = supabaseMock.subscribe.mock.calls[0]?.[0];
+      firstStatusCallback('TIMED_OUT', new Error('timeout'));
+      vi.advanceTimersByTime(0);
       syncSpy.mockClear();
 
       document.dispatchEvent(new Event('visibilitychange'));
-      vi.advanceTimersByTime(400);
+      vi.advanceTimersByTime(0);
       expect(syncSpy).toHaveBeenCalledTimes(1);
 
       syncSpy.mockClear();
-      SyncService.stop();
+      window.dispatchEvent(new Event('online'));
+      vi.advanceTimersByTime(0);
+      expect(syncSpy).toHaveBeenCalledTimes(1);
 
+      syncSpy.mockClear();
+      visibilityState = 'hidden';
+      document.dispatchEvent(new Event('visibilitychange'));
+      vi.advanceTimersByTime(60_000);
+      expect(syncSpy).not.toHaveBeenCalled();
+
+      visibilityState = 'visible';
+      document.dispatchEvent(new Event('visibilitychange'));
+      vi.advanceTimersByTime(0);
+      expect(syncSpy).toHaveBeenCalledTimes(1);
+
+      syncSpy.mockClear();
+      vi.mocked(localStorage.getItem).mockImplementation((key: string) => (
+        key === 'grainfolio_user_id' ? 'user-2' : null
+      ));
+      SyncService.start();
+      vi.advanceTimersByTime(0);
+      syncSpy.mockClear();
+
+      firstStatusCallback('TIMED_OUT', new Error('stale channel'));
+      vi.advanceTimersByTime(60_000);
+      expect(syncSpy).not.toHaveBeenCalled();
+
+      SyncService.stop();
       window.dispatchEvent(new Event('online'));
       window.dispatchEvent(new CustomEvent('grainfolio-sync-request'));
       document.dispatchEvent(new Event('visibilitychange'));
-      vi.runAllTimers();
+      vi.advanceTimersByTime(60_000);
 
       expect(syncSpy).not.toHaveBeenCalled();
       expect(supabaseMock.removeChannel).toHaveBeenCalled();
