@@ -147,6 +147,88 @@ describe('SyncService schema parity', () => {
     ]);
   });
 
+  it('marks RLS failures as needing attention and excludes them from automatic retries', async () => {
+    await db.syncQueue.add({
+      userId: 'user-1',
+      tableName: 'cameras',
+      action: 'upsert',
+      recordId: 'blocked-camera',
+      payload: {
+        id: 'blocked-camera',
+        userId: 'user-1',
+        name: 'Blocked camera',
+        type: 'film',
+        format: '135',
+        addedAt: 1782864000000,
+      },
+      timestamp: 1782864000000,
+    });
+    supabaseMock.upsert.mockResolvedValueOnce({
+      data: null,
+      error: { status: 403, code: '42501', message: 'permission denied' },
+    });
+
+    await expect(SyncService.push()).rejects.toThrow('One or more sync push batches failed.');
+
+    const queued = await db.syncQueue.where('recordId').equals('blocked-camera').first();
+    expect(queued).toEqual(expect.objectContaining({
+      attemptCount: 1,
+      failureKind: 'needs_attention',
+      lastErrorCode: '42501',
+      lastErrorMessage: 'permission denied',
+    }));
+    expect(queued?.nextRetryAt).toBeUndefined();
+
+    supabaseMock.upsert.mockClear();
+    await SyncService.push();
+    expect(supabaseMock.upsert).not.toHaveBeenCalled();
+    await expect(SyncService.getQueueSummary()).resolves.toEqual({
+      pendingCount: 0,
+      needsAttentionCount: 1,
+    });
+  });
+
+  it('keeps transient failures queued with exponential retry metadata', async () => {
+    const now = 1782864000000;
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(now);
+    await db.syncQueue.add({
+      userId: 'user-1',
+      tableName: 'cameras',
+      action: 'upsert',
+      recordId: 'retry-camera',
+      payload: {
+        id: 'retry-camera',
+        userId: 'user-1',
+        name: 'Retry camera',
+        type: 'film',
+        format: '135',
+        addedAt: now,
+      },
+      timestamp: now,
+    });
+    supabaseMock.upsert.mockResolvedValueOnce({
+      data: null,
+      error: { status: 503, code: 'service_unavailable', message: 'temporary outage' },
+    });
+
+    try {
+      await expect(SyncService.push()).rejects.toThrow('One or more sync push batches failed.');
+      const queued = await db.syncQueue.where('recordId').equals('retry-camera').first();
+      expect(queued).toEqual(expect.objectContaining({
+        attemptCount: 1,
+        failureKind: 'retryable',
+        lastErrorCode: 'service_unavailable',
+        nextRetryAt: now + 5000,
+      }));
+      await expect(SyncService.getQueueSummary()).resolves.toEqual({
+        pendingCount: 1,
+        needsAttentionCount: 0,
+      });
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
   it('pushes roll cameraIds, lensIds, collectionId, and filmBackId using Supabase snake_case fields', async () => {
     await db.syncQueue.add({
       userId: 'user-1',

@@ -28,7 +28,7 @@ import {
   GEAR_AVATAR_WEBP_QUALITY,
   compressImageToBase64,
 } from '../../utils/imageService';
-import { removeGearAvatar, type GearAvatarTableName } from '../../services/gearAvatarService';
+import { removeGearAvatar, updateGearAvatar, type GearAvatarTableName } from '../../services/gearAvatarService';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { GEAR_SUB_TAB_KEY } from '../../services/workspacePreferences';
 import { requestImmediateSync } from '../../services/syncEvents';
@@ -248,9 +248,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
         GEAR_AVATAR_WEBP_QUALITY
       );
 
-      // Save directly to Local Database based on entity type
-      const table = (db as any)[activeUploadEntity.type];
-      await table.update(activeUploadEntity.id, { avatarUrl: base64DataUrl });
+      await updateGearAvatar(activeUploadEntity.type, activeUploadEntity.id, base64DataUrl);
       requestImmediateSync('gear-cover-upload');
       updateEditingAvatarState(activeUploadEntity.id, activeUploadEntity.type, base64DataUrl);
 

@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'react';
-import { SYNC_STATUS_EVENT, SyncService, type SyncStatusState } from '../services/syncService';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '../db/schema';
+import {
+  SYNC_STATUS_EVENT,
+  SyncService,
+  summarizeSyncQueue,
+  type SyncQueueSummary,
+  type SyncStatusState,
+} from '../services/syncService';
 
 const getInitialStatus = (): SyncStatusState => SyncService.getStatus();
 
@@ -19,4 +27,15 @@ export const useSyncStatus = () => {
   }, []);
 
   return status;
+};
+
+export const useSyncQueueSummary = (status: SyncStatusState): SyncQueueSummary => {
+  return useLiveQuery(
+    async () => {
+      const queue = await db.syncQueue.orderBy('timestamp').toArray();
+      return summarizeSyncQueue(queue, localStorage.getItem('grainfolio_user_id'));
+    },
+    [status],
+    { pendingCount: 0, needsAttentionCount: 0 },
+  );
 };

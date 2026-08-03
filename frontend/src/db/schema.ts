@@ -15,6 +15,12 @@ export interface SyncQueueItem {
   recordId: string;
   payload?: any;
   timestamp: number;
+  attemptCount?: number;
+  failureKind?: 'retryable' | 'needs_attention';
+  lastErrorCode?: string;
+  lastErrorMessage?: string;
+  lastAttemptAt?: number;
+  nextRetryAt?: number;
 }
 
 export interface LedgerTransaction {
@@ -562,6 +568,25 @@ export class GrainfolioDatabase extends Dexie {
       albumPhotos: 'id, userId, albumId, photoId, addedAt',
       tagConfigs: 'id, userId, &[userId+name], color',
       syncQueue: '++id, userId, tableName, action, recordId, timestamp',
+      ledgerTransactions: 'id, userId, amount, date, type, category, relatedEntityId, addedAt',
+      userProfiles: 'id, userId, tier, displayName, membershipRequestStatus, membershipRequestedAt',
+      collections: 'id, userId, name, date, addedAt'
+    });
+
+    // Version 23: Persist retry and actionable-failure metadata for local sync work.
+    this.version(23).stores({
+      cameras: 'id, userId, name, type, format, cameraSystemId, backType, avatarUrl, addedAt',
+      cameraSystems: 'id, userId, name, mountKey, addedAt',
+      filmBacks: 'id, userId, cameraSystemId, name, format, status, addedAt',
+      lenses: 'id, userId, name, focalLength, maxAperture, type, mountKey, addedAt',
+      filmStocks: 'id, userId, brand, name, iso, colorType, format, isSystem, systemKey, addedAt',
+      rolls: 'id, userId, name, *cameraIds, *lensIds, filmBackId, filmStockId, status, startDate, endDate, rating, location, developNotes, collectionId',
+      photoAssets: 'id, userId, rollId, originalFileName, fileSize, thumbnailUrl, previewUrl, storageKey, addedAt, isPinned, rating, tags, orderIndex',
+      otherEquipments: 'id, userId, name, type, notes, purchaseDate, expiryDate, addedAt',
+      albums: 'id, userId, name, description, coverPhotoId, addedAt',
+      albumPhotos: 'id, userId, albumId, photoId, addedAt',
+      tagConfigs: 'id, userId, &[userId+name], color',
+      syncQueue: '++id, userId, tableName, action, recordId, timestamp, failureKind, nextRetryAt',
       ledgerTransactions: 'id, userId, amount, date, type, category, relatedEntityId, addedAt',
       userProfiles: 'id, userId, tier, displayName, membershipRequestStatus, membershipRequestedAt',
       collections: 'id, userId, name, date, addedAt'

@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { db, type SyncQueueItem } from '../db/schema';
+import type { Table } from 'dexie';
 import {
   getSyncIntentFromEvent,
   LOCAL_CHANGE_EVENT,
@@ -25,40 +26,48 @@ const camelToSnake = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter
 const snakeToCamel = (str: string) => str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
 
 const localOnlyFields = new Set(['blob', 'updatedAt', 'deletedAt']);
+type SyncRecord = Record<string, unknown>;
+type SyncRow = SyncRecord & {
+  id?: string;
+  userId?: string;
+  updatedAt?: number | string;
+  addedAt?: number | string;
+};
 
-const convertKeysToSnakeCase = (obj: any): any => {
-  if (typeof obj !== 'object' || obj === null) return obj;
+const isSyncRecord = (value: unknown): value is SyncRecord => (
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+);
+
+const convertKeysToSnakeCase = (obj: unknown): unknown => {
+  if (!isSyncRecord(obj)) {
+    return Array.isArray(obj) ? obj.map(convertKeysToSnakeCase) : obj;
+  }
   if (Array.isArray(obj)) return obj.map(convertKeysToSnakeCase);
-  
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      // Omit local-only fields that shouldn't go to Supabase
-      if (localOnlyFields.has(key)) continue;
-      if (obj[key] === undefined) continue;
-      
-      newObj[camelToSnake(key)] = convertKeysToSnakeCase(obj[key]);
-    }
+
+  const newObj: SyncRecord = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (localOnlyFields.has(key) || value === undefined) continue;
+    newObj[camelToSnake(key)] = convertKeysToSnakeCase(value);
   }
   return newObj;
 };
 
-const convertKeysToCamelCase = (obj: any): any => {
-  if (typeof obj !== 'object' || obj === null) return obj;
+const convertKeysToCamelCase = (obj: unknown): unknown => {
+  if (!isSyncRecord(obj)) {
+    return Array.isArray(obj) ? obj.map(convertKeysToCamelCase) : obj;
+  }
   if (Array.isArray(obj)) return obj.map(convertKeysToCamelCase);
-  
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      if (localOnlyFields.has(snakeToCamel(key))) continue;
-      newObj[snakeToCamel(key)] = convertKeysToCamelCase(obj[key]);
-    }
+
+  const newObj: SyncRecord = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (localOnlyFields.has(snakeToCamel(key))) continue;
+    newObj[snakeToCamel(key)] = convertKeysToCamelCase(value);
   }
   return newObj;
 };
 
 // Map Dexie table names to Supabase table names
-const tableMap: Record<string, string> = {
+const tableMap = {
   cameras: 'cameras',
   cameraSystems: 'camera_systems',
   filmBacks: 'film_backs',
@@ -73,6 +82,23 @@ const tableMap: Record<string, string> = {
   tagConfigs: 'tag_configs',
   ledgerTransactions: 'ledger_transactions',
   userProfiles: 'user_profiles'
+} as const;
+
+type SyncTableName = keyof typeof tableMap;
+
+const isSyncTableName = (value: string): value is SyncTableName => value in tableMap;
+
+// Sync is the only layer that bridges heterogeneous Dexie entities. The cast is
+// intentionally isolated here so views never receive an untyped database table.
+const getSyncTable = (tableName: SyncTableName): Table<SyncRow, string> => (
+  db[tableName] as unknown as Table<SyncRow, string>
+);
+
+const getString = (value: unknown) => typeof value === 'string' ? value : undefined;
+const getTimestamp = (value: unknown) => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') return new Date(value).getTime();
+  return 0;
 };
 
 const getCurrentUserId = () => localStorage.getItem('grainfolio_user_id');
@@ -87,16 +113,44 @@ const getUserQueue = async (userId: string) => {
   return queue.filter(item => queueBelongsToUser(item, userId));
 };
 
+const getReadyUserQueue = async (userId: string) => {
+  const now = Date.now();
+  const queue = await getUserQueue(userId);
+  return queue.filter(item => (
+    item.failureKind !== 'needs_attention' &&
+    (!item.nextRetryAt || item.nextRetryAt <= now)
+  ));
+};
+
+export const summarizeSyncQueue = (queue: SyncQueueItem[], userId: string | null): SyncQueueSummary => {
+  if (!userId) return { pendingCount: 0, needsAttentionCount: 0 };
+  return queue
+    .filter(item => queueBelongsToUser(item, userId))
+    .reduce<SyncQueueSummary>((summary, item) => {
+      if (item.failureKind === 'needs_attention') {
+        summary.needsAttentionCount += 1;
+      } else {
+        summary.pendingCount += 1;
+      }
+      return summary;
+    }, { pendingCount: 0, needsAttentionCount: 0 });
+};
+
 const supabaseTables = Object.values(tableMap);
 export { LOCAL_CHANGE_EVENT } from './syncEvents';
 export const SYNC_STATUS_EVENT = 'grainfolio-sync-status';
-export type SyncStatusState = 'local' | 'offline' | 'syncing' | 'synced' | 'error';
+export type SyncStatusState = 'local' | 'offline' | 'pending' | 'syncing' | 'synced' | 'needs_attention';
+export type SyncQueueSummary = {
+  pendingCount: number;
+  needsAttentionCount: number;
+};
 type SyncPullResult = {
   remoteUserProfileFound: boolean;
 };
 const SYNC_DEBOUNCE_MS = 500;
 const RESUME_SYNC_DEBOUNCE_MS = 400;
 const RETRY_SYNC_DELAY_MS = 5000;
+const MAX_RETRY_SYNC_DELAY_MS = 5 * 60_000;
 const VISIBLE_FALLBACK_POLL_INTERVAL_MS = 60_000;
 const REALTIME_SUBSCRIBED_STATUS = 'SUBSCRIBED';
 const REALTIME_RETRY_STATUSES = new Set(['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED']);
@@ -106,6 +160,52 @@ const SYNC_INTENT_DELAYS: Record<SyncIntent, number> = {
   background: RESUME_SYNC_DEBOUNCE_MS,
 };
 let currentSyncStatus: SyncStatusState = 'local';
+
+type SyncFailure = {
+  kind: 'retryable' | 'needs_attention';
+  code: string;
+  message: string;
+};
+
+class SyncPushError extends Error {
+  readonly nextRetryAt: number | null;
+
+  constructor(nextRetryAt: number | null) {
+    super('One or more sync push batches failed.');
+    this.nextRetryAt = nextRetryAt;
+  }
+}
+
+const getErrorDetails = (error: unknown): { code: string; status?: number; message: string } => {
+  const value = error as { code?: unknown; status?: unknown; message?: unknown };
+  const code = typeof value?.code === 'string' ? value.code : '';
+  const status = typeof value?.status === 'number' ? value.status : undefined;
+  const message = error instanceof Error
+    ? error.message
+    : typeof value?.message === 'string'
+      ? value.message
+      : 'Unknown sync failure.';
+  return { code, status, message };
+};
+
+const classifySyncFailure = (error: unknown): SyncFailure => {
+  const { code, status, message } = getErrorDetails(error);
+  const normalizedCode = code.toUpperCase();
+  const isRetryableStatus = status === 408 || status === 429 || (status !== undefined && status >= 500);
+  const isActionableStatus = status !== undefined && status >= 400 && status < 500 && !isRetryableStatus;
+  const isActionableCode = /^(42501|23503|23505|22P02|PGRST)/.test(normalizedCode);
+
+  return {
+    kind: isActionableStatus || isActionableCode ? 'needs_attention' : 'retryable',
+    code: code || (status ? String(status) : 'unknown'),
+    message: message.slice(0, 240),
+  };
+};
+
+const getRetryDelayMs = (attemptCount: number) => Math.min(
+  RETRY_SYNC_DELAY_MS * (2 ** Math.max(0, attemptCount - 1)),
+  MAX_RETRY_SYNC_DELAY_MS,
+);
 
 const dispatchSyncStatus = (status: SyncStatusState) => {
   currentSyncStatus = status;
@@ -132,6 +232,82 @@ export class SyncService {
     if (!this.isAutoSyncEnabled()) return 'local';
     if (!navigator.onLine) return 'offline';
     return currentSyncStatus === 'local' ? 'syncing' : currentSyncStatus;
+  }
+
+  static async getQueueSummary(userId = getCurrentUserId()): Promise<SyncQueueSummary> {
+    const queue = await db.syncQueue.orderBy('timestamp').toArray();
+    return summarizeSyncQueue(queue, userId);
+  }
+
+  private static async refreshQueueAwareStatus(
+    fallback: SyncStatusState = 'synced',
+    allowDuringSync = false,
+  ): Promise<void> {
+    const activeUserId = this.activeUserId;
+    const summary = await this.getQueueSummary(this.activeUserId || undefined);
+    if (activeUserId !== this.activeUserId || (!allowDuringSync && this.inFlightSync)) return;
+    if (summary.needsAttentionCount > 0) {
+      dispatchSyncStatus('needs_attention');
+      return;
+    }
+    if (summary.pendingCount > 0) {
+      dispatchSyncStatus('pending');
+      this.scheduleRetryForQueuedWork();
+      return;
+    }
+    dispatchSyncStatus(fallback);
+  }
+
+  private static scheduleRetryForQueuedWork(): void {
+    const userId = this.activeUserId;
+    if (!userId || this.retryTimer) return;
+
+    void getUserQueue(userId).then(queue => {
+      const nextRetryAt = queue
+        .filter(item => item.failureKind === 'retryable' && item.nextRetryAt)
+        .reduce<number | null>((earliest, item) => (
+          earliest === null || item.nextRetryAt! < earliest ? item.nextRetryAt! : earliest
+        ), null);
+      if (nextRetryAt === null || !this.activeUserId || this.retryTimer) return;
+
+      this.retryTimer = setTimeout(() => {
+        this.retryTimer = null;
+        this.requestSyncIntent('background', 'retry', 0);
+      }, Math.max(0, nextRetryAt - Date.now()));
+    });
+  }
+
+  private static async markQueueFailure(
+    queueIds: number[],
+    items: SyncQueueItem[],
+    failure: SyncFailure,
+  ): Promise<number | null> {
+    const now = Date.now();
+    let earliestRetryAt: number | null = null;
+
+    await Promise.all(queueIds.map(async id => {
+      const item = items.find(candidate => candidate.id === id);
+      if (!item) return;
+      const attemptCount = (item.attemptCount || 0) + 1;
+      const nextRetryAt = failure.kind === 'retryable'
+        ? now + getRetryDelayMs(attemptCount)
+        : undefined;
+      if (nextRetryAt !== undefined) {
+        earliestRetryAt = earliestRetryAt === null
+          ? nextRetryAt
+          : Math.min(earliestRetryAt, nextRetryAt);
+      }
+      await db.syncQueue.update(id, {
+        attemptCount,
+        failureKind: failure.kind,
+        lastErrorCode: failure.code,
+        lastErrorMessage: failure.message,
+        lastAttemptAt: now,
+        nextRetryAt,
+      });
+    }));
+
+    return earliestRetryAt;
   }
 
   static start(): void {
@@ -284,6 +460,10 @@ export class SyncService {
     void reason;
     if (!this.isAutoSyncEnabled() || !this.activeUserId) return;
 
+    if (currentSyncStatus !== 'syncing') {
+      void this.refreshQueueAwareStatus('pending');
+    }
+
     if (this.retryTimer) {
       clearTimeout(this.retryTimer);
       this.retryTimer = null;
@@ -310,10 +490,10 @@ export class SyncService {
   static async push(): Promise<void> {
     const userId = getCurrentUserId();
     if (!userId) return;
-    let hadErrors = false;
+    let earliestRetryAt: number | null = null;
 
-    // 1. Fetch only this user's pending queue items
-    const queue = await getUserQueue(userId);
+    // 1. Skip operations that are waiting for backoff or need user intervention.
+    const queue = await getReadyUserQueue(userId);
     if (queue.length === 0) return;
 
     // 2. Group by table name to optimize network calls
@@ -325,6 +505,7 @@ export class SyncService {
 
     // 3. Process each table
     for (const [tableName, items] of Object.entries(grouped)) {
+      if (!isSyncTableName(tableName)) continue;
       const supabaseTable = tableMap[tableName];
       if (!supabaseTable) continue;
 
@@ -333,7 +514,7 @@ export class SyncService {
       const latestOps = new Map<string, SyncQueueItem>();
       items.forEach(item => latestOps.set(item.recordId, item));
 
-      const upserts: any[] = [];
+      const upserts: SyncRecord[] = [];
       const deletes: string[] = [];
       
       const queueIdsToClear: number[] = [];
@@ -341,6 +522,7 @@ export class SyncService {
       for (const op of latestOps.values()) {
         if (op.action === 'upsert' && op.payload) {
           const snakePayload = convertKeysToSnakeCase(op.payload);
+          if (!isSyncRecord(snakePayload)) continue;
           // Ensure user_id is injected just in case
           snakePayload.user_id = userId;
           upserts.push(snakePayload);
@@ -355,7 +537,7 @@ export class SyncService {
         // Execute Upserts
         if (upserts.length > 0) {
           const { error } = await supabase.from(supabaseTable).upsert(upserts);
-          if (error) throw new Error(`[Sync Push Upsert] ${supabaseTable}: ${error.message}`);
+          if (error) throw error;
         }
 
         // Execute Soft Deletes on Supabase
@@ -369,7 +551,7 @@ export class SyncService {
               })
               .eq('id', delId)
               .eq('user_id', userId);
-            if (error) throw new Error(`[Sync Push Delete] ${supabaseTable}: ${error.message}`);
+            if (error) throw error;
           }
         }
 
@@ -377,14 +559,17 @@ export class SyncService {
         await db.syncQueue.bulkDelete(queueIdsToClear);
 
       } catch (err) {
-        hadErrors = true;
+        const failure = classifySyncFailure(err);
+        const retryAt = await this.markQueueFailure(queueIdsToClear, items, failure);
+        if (retryAt !== null) {
+          earliestRetryAt = earliestRetryAt === null ? retryAt : Math.min(earliestRetryAt, retryAt);
+        }
         console.error('Failed to push sync queue batch:', err);
-        // Will retry on next push call since we didn't delete from syncQueue
       }
     }
 
-    if (hadErrors) {
-      throw new Error('One or more sync push batches failed.');
+    if (earliestRetryAt !== null || (await this.getQueueSummary(userId)).needsAttentionCount > 0) {
+      throw new SyncPushError(earliestRetryAt);
     }
   }
 
@@ -417,7 +602,7 @@ export class SyncService {
     try {
       // Fetch all independent tables concurrently. Applying them remains sequential so
       // Dexie conflict resolution and queued writes keep deterministic behavior.
-      const remoteChanges = await Promise.all(Object.entries(tableMap).map(async ([dexieTable, supaTable]) => {
+      const remoteChanges = await Promise.all((Object.entries(tableMap) as Array<[SyncTableName, string]>).map(async ([dexieTable, supaTable]) => {
         const { data, error } = await supabase
           .from(supaTable)
           .select('*')
@@ -425,7 +610,7 @@ export class SyncService {
           .gt('updated_at', lastSync);
 
         if (error) throw new Error(`[Sync Pull] ${supaTable}: ${error.message}`);
-        return { dexieTable, supaTable, data: data || [] };
+        return { dexieTable, supaTable, data: (data || []) as SyncRecord[] };
       }));
 
       for (const { dexieTable, supaTable, data } of remoteChanges) {
@@ -436,57 +621,59 @@ export class SyncService {
         const shouldPreferRemoteProfile = preferRemoteUserProfile && dexieTable === 'userProfiles';
         if (shouldPreferRemoteProfile) remoteUserProfileFound = true;
 
-        const table = (db as any)[dexieTable];
+        const table = getSyncTable(dexieTable);
 
-        const toPut: any[] = [];
+        const toPut: SyncRow[] = [];
         const toDelete: string[] = [];
 
         // Bulk fetch local rows for LWW comparison
-        const recordIds = data.map((r: any) => r.id);
+        const recordIds = data.map(row => getString(row.id)).filter((id): id is string => Boolean(id));
+        if (recordIds.length === 0) continue;
         const localRows = await table.where('id').anyOf(recordIds).toArray();
-        const localMap = new Map();
-        localRows.forEach((r: any) => localMap.set(r.id, r));
+        const localMap = new Map<string, SyncRow>();
+        localRows.forEach(row => {
+          if (row.id) localMap.set(row.id, row);
+        });
 
         // Fetch pending sync items to get the TRUE local last modified time
         const pendingSyncs = await db.syncQueue.where('recordId').anyOf(recordIds).toArray();
-        const pendingSyncMap = new Map();
-        pendingSyncs.forEach((s: any) => {
-          const existing = pendingSyncMap.get(s.recordId) || 0;
-          pendingSyncMap.set(s.recordId, Math.max(existing, s.timestamp));
+        const pendingSyncMap = new Map<string, number>();
+        pendingSyncs.forEach(syncItem => {
+          const existing = pendingSyncMap.get(syncItem.recordId) || 0;
+          pendingSyncMap.set(syncItem.recordId, Math.max(existing, syncItem.timestamp));
         });
 
         for (const row of data) {
-          const localRow = localMap.get(row.id);
-          const remoteTime = new Date(row.updated_at).getTime();
+          const rowId = getString(row.id);
+          if (!rowId) continue;
+          const localRow = localMap.get(rowId);
+          const remoteTime = getTimestamp(row.updated_at);
           
           let localTime = 0;
           if (localRow) {
             // Local timestamps might be numeric or strings depending on legacy, but usually updatedAt is ISO string in our new architecture, addedAt is numeric.
-            if (localRow.updatedAt) {
-              localTime = typeof localRow.updatedAt === 'number' ? localRow.updatedAt : new Date(localRow.updatedAt).getTime();
-            } else if (localRow.addedAt) {
-              localTime = typeof localRow.addedAt === 'number' ? localRow.addedAt : new Date(localRow.addedAt).getTime();
-            }
+            localTime = getTimestamp(localRow.updatedAt ?? localRow.addedAt);
           }
           
           // CRITICAL EDGE CASE: If the user modified the item locally but it hasn't pushed yet, 
           // the localRow.updatedAt in Dexie might be STALE (because Dexie hook doesn't mutate local object updatedAt).
           // The true local modified time is in the syncQueue timestamp.
-          const pendingTime = pendingSyncMap.get(row.id) || 0;
+          const pendingTime = pendingSyncMap.get(rowId) || 0;
           localTime = Math.max(localTime, pendingTime);
 
           if (shouldPreferRemoteProfile || remoteTime >= localTime) {
             if (row.deleted_at) {
-              toDelete.push(row.id);
+              toDelete.push(rowId);
             } else {
               const camelPayload = convertKeysToCamelCase(row);
+              if (!isSyncRecord(camelPayload)) continue;
               delete camelPayload.updatedAt;
               delete camelPayload.deletedAt;
-              toPut.push(camelPayload);
+              toPut.push({ ...camelPayload, id: rowId });
             }
             
             // Critical: Drop any pending sync items that were overridden by cloud
-            const pendingForRecord = (await db.syncQueue.where('recordId').equals(row.id).toArray())
+            const pendingForRecord = (await db.syncQueue.where('recordId').equals(rowId).toArray())
               .filter((s: SyncQueueItem) => queueBelongsToUser(s, userId) || localMap.get(s.recordId)?.userId === userId)
               .map((s: SyncQueueItem) => s.id)
               .filter((id): id is number => typeof id === 'number');
@@ -494,7 +681,7 @@ export class SyncService {
               await db.syncQueue.bulkDelete(pendingForRecord);
             }
           } else {
-            console.log(`[Sync LWW] Kept local version for ${row.id} (${localTime} > ${remoteTime})`);
+            console.log(`[Sync LWW] Kept local version for ${rowId} (${localTime} > ${remoteTime})`);
           }
         }
 
@@ -558,10 +745,12 @@ export class SyncService {
           await this.push();
           await this.pull();
         }
-        dispatchSyncStatus('synced');
-      } catch {
-        dispatchSyncStatus('error');
-        if (this.activeUserId) {
+        await this.refreshQueueAwareStatus('synced', true);
+      } catch (error) {
+        await this.refreshQueueAwareStatus('pending', true);
+        const hasScheduledQueueRetry = error instanceof SyncPushError;
+        const shouldRetryGenericFailure = !hasScheduledQueueRetry;
+        if (shouldRetryGenericFailure && this.activeUserId && !this.retryTimer) {
           this.retryTimer = setTimeout(() => {
             this.retryTimer = null;
             this.requestSyncIntent('background', 'retry', 0);

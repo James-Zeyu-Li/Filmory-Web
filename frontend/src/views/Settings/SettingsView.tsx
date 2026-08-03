@@ -3,7 +3,7 @@ import { BackupService } from '../../services/backupService';
 import { Shield, Download, X, LogOut, UserX, Sun, Moon, Monitor, Coins, Film, BadgeCheck, ArrowUp, ArrowDown, Folder, Languages, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../contexts/useAuth';
 import { useTheme } from '../../contexts/useTheme';
-import { supabase } from '../../services/supabaseClient';
+import { deleteCurrentAccount } from '../../services/accountService';
 import { Modal } from '../../components/Modal';
 import { useConfirm } from '../../contexts/useConfirm';
 import { useFeedback } from '../../contexts/useFeedback';
@@ -132,8 +132,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
         
         // Dev bypass is local-only; real Supabase users use the account deletion RPC.
         if (!isDevBypass) {
-          const { error } = await supabase.rpc('delete_user');
-          if (error) throw error;
+          await deleteCurrentAccount();
         }
         
         completeSignedOutTransition('deletingAccount');

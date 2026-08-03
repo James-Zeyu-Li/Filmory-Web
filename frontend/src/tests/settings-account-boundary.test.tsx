@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SettingsView } from '../views/Settings/SettingsView';
-import { supabase } from '../services/supabaseClient';
+import { deleteCurrentAccount } from '../services/accountService';
 
 const mockSetTheme = vi.fn();
 const mockSetCurrency = vi.fn();
@@ -62,11 +62,11 @@ vi.mock('../contexts/useFeedback', () => ({
   }),
 }));
 
-describe('SettingsView account boundary', () => {
-  const mockedSupabase = supabase as unknown as {
-    rpc: ReturnType<typeof vi.fn>;
-  };
+vi.mock('../services/accountService', () => ({
+  deleteCurrentAccount: vi.fn(),
+}));
 
+describe('SettingsView account boundary', () => {
   beforeEach(() => {
     currentLanguage = 'zh-CN';
     mockSetTheme.mockReset();
@@ -77,8 +77,8 @@ describe('SettingsView account boundary', () => {
     mockAuthState.logout.mockReset();
     mockAuthState.clearLocalAuthState.mockReset();
     mockAuthState.completeSignedOutTransition.mockReset();
-    mockedSupabase.rpc.mockClear();
-    mockedSupabase.rpc.mockResolvedValue({ data: null, error: null });
+    vi.mocked(deleteCurrentAccount).mockReset();
+    vi.mocked(deleteCurrentAccount).mockResolvedValue(undefined);
   });
 
   it('keeps personal profile and membership controls out of settings', () => {
@@ -131,7 +131,7 @@ describe('SettingsView account boundary', () => {
     fireEvent.click(screen.getByRole('button', { name: '确认永久销毁' }));
 
     await waitFor(() => {
-      expect(mockedSupabase.rpc).toHaveBeenCalledWith('delete_user');
+      expect(deleteCurrentAccount).toHaveBeenCalledTimes(1);
       expect(mockAuthState.completeSignedOutTransition).toHaveBeenCalledWith('deletingAccount');
     });
 

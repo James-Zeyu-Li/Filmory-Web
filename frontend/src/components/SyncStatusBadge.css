@@ -51,7 +51,7 @@
   border-color: rgba(16, 185, 129, 0.25);
 }
 
-.sync-status-badge.error {
+.sync-status-badge.needs_attention {
   color: #ef4444;
   border-color: rgba(239, 68, 68, 0.25);
 }

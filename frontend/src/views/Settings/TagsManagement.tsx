@@ -6,10 +6,14 @@ import { useConfirm } from '../../contexts/useConfirm';
 import { useTagConfigs } from '../../hooks/useData';
 import { deleteTagAndClearPhotoTags } from '../../services/tagService';
 import { requestImmediateSync } from '../../services/syncEvents';
+import { useFeedback } from '../../contexts/useFeedback';
+import { useLanguage } from '../../contexts/useLanguage';
 
 export const TagsManagement: React.FC = () => {
   const { user } = useAuth();
   const { confirm } = useConfirm();
+  const { notify } = useFeedback();
+  const { t } = useLanguage();
   const [tagName, setTagName] = useState('');
   const [selectedColor, setSelectedColor] = useState('#3b82f6');
   const [errorMsg, setErrorMsg] = useState('');
@@ -57,6 +61,11 @@ export const TagsManagement: React.FC = () => {
       setSelectedColor('#3b82f6');
     } catch (err: unknown) {
       console.error('Failed to add tag:', err);
+      notify({
+        type: 'error',
+        title: t('settings.tagCreateFailedTitle'),
+        message: err instanceof Error ? err.message : t('settings.tagCreateFailedMessage'),
+      });
     }
   };
 
@@ -76,6 +85,11 @@ export const TagsManagement: React.FC = () => {
       requestImmediateSync('tag-delete');
     } catch (err: unknown) {
       console.error('Failed to delete tag:', err);
+      notify({
+        type: 'error',
+        title: t('settings.tagDeleteFailedTitle'),
+        message: err instanceof Error ? err.message : t('settings.tagDeleteFailedMessage'),
+      });
     }
   };
 
