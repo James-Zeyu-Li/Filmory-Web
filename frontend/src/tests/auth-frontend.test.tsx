@@ -12,6 +12,7 @@ import {
   buildPasswordRecoveryRedirectUrl,
   buildSignupEmailRedirectUrl,
   hasPasswordRecoveryIntent,
+  markPasswordRecoveryIntent,
 } from '../services/authFlow';
 
 const mockUseAuthState = {
@@ -250,7 +251,7 @@ describe('Auth frontend closure', () => {
       data: { session: { user: { id: 'user-1', email: 'recover@grainfolio.app' } } },
       error: null,
     });
-    window.sessionStorage.setItem('grainfolio:password-recovery-user-id', 'user-1');
+    markPasswordRecoveryIntent('user-1');
 
     render(
       <MemoryRouter initialEntries={[AUTH_ROUTES.resetPassword]}>
@@ -281,7 +282,7 @@ describe('Auth frontend closure', () => {
       data: { session: { user: { id: 'user-1', email: 'recover@grainfolio.app' } } },
       error: null,
     });
-    window.sessionStorage.setItem('grainfolio:password-recovery-user-id', 'user-1');
+    markPasswordRecoveryIntent('user-1');
 
     render(
       <MemoryRouter initialEntries={[AUTH_ROUTES.resetPassword]}>
@@ -301,6 +302,33 @@ describe('Auth frontend closure', () => {
     });
 
     expect(mockedAuth.updateUser).not.toHaveBeenCalled();
+  });
+
+  it('reset password rejects a recovery marker for a different user', async () => {
+    mockedAuth.getSession.mockResolvedValue({
+      data: { session: { user: { id: 'user-2', email: 'other@grainfolio.app' } } },
+      error: null,
+    });
+    markPasswordRecoveryIntent('user-1');
+
+    render(
+      <MemoryRouter initialEntries={[AUTH_ROUTES.resetPassword]}>
+        <Routes>
+          <Route path={AUTH_ROUTES.resetPassword} element={<ResetPasswordView />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('链接已失效或不可用')).toBeInTheDocument();
+    expect(mockedAuth.updateUser).not.toHaveBeenCalled();
+    expect(hasPasswordRecoveryIntent('user-1')).toBe(false);
+  });
+
+  it('expires the recovery marker after its short client-side window', () => {
+    markPasswordRecoveryIntent('user-1');
+
+    expect(hasPasswordRecoveryIntent('user-1', Date.now() + (15 * 60 * 1000) + 1)).toBe(false);
+    expect(hasPasswordRecoveryIntent('user-1')).toBe(false);
   });
 
   it('auth callback exchanges code and redirects to the next path', async () => {
@@ -403,8 +431,13 @@ describe('Auth frontend closure', () => {
     });
   });
 
-  it('auth callback falls back to login when next path is unsafe', async () => {
-    window.history.pushState({}, '', `${AUTH_ROUTES.callback}?code=test-code&next=${encodeURIComponent('https://evil.example')}&auth_intent=oauth`);
+  it.each([
+    'https://evil.example',
+    '//evil.example',
+    '\\\\evil.example',
+    '/auth/reset-password',
+  ])('auth callback falls back to login when next path is unsafe: %s', async (nextPath) => {
+    window.history.pushState({}, '', `${AUTH_ROUTES.callback}?code=test-code&next=${encodeURIComponent(nextPath)}&auth_intent=oauth`);
 
     render(
       <BrowserRouter>

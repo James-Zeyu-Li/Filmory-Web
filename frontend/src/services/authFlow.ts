@@ -14,6 +14,13 @@ export const AUTH_ROUTES = {
 type AuthIntent = 'signup' | 'recovery' | 'oauth';
 
 const PASSWORD_RECOVERY_INTENT_KEY = 'grainfolio:password-recovery-user-id';
+export const PASSWORD_RECOVERY_INTENT_TTL_MS = 15 * 60 * 1000;
+
+interface PasswordRecoveryIntent {
+  userId: string;
+  issuedAt: number;
+  flow: 'recovery';
+}
 
 const buildCallbackUrl = (intent: AuthIntent, nextPath: string) => {
   const callbackUrl = new URL(AUTH_ROUTES.callback, window.location.origin);
@@ -30,15 +37,38 @@ export const buildPasswordRecoveryRedirectUrl = () => (
   buildCallbackUrl('recovery', AUTH_ROUTES.resetPassword)
 );
 
-// The marker is only a client-side route guard. Supabase owns the actual
+// The marker is only a short-lived client-side route guard. Supabase owns the
 // recovery-token validation, session lifetime, and password update permission.
 export const markPasswordRecoveryIntent = (userId: string) => {
-  window.sessionStorage.setItem(PASSWORD_RECOVERY_INTENT_KEY, userId);
+  const intent: PasswordRecoveryIntent = {
+    userId,
+    issuedAt: Date.now(),
+    flow: 'recovery',
+  };
+  window.sessionStorage.setItem(PASSWORD_RECOVERY_INTENT_KEY, JSON.stringify(intent));
 };
 
-export const hasPasswordRecoveryIntent = (userId: string) => (
-  window.sessionStorage.getItem(PASSWORD_RECOVERY_INTENT_KEY) === userId
-);
+export const hasPasswordRecoveryIntent = (userId: string, now = Date.now()) => {
+  const storedIntent = window.sessionStorage.getItem(PASSWORD_RECOVERY_INTENT_KEY);
+  if (!storedIntent) return false;
+
+  try {
+    const intent = JSON.parse(storedIntent) as Partial<PasswordRecoveryIntent>;
+    const isValid =
+      intent.flow === 'recovery' &&
+      intent.userId === userId &&
+      typeof intent.issuedAt === 'number' &&
+      now >= intent.issuedAt &&
+      now - intent.issuedAt <= PASSWORD_RECOVERY_INTENT_TTL_MS;
+
+    if (isValid) return true;
+  } catch {
+    // Invalid storage is treated as an expired recovery intent.
+  }
+
+  clearPasswordRecoveryIntent();
+  return false;
+};
 
 export const clearPasswordRecoveryIntent = () => {
   window.sessionStorage.removeItem(PASSWORD_RECOVERY_INTENT_KEY);
@@ -252,6 +282,41 @@ export const getAuthErrorMessage = (
   return message;
 };
 
+const POST_AUTH_PATHS = new Set([
+  '/dashboard',
+  '/rolls',
+  '/gear',
+  '/insights',
+  '/compare',
+  AUTH_ROUTES.verified,
+]);
+
+const hasControlCharacter = (value: string) => {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code <= 31 || code === 127) return true;
+  }
+  return false;
+};
+
+export const isSafeInternalPath = (nextPath: string) => {
+  if (
+    !nextPath.startsWith('/') ||
+    nextPath.startsWith('//') ||
+    nextPath.includes('\\') ||
+    hasControlCharacter(nextPath)
+  ) {
+    return false;
+  }
+
+  try {
+    const target = new URL(nextPath, window.location.origin);
+    return target.origin === window.location.origin && POST_AUTH_PATHS.has(target.pathname);
+  } catch {
+    return false;
+  }
+};
+
 export const getAuthSuccessRedirectPath = (nextPath: string) => (
-  nextPath.startsWith('/') ? nextPath : AUTH_ROUTES.login
+  isSafeInternalPath(nextPath) ? nextPath : AUTH_ROUTES.login
 );
