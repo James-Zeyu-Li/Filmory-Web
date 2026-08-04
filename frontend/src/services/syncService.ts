@@ -14,6 +14,7 @@ import {
   LOCAL_CHANGE_EVENT,
   type SyncIntent,
 } from './syncEvents';
+import { recordSyncDiagnostic } from './syncDiagnostics';
 
 const isLocalSupabaseUrl = (url: string) => (
   url.includes('127.0.0.1:54321') || url.includes('localhost:54321')
@@ -191,6 +192,7 @@ const MAX_RETRY_SYNC_DELAY_MS = 5 * 60_000;
 const VISIBLE_FALLBACK_POLL_INTERVAL_MS = 60_000;
 const REALTIME_SUBSCRIBED_STATUS = 'SUBSCRIBED';
 const REALTIME_RETRY_STATUSES = new Set(['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED']);
+const MISSING_RPC_SCHEMA_CACHE_CODE = 'PGRST202';
 const SYNC_INTENT_DELAYS: Record<SyncIntent, number> = {
   debounced: SYNC_DEBOUNCE_MS,
   immediate: 0,
@@ -202,6 +204,11 @@ type SyncFailure = {
   kind: 'retryable' | 'needs_attention';
   code: string;
   message: string;
+};
+
+type SyncTrigger = {
+  intent: SyncIntent;
+  reason: string;
 };
 
 type InventoryOperationResult = {
@@ -250,9 +257,23 @@ const classifySyncFailure = (error: unknown): SyncFailure => {
   };
 };
 
+const isRecoverableLegacyInventoryRpcFailure = (item: SyncQueueItem): item is SyncOperationQueueItem => (
+  isSyncOperationQueueItem(item) &&
+  item.failureKind === 'needs_attention' &&
+  item.lastErrorCode === MISSING_RPC_SCHEMA_CACHE_CODE &&
+  item.lastErrorMessage?.includes(`public.${item.operationType}`) === true
+);
+
 const getRetryDelayMs = (attemptCount: number) => Math.min(
   RETRY_SYNC_DELAY_MS * (2 ** Math.max(0, attemptCount - 1)),
   MAX_RETRY_SYNC_DELAY_MS,
+);
+
+const countSyncIntents = (triggers: SyncTrigger[]): Partial<Record<SyncIntent, number>> => (
+  triggers.reduce<Partial<Record<SyncIntent, number>>>((counts, trigger) => {
+    counts[trigger.intent] = (counts[trigger.intent] || 0) + 1;
+    return counts;
+  }, {})
 );
 
 const dispatchSyncStatus = (status: SyncStatusState) => {
@@ -268,6 +289,9 @@ export class SyncService {
   private static visiblePollTimer: ReturnType<typeof setInterval> | null = null;
   private static inFlightSync: Promise<void> | null = null;
   private static shouldRunAgain = false;
+  private static pendingSyncTriggers: SyncTrigger[] = [];
+  private static nextSyncRunId = 1;
+  private static activeSyncRunId: number | undefined;
   private static realtimeLifecycleId = 0;
   private static isRealtimeSubscribed = false;
   private static isRealtimeFallbackRequired = false;
@@ -358,6 +382,31 @@ export class SyncService {
     return earliestRetryAt;
   }
 
+  // A deployment can add an inventory RPC after local operations were already
+  // queued. Re-open only the exact schema-cache failure once; all other
+  // actionable failures remain blocked until a user-facing resolution exists.
+  private static async recoverLegacyInventoryRpcFailures(userId: string): Promise<number> {
+    const recoverableItems = (await getUserQueue(userId))
+      .filter(isRecoverableLegacyInventoryRpcFailure)
+      .filter((item): item is SyncOperationQueueItem & { id: number } => item.id !== undefined);
+
+    if (recoverableItems.length === 0) return 0;
+
+    await db.syncQueue.where('id').anyOf(recoverableItems.map(item => item.id)).modify(item => {
+      delete item.attemptCount;
+      delete item.failureKind;
+      delete item.lastErrorCode;
+      delete item.lastErrorMessage;
+      delete item.lastAttemptAt;
+      delete item.nextRetryAt;
+    });
+
+    recordSyncDiagnostic('legacy_inventory_rpc_reopened', {
+      queueItemCount: recoverableItems.length,
+    });
+    return recoverableItems.length;
+  }
+
   static start(): void {
     const userId = getCurrentUserId();
     if (!userId) {
@@ -421,6 +470,7 @@ export class SyncService {
 
     dispatchSyncStatus('syncing');
     this.requestSyncIntent('background', 'start', 0);
+
   }
 
   static stop(): void {
@@ -431,6 +481,8 @@ export class SyncService {
     this.isRealtimeSubscribed = false;
     this.isRealtimeFallbackRequired = false;
     this.shouldRunAgain = false;
+    this.pendingSyncTriggers = [];
+    this.activeSyncRunId = undefined;
     this.inFlightSync = null;
 
     if (this.scheduledSyncTimer) {
@@ -483,6 +535,8 @@ export class SyncService {
   ): void {
     if (this.activeUserId !== userId || this.realtimeLifecycleId !== lifecycleId) return;
 
+    recordSyncDiagnostic('realtime_status', { realtimeStatus: status });
+
     if (status === REALTIME_SUBSCRIBED_STATUS) {
       this.isRealtimeSubscribed = true;
       this.isRealtimeFallbackRequired = false;
@@ -501,12 +555,20 @@ export class SyncService {
   }
 
   static requestSyncIntent(intent: SyncIntent, reason: string = intent, delayMs = SYNC_INTENT_DELAYS[intent]): void {
+    this.pendingSyncTriggers.push({ intent, reason });
+    recordSyncDiagnostic('intent_requested', { intent, reason, delayMs });
     this.requestSync(reason, delayMs);
   }
 
   static requestSync(reason = 'manual', delayMs = 0): void {
-    void reason;
     if (!this.isAutoSyncEnabled() || !this.activeUserId) return;
+
+    let latestTrigger = this.pendingSyncTriggers.at(-1);
+    if (!latestTrigger) {
+      latestTrigger = { intent: 'background', reason };
+      this.pendingSyncTriggers.push(latestTrigger);
+      recordSyncDiagnostic('intent_requested', { intent: 'background', reason, delayMs });
+    }
 
     if (currentSyncStatus !== 'syncing') {
       void this.refreshQueueAwareStatus('pending');
@@ -519,13 +581,30 @@ export class SyncService {
 
     if (this.inFlightSync) {
       this.shouldRunAgain = true;
+      recordSyncDiagnostic('coalesced_in_flight', {
+        intent: latestTrigger?.intent,
+        reason,
+        triggerCount: this.pendingSyncTriggers.length,
+      });
       return;
     }
 
     if (this.scheduledSyncTimer) {
       clearTimeout(this.scheduledSyncTimer);
+      recordSyncDiagnostic('timer_replaced', {
+        intent: latestTrigger?.intent,
+        reason,
+        delayMs,
+        triggerCount: this.pendingSyncTriggers.length,
+      });
     }
 
+    recordSyncDiagnostic('scheduled', {
+      intent: latestTrigger?.intent,
+      reason,
+      delayMs,
+      triggerCount: this.pendingSyncTriggers.length,
+    });
     this.scheduledSyncTimer = setTimeout(() => {
       this.scheduledSyncTimer = null;
       void this.sync();
@@ -605,12 +684,26 @@ export class SyncService {
 
     // 1. Skip operations that are waiting for backoff or need user intervention.
     const queue = await getReadyUserQueue(userId);
-    if (queue.length === 0) return;
+    if (queue.length === 0) {
+      recordSyncDiagnostic('push_started', {
+        runId: this.activeSyncRunId,
+        queueItemCount: 0,
+        recordItemCount: 0,
+        operationItemCount: 0,
+      });
+      return;
+    }
 
     // Record sync runs first so an operation can safely reference a newly-created
     // film stock. Operations then execute one at a time through idempotent RPCs.
     const recordQueue = queue.filter(isSyncRecordQueueItem);
     const operationQueue = queue.filter(isSyncOperationQueueItem);
+    recordSyncDiagnostic('push_started', {
+      runId: this.activeSyncRunId,
+      queueItemCount: queue.length,
+      recordItemCount: recordQueue.length,
+      operationItemCount: operationQueue.length,
+    });
 
     // 2. Group ordinary record work by table name to optimize network calls.
     const grouped = recordQueue.reduce((acc, item) => {
@@ -679,6 +772,13 @@ export class SyncService {
 
         // On success, remove these operations from local queue
         await db.syncQueue.bulkDelete(queueIdsToClear);
+        recordSyncDiagnostic('record_batch_completed', {
+          runId: this.activeSyncRunId,
+          tableName,
+          queueItemCount: items.length,
+          upsertCount: upserts.length,
+          deleteCount: deletes.length,
+        });
 
       } catch (err) {
         const failure = classifySyncFailure(err);
@@ -687,6 +787,13 @@ export class SyncService {
           earliestRetryAt = earliestRetryAt === null ? retryAt : Math.min(earliestRetryAt, retryAt);
         }
         console.error('Failed to push sync queue batch:', err);
+        recordSyncDiagnostic('record_batch_failed', {
+          runId: this.activeSyncRunId,
+          tableName,
+          queueItemCount: items.length,
+          errorCode: failure.code,
+          failureKind: failure.kind,
+        });
       }
     }
 
@@ -695,6 +802,10 @@ export class SyncService {
       try {
         const result = await this.pushInventoryOperation(operation);
         await this.applyInventoryOperationResult(result, userId, operation.id);
+        recordSyncDiagnostic('inventory_operation_completed', {
+          runId: this.activeSyncRunId,
+          operationType: operation.operationType,
+        });
       } catch (err) {
         const failure = classifySyncFailure(err);
         const retryAt = await this.markQueueFailure([operation.id], [operation], failure);
@@ -702,6 +813,12 @@ export class SyncService {
           earliestRetryAt = earliestRetryAt === null ? retryAt : Math.min(earliestRetryAt, retryAt);
         }
         console.error('Failed to push inventory sync operation:', err);
+        recordSyncDiagnostic('inventory_operation_failed', {
+          runId: this.activeSyncRunId,
+          operationType: operation.operationType,
+          errorCode: failure.code,
+          failureKind: failure.kind,
+        });
       }
     }
 
@@ -720,6 +837,10 @@ export class SyncService {
     let lastSync = new Date(0).toISOString();
     const lastSyncStr = localStorage.getItem(getSyncWatermarkKey(userId));
     const isInitialPull = !lastSyncStr;
+    recordSyncDiagnostic('pull_started', {
+      runId: this.activeSyncRunId,
+      pullMode: isInitialPull ? 'initial' : 'incremental',
+    });
 
     if (!isInitialPull) {
       lastSync = new Date(lastSyncStr).toISOString();
@@ -735,6 +856,8 @@ export class SyncService {
 
     let syncError: Error | null = null;
     let remoteUserProfileFound = false;
+    let changedTableCount = 0;
+    let receivedRecordCount = 0;
 
     try {
       const pendingInventoryDeltas = getPendingInventoryDeltas(await getUserQueue(userId));
@@ -754,6 +877,8 @@ export class SyncService {
 
       for (const { dexieTable, supaTable, data } of remoteChanges) {
         if (data.length === 0) continue;
+        changedTableCount += 1;
+        receivedRecordCount += data.length;
 
         console.log(`[Sync Pull] Downloaded ${data.length} new/updated records for ${supaTable}`);
 
@@ -849,8 +974,19 @@ export class SyncService {
     }
 
     if (syncError) {
+      recordSyncDiagnostic('pull_failed', {
+        runId: this.activeSyncRunId,
+        errorCode: getErrorDetails(syncError).code || 'unknown',
+      });
       throw syncError;
     }
+
+    recordSyncDiagnostic('pull_completed', {
+      runId: this.activeSyncRunId,
+      pullMode: isInitialPull ? 'initial' : 'incremental',
+      changedTableCount,
+      receivedRecordCount,
+    });
 
     return { remoteUserProfileFound };
   }
@@ -877,10 +1013,28 @@ export class SyncService {
     // Dispatch sync start event
     dispatchSyncStatus('syncing');
 
+    const runId = this.nextSyncRunId;
+    this.nextSyncRunId += 1;
+    const triggers = this.pendingSyncTriggers.splice(0);
+    const runTriggers: SyncTrigger[] = triggers.length > 0
+      ? triggers
+      : [{ intent: 'background', reason: 'manual' }];
+    const startedAt = Date.now();
+    this.activeSyncRunId = runId;
+    recordSyncDiagnostic('run_started', {
+      runId,
+      triggerCount: runTriggers.length,
+      intentCounts: countSyncIntents(runTriggers),
+    });
+
     this.inFlightSync = (async () => {
       try {
         const userId = getCurrentUserId();
         const isInitialSync = userId && !localStorage.getItem(getSyncWatermarkKey(userId));
+
+        if (userId) {
+          await this.recoverLegacyInventoryRpcFailures(userId);
+        }
 
         if (isInitialSync) {
           // A new browser must import the account profile before its local default can queue a write.
@@ -891,7 +1045,16 @@ export class SyncService {
           await this.pull();
         }
         await this.refreshQueueAwareStatus('synced', true);
+        recordSyncDiagnostic('run_completed', {
+          runId,
+          durationMs: Date.now() - startedAt,
+        });
       } catch (error) {
+        recordSyncDiagnostic('run_failed', {
+          runId,
+          durationMs: Date.now() - startedAt,
+          errorCode: getErrorDetails(error).code || 'unknown',
+        });
         await this.refreshQueueAwareStatus('pending', true);
         const hasScheduledQueueRetry = error instanceof SyncPushError;
         const shouldRetryGenericFailure = !hasScheduledQueueRetry;
@@ -903,6 +1066,9 @@ export class SyncService {
         }
       } finally {
         this.inFlightSync = null;
+        if (this.activeSyncRunId === runId) {
+          this.activeSyncRunId = undefined;
+        }
         if (this.shouldRunAgain && this.activeUserId) {
           this.shouldRunAgain = false;
           this.requestSyncIntent('background', 'follow-up');

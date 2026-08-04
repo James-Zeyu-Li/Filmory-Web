@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '../db/schema';
+import { clearSyncDiagnosticEntries, getSyncDiagnosticEntries } from '../services/syncDiagnostics';
 import { SyncService } from '../services/syncService';
 import { LOCAL_CHANGE_EVENT } from '../services/syncEvents';
 
@@ -36,6 +37,7 @@ const waitForQueuedRecord = async (recordId: string) => {
 describe('SyncService schema parity', () => {
   beforeEach(async () => {
     SyncService.stop();
+    clearSyncDiagnosticEntries();
     await db.syncQueue.clear();
     localStorage.clear();
     vi.mocked(localStorage.getItem).mockImplementation((key: string) => (
@@ -151,40 +153,91 @@ describe('SyncService schema parity', () => {
   });
 
   it('sends inventory operations through RPC and applies the server stock result locally', async () => {
+    vi.stubEnv('VITE_ENABLE_SYNC_DEBUG_LOGGING', 'true');
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => undefined);
+    try {
+      await db.filmStocks.add({
+        id: 'film-operation-1',
+        userId: 'user-1',
+        brand: 'Kodak',
+        name: 'Gold 200',
+        iso: 200,
+        colorType: 'color',
+        format: '135',
+        isSystem: 0,
+        stockCount: 1,
+        addedAt: 1782864000000,
+      });
+      await db.syncQueue.clear();
+      await db.syncQueue.add({
+        kind: 'operation',
+        userId: 'user-1',
+        operationId: 'operation-1',
+        operationType: 'adjust_film_stock',
+        operationPayload: { filmStockId: 'film-operation-1', delta: -1 },
+        timestamp: 1782864000000,
+      });
+      supabaseMock.rpc.mockResolvedValue({
+        data: { operationId: 'operation-1', filmStockId: 'film-operation-1', stockCount: 0 },
+        error: null,
+      });
+
+      await SyncService.push();
+
+      expect(supabaseMock.rpc).toHaveBeenCalledWith('adjust_film_stock', {
+        p_operation_id: 'operation-1',
+        p_film_stock_id: 'film-operation-1',
+        p_delta: -1,
+      });
+      expect((await db.filmStocks.get('film-operation-1'))?.stockCount).toBe(0);
+      expect(await db.syncQueue.count()).toBe(0);
+      expect(getSyncDiagnosticEntries()).toContainEqual(expect.objectContaining({
+        event: 'inventory_operation_completed',
+        operationType: 'adjust_film_stock',
+      }));
+    } finally {
+      debugSpy.mockRestore();
+    }
+  });
+
+  it('keeps consecutive inventory adjustments as distinct idempotent RPC operations', async () => {
     await db.filmStocks.add({
-      id: 'film-operation-1',
+      id: 'film-operation-2',
       userId: 'user-1',
       brand: 'Kodak',
-      name: 'Gold 200',
-      iso: 200,
+      name: 'Portra 400',
+      iso: 400,
       colorType: 'color',
       format: '135',
       isSystem: 0,
-      stockCount: 1,
+      stockCount: 3,
       addedAt: 1782864000000,
     });
     await db.syncQueue.clear();
-    await db.syncQueue.add({
-      kind: 'operation',
+    await db.syncQueue.bulkAdd([1, 2, 3].map(offset => ({
+      kind: 'operation' as const,
       userId: 'user-1',
-      operationId: 'operation-1',
-      operationType: 'adjust_film_stock',
-      operationPayload: { filmStockId: 'film-operation-1', delta: -1 },
-      timestamp: 1782864000000,
-    });
-    supabaseMock.rpc.mockResolvedValue({
-      data: { operationId: 'operation-1', filmStockId: 'film-operation-1', stockCount: 0 },
+      operationId: `operation-${offset}`,
+      operationType: 'adjust_film_stock' as const,
+      operationPayload: { filmStockId: 'film-operation-2', delta: 1 },
+      timestamp: 1782864000000 + offset,
+    })));
+    supabaseMock.rpc.mockImplementation(async (_name: string, args: { p_operation_id: string }) => ({
+      data: {
+        operationId: args.p_operation_id,
+        filmStockId: 'film-operation-2',
+        stockCount: 3 + Number(args.p_operation_id.replace('operation-', '')),
+      },
       error: null,
-    });
+    }));
 
     await SyncService.push();
 
-    expect(supabaseMock.rpc).toHaveBeenCalledWith('adjust_film_stock', {
-      p_operation_id: 'operation-1',
-      p_film_stock_id: 'film-operation-1',
-      p_delta: -1,
-    });
-    expect((await db.filmStocks.get('film-operation-1'))?.stockCount).toBe(0);
+    expect(supabaseMock.rpc).toHaveBeenCalledTimes(3);
+    expect(supabaseMock.rpc).toHaveBeenNthCalledWith(1, 'adjust_film_stock', expect.objectContaining({ p_operation_id: 'operation-1' }));
+    expect(supabaseMock.rpc).toHaveBeenNthCalledWith(2, 'adjust_film_stock', expect.objectContaining({ p_operation_id: 'operation-2' }));
+    expect(supabaseMock.rpc).toHaveBeenNthCalledWith(3, 'adjust_film_stock', expect.objectContaining({ p_operation_id: 'operation-3' }));
+    expect((await db.filmStocks.get('film-operation-2'))?.stockCount).toBe(6);
     expect(await db.syncQueue.count()).toBe(0);
   });
 
@@ -344,6 +397,55 @@ describe('SyncService schema parity', () => {
       pendingCount: 0,
       needsAttentionCount: 1,
     });
+  });
+
+  it('reopens only legacy missing-RPC inventory operations for a safe retry', async () => {
+    await db.syncQueue.bulkAdd([
+      {
+        kind: 'operation' as const,
+        userId: 'user-1',
+        operationId: 'legacy-adjustment',
+        operationType: 'adjust_film_stock' as const,
+        operationPayload: { filmStockId: 'film-operation-1', delta: 1 },
+        timestamp: 1782864000000,
+        attemptCount: 1,
+        failureKind: 'needs_attention' as const,
+        lastErrorCode: 'PGRST202',
+        lastErrorMessage: 'Could not find the function public.adjust_film_stock(p_delta, p_film_stock_id, p_operation_id) in the schema cache',
+        lastAttemptAt: 1782864005000,
+      },
+      {
+        kind: 'operation' as const,
+        userId: 'user-1',
+        operationId: 'permission-denied-adjustment',
+        operationType: 'adjust_film_stock' as const,
+        operationPayload: { filmStockId: 'film-operation-1', delta: 1 },
+        timestamp: 1782864000001,
+        attemptCount: 1,
+        failureKind: 'needs_attention' as const,
+        lastErrorCode: '42501',
+        lastErrorMessage: 'permission denied',
+        lastAttemptAt: 1782864005000,
+      },
+    ]);
+
+    const service = SyncService as unknown as {
+      recoverLegacyInventoryRpcFailures: (userId: string) => Promise<number>;
+    };
+
+    await expect(service.recoverLegacyInventoryRpcFailures('user-1')).resolves.toBe(1);
+
+    const [reopened, blocked] = await db.syncQueue.orderBy('timestamp').toArray();
+    expect(reopened).toEqual(expect.objectContaining({ operationId: 'legacy-adjustment' }));
+    expect(reopened?.failureKind).toBeUndefined();
+    expect(reopened?.lastErrorCode).toBeUndefined();
+    expect(reopened?.lastErrorMessage).toBeUndefined();
+    expect(reopened?.attemptCount).toBeUndefined();
+    expect(blocked).toEqual(expect.objectContaining({
+      operationId: 'permission-denied-adjustment',
+      failureKind: 'needs_attention',
+      lastErrorCode: '42501',
+    }));
   });
 
   it('keeps transient failures queued with exponential retry metadata', async () => {
@@ -713,6 +815,46 @@ describe('SyncService schema parity', () => {
     } finally {
       SyncService.stop();
       syncSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it('records immediate requests as one scheduled sync batch without merging inventory operations', () => {
+    vi.useFakeTimers();
+    vi.stubEnv('VITE_ENABLE_SUPABASE_SYNC', 'true');
+    vi.stubEnv('VITE_ENABLE_SYNC_DEBUG_LOGGING', 'true');
+    vi.stubEnv('VITE_SUPABASE_URL', 'http://127.0.0.1:54321');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'eyJ.local-dev-jwt');
+
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => undefined);
+    const syncSpy = vi.spyOn(SyncService, 'sync').mockResolvedValue(undefined);
+
+    try {
+      SyncService.start();
+      vi.advanceTimersByTime(0);
+      syncSpy.mockClear();
+      clearSyncDiagnosticEntries();
+
+      for (let index = 0; index < 3; index += 1) {
+        window.dispatchEvent(new CustomEvent(LOCAL_CHANGE_EVENT, {
+          detail: { intent: 'immediate', source: 'film-stock-adjust' },
+        }));
+      }
+      vi.advanceTimersByTime(0);
+
+      const entries = getSyncDiagnosticEntries();
+      expect(entries.filter(entry => entry.event === 'intent_requested' && entry.intent === 'immediate')).toHaveLength(3);
+      expect(entries.filter(entry => entry.event === 'timer_replaced')).toHaveLength(2);
+      expect(entries).toContainEqual(expect.objectContaining({
+        event: 'scheduled',
+        intent: 'immediate',
+        triggerCount: 3,
+      }));
+      expect(syncSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      SyncService.stop();
+      syncSpy.mockRestore();
+      debugSpy.mockRestore();
       vi.useRealTimers();
     }
   });
