@@ -93,6 +93,33 @@ describe('inventory operation outbox', () => {
     ]);
   });
 
+  it('queues one combined delta when a user sets a new target stock count', async () => {
+    await db.filmStocks.add({
+      id: 'film-1',
+      userId: 'user-1',
+      brand: 'Kodak',
+      name: 'Gold 200',
+      iso: 200,
+      colorType: 'color',
+      format: '135',
+      isSystem: 0,
+      stockCount: 10,
+      addedAt: 1782864000000,
+    });
+    await db.syncQueue.clear();
+
+    await adjustFilmStock({ id: 'film-1', userId: 'user-1', stockCount: 10 }, 5);
+
+    expect((await db.filmStocks.get('film-1'))?.stockCount).toBe(15);
+    expect(await db.syncQueue.toArray()).toEqual([
+      expect.objectContaining({
+        kind: 'operation',
+        operationType: 'adjust_film_stock',
+        operationPayload: { filmStockId: 'film-1', delta: 5 },
+      }),
+    ]);
+  });
+
   it('keeps digital rolls on the normal record queue', async () => {
     await createRollWithInventory({
       roll: {

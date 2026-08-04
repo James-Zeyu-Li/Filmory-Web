@@ -133,6 +133,32 @@ const getReadyUserQueue = async (userId: string) => {
   ));
 };
 
+const getInventoryOperationDelta = (item: SyncOperationQueueItem): { filmStockId: string; delta: number } | null => {
+  if (item.operationType === 'adjust_film_stock') {
+    const filmStockId = getString(item.operationPayload.filmStockId);
+    const delta = item.operationPayload.delta;
+    return filmStockId && typeof delta === 'number' && Number.isInteger(delta)
+      ? { filmStockId, delta }
+      : null;
+  }
+
+  const roll = item.operationPayload.roll;
+  if (item.operationPayload.consumeInventory !== true || !isSyncRecord(roll)) return null;
+  const filmStockId = getString(roll.filmStockId);
+  return filmStockId ? { filmStockId, delta: -1 } : null;
+};
+
+const getPendingInventoryDeltas = (queue: SyncQueueItem[]): Map<string, number> => {
+  const deltas = new Map<string, number>();
+  for (const item of queue) {
+    if (!isSyncOperationQueueItem(item)) continue;
+    const operation = getInventoryOperationDelta(item);
+    if (!operation) continue;
+    deltas.set(operation.filmStockId, (deltas.get(operation.filmStockId) || 0) + operation.delta);
+  }
+  return deltas;
+};
+
 export const summarizeSyncQueue = (queue: SyncQueueItem[], userId: string | null): SyncQueueSummary => {
   if (!userId) return { pendingCount: 0, needsAttentionCount: 0 };
   return queue
@@ -506,16 +532,29 @@ export class SyncService {
     }, Math.max(0, delayMs));
   }
 
-  private static async applyInventoryOperationResult(result: InventoryOperationResult): Promise<void> {
-    if (!result.filmStockId || typeof result.stockCount !== 'number') return;
+  private static async applyInventoryOperationResult(
+    result: InventoryOperationResult,
+    userId: string,
+    completedQueueItemId: number,
+  ): Promise<void> {
+    const filmStockId = result.filmStockId;
+    const confirmedStockCount = result.stockCount;
+    if (!filmStockId || typeof confirmedStockCount !== 'number') return;
 
-    await db.transaction('rw', db.filmStocks, async () => {
+    await db.transaction('rw', db.filmStocks, db.syncQueue, async () => {
+      // Delete the confirmed operation first. The remaining local operations
+      // are then rebased onto the Cloud-confirmed count in this same commit.
+      await db.syncQueue.delete(completedQueueItemId);
+      const pendingQueue = await getUserQueue(userId);
+      const pendingDelta = getPendingInventoryDeltas(pendingQueue).get(filmStockId) || 0;
       suppressSyncRecordsForCurrentTransaction();
-      await db.filmStocks.update(result.filmStockId, { stockCount: result.stockCount });
+      await db.filmStocks.update(filmStockId, {
+        stockCount: Math.max(0, confirmedStockCount + pendingDelta),
+      });
     });
   }
 
-  private static async pushInventoryOperation(item: SyncOperationQueueItem): Promise<void> {
+  private static async pushInventoryOperation(item: SyncOperationQueueItem): Promise<InventoryOperationResult> {
     const payload = item.operationPayload;
     let data: unknown;
     let error: unknown;
@@ -553,7 +592,7 @@ export class SyncService {
       throw new Error('Inventory operation returned an invalid result.');
     }
 
-    await this.applyInventoryOperationResult(data);
+    return data;
   }
 
   /**
@@ -654,8 +693,8 @@ export class SyncService {
     for (const operation of operationQueue) {
       if (operation.id === undefined) continue;
       try {
-        await this.pushInventoryOperation(operation);
-        await db.syncQueue.delete(operation.id);
+        const result = await this.pushInventoryOperation(operation);
+        await this.applyInventoryOperationResult(result, userId, operation.id);
       } catch (err) {
         const failure = classifySyncFailure(err);
         const retryAt = await this.markQueueFailure([operation.id], [operation], failure);
@@ -698,6 +737,8 @@ export class SyncService {
     let remoteUserProfileFound = false;
 
     try {
+      const pendingInventoryDeltas = getPendingInventoryDeltas(await getUserQueue(userId));
+
       // Fetch all independent tables concurrently. Applying them remains sequential so
       // Dexie conflict resolution and queued writes keep deterministic behavior.
       const remoteChanges = await Promise.all((Object.entries(tableMap) as Array<[SyncTableName, string]>).map(async ([dexieTable, supaTable]) => {
@@ -768,6 +809,10 @@ export class SyncService {
               if (!isSyncRecord(camelPayload)) continue;
               delete camelPayload.updatedAt;
               delete camelPayload.deletedAt;
+              if (dexieTable === 'filmStocks' && typeof camelPayload.stockCount === 'number') {
+                const pendingDelta = pendingInventoryDeltas.get(rowId) || 0;
+                camelPayload.stockCount = Math.max(0, camelPayload.stockCount + pendingDelta);
+              }
               toPut.push({ ...camelPayload, id: rowId });
             }
             

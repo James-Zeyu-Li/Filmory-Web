@@ -188,6 +188,123 @@ describe('SyncService schema parity', () => {
     expect(await db.syncQueue.count()).toBe(0);
   });
 
+  it('keeps the optimistic inventory count stable while individual operations are confirmed', async () => {
+    await db.filmStocks.add({
+      id: 'film-operation-rebase',
+      userId: 'user-1',
+      brand: 'Kodak',
+      name: 'Ultramax 400',
+      iso: 400,
+      colorType: 'color',
+      format: '135',
+      isSystem: 0,
+      stockCount: 13,
+      addedAt: 1782864000000,
+    });
+    await db.syncQueue.clear();
+    await db.syncQueue.bulkAdd([
+      {
+        kind: 'operation',
+        userId: 'user-1',
+        operationId: 'inventory-rebase-1',
+        operationType: 'adjust_film_stock',
+        operationPayload: { filmStockId: 'film-operation-rebase', delta: 1 },
+        timestamp: 1782864000001,
+      },
+      {
+        kind: 'operation',
+        userId: 'user-1',
+        operationId: 'inventory-rebase-2',
+        operationType: 'adjust_film_stock',
+        operationPayload: { filmStockId: 'film-operation-rebase', delta: 1 },
+        timestamp: 1782864000002,
+      },
+    ]);
+    const updateSpy = vi.spyOn(db.filmStocks, 'update');
+    supabaseMock.rpc
+      .mockResolvedValueOnce({
+        data: { operationId: 'inventory-rebase-1', filmStockId: 'film-operation-rebase', stockCount: 12 },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: { operationId: 'inventory-rebase-2', filmStockId: 'film-operation-rebase', stockCount: 13 },
+        error: null,
+      });
+
+    try {
+      await SyncService.push();
+
+      const stockWrites = updateSpy.mock.calls
+        .filter(([id]) => id === 'film-operation-rebase')
+        .map(([, changes]) => (changes as { stockCount?: number }).stockCount);
+      expect(stockWrites).toEqual([13, 13]);
+      expect((await db.filmStocks.get('film-operation-rebase'))?.stockCount).toBe(13);
+      expect(await db.syncQueue.count()).toBe(0);
+    } finally {
+      updateSpy.mockRestore();
+    }
+  });
+
+  it('rebases a Cloud film-stock update with local inventory operations that are still pending', async () => {
+    const remoteUpdatedAt = new Date(1782864001000).toISOString();
+    await db.filmStocks.add({
+      id: 'film-pull-rebase',
+      userId: 'user-1',
+      brand: 'Kodak',
+      name: 'Tri-X 400',
+      iso: 400,
+      colorType: 'bw',
+      format: '135',
+      isSystem: 0,
+      stockCount: 13,
+      addedAt: 1782864000000,
+    });
+    await db.syncQueue.clear();
+    await db.syncQueue.add({
+      kind: 'operation',
+      userId: 'user-1',
+      operationId: 'pending-pull-rebase',
+      operationType: 'adjust_film_stock',
+      operationPayload: { filmStockId: 'film-pull-rebase', delta: 1 },
+      timestamp: 1782864000001,
+    });
+    vi.mocked(localStorage.getItem).mockImplementation((key: string) => (
+      key === 'grainfolio_user_id'
+        ? 'user-1'
+        : key === 'grainfolio_last_sync_user-1'
+          ? new Date(0).toISOString()
+          : null
+    ));
+    supabaseMock.from.mockImplementation((tableName: string) => ({
+      select: () => ({
+        eq: () => ({
+          gt: async () => ({
+            data: tableName === 'film_stocks'
+              ? [{
+                id: 'film-pull-rebase',
+                user_id: 'user-1',
+                brand: 'Kodak',
+                name: 'Tri-X 400',
+                iso: 400,
+                color_type: 'bw',
+                format: '135',
+                is_system: 0,
+                stock_count: 12,
+                added_at: 1782864000000,
+                updated_at: remoteUpdatedAt,
+              }]
+              : [],
+            error: null,
+          }),
+        }),
+      }),
+    }));
+
+    await SyncService.pull();
+
+    expect((await db.filmStocks.get('film-pull-rebase'))?.stockCount).toBe(13);
+  });
+
   it('marks RLS failures as needing attention and excludes them from automatic retries', async () => {
     await db.syncQueue.add({
       userId: 'user-1',
