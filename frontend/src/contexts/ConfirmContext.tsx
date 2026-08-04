@@ -9,6 +9,9 @@ interface ConfirmProviderProps {
   children: ReactNode;
 }
 
+// Confirmation dialogs must remain actionable above regular modal workflows.
+const CONFIRM_OVERLAY_Z_INDEX = 10000;
+
 export const ConfirmProvider: React.FC<ConfirmProviderProps> = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [options, setOptions] = useState<ConfirmOptions | null>(null);
@@ -37,30 +40,34 @@ export const ConfirmProvider: React.FC<ConfirmProviderProps> = ({ children }) =>
     <ConfirmContext.Provider value={{ confirm }}>
       {children}
       {options && (
-        <Modal isOpen={isOpen} onClose={handleCancel} style={{ maxWidth: '400px' }}>
-          <div className="modal-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Modal
+          isOpen={isOpen}
+          onClose={handleCancel}
+          style={{ maxWidth: '400px' }}
+          overlayStyle={{ zIndex: CONFIRM_OVERLAY_Z_INDEX }}
+          portal
+        >
+          <div className="confirm-dialog">
+            <div className="modal-header confirm-dialog-header">
               {options.isDanger ? (
-                <AlertTriangle size={20} color="var(--danger-color)" />
+                <span className="confirm-dialog-icon danger" aria-hidden="true"><AlertTriangle size={19} /></span>
               ) : (
-                <Info size={20} color="var(--accent)" />
+                <span className="confirm-dialog-icon" aria-hidden="true"><Info size={19} /></span>
               )}
-              <h3 style={{ margin: 0, fontSize: '18px' }}>{options.title}</h3>
+              <h2>{options.title}</h2>
             </div>
-          </div>
-          <div className="modal-body" style={{ margin: '16px 0', fontSize: '15px', color: 'var(--text-secondary)', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
-            {options.message}
-          </div>
-          <div className="modal-footer" style={{ marginTop: '24px' }}>
-            <button className="secondary" onClick={handleCancel}>
-              {options.cancelText || t('common.cancel')}
-            </button>
-            <button 
-              className={options.isDanger ? 'primary danger' : 'primary'} 
-              onClick={handleConfirm}
-            >
-              {options.confirmText || t('common.confirm')}
-            </button>
+            <div className="modal-body confirm-dialog-body">{options.message}</div>
+            <div className="modal-footer confirm-dialog-actions">
+              <button className="secondary" onClick={handleCancel}>
+                {options.cancelText || t('common.cancel')}
+              </button>
+              <button
+                className={options.isDanger ? 'primary danger' : 'primary'}
+                onClick={handleConfirm}
+              >
+                {options.confirmText || t('common.confirm')}
+              </button>
+            </div>
           </div>
         </Modal>
       )}

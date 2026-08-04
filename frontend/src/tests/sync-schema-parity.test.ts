@@ -239,6 +239,120 @@ describe('SyncService schema parity', () => {
     }
   });
 
+  it('replays a response-lost inventory operation with the same id without applying its delta twice', async () => {
+    await db.filmStocks.add({
+      id: 'film-idempotent-replay',
+      userId: 'user-1',
+      brand: 'Kodak',
+      name: 'Ultramax 400',
+      iso: 400,
+      colorType: 'color',
+      format: '135',
+      isSystem: 0,
+      // The local optimistic update has already applied +1.
+      stockCount: 11,
+      addedAt: 1782864000000,
+    });
+    // The entity write above is not part of this RPC replay scenario.
+    await db.syncQueue.clear();
+    const queueItemId = await db.syncQueue.add({
+      kind: 'operation',
+      userId: 'user-1',
+      operationId: 'response-lost-operation',
+      operationType: 'adjust_film_stock',
+      operationPayload: { filmStockId: 'film-idempotent-replay', delta: 1 },
+      timestamp: 1782864000000,
+    });
+    const serverResults = new Map<string, { operationId: string; filmStockId: string; stockCount: number }>();
+    let appliedServerDeltas = 0;
+    supabaseMock.rpc.mockImplementation(async (_name: string, args: { p_operation_id: string }) => {
+      const existingResult = serverResults.get(args.p_operation_id);
+      if (existingResult) return { data: existingResult, error: null };
+
+      appliedServerDeltas += 1;
+      const result = {
+        operationId: args.p_operation_id,
+        filmStockId: 'film-idempotent-replay',
+        stockCount: 11,
+      };
+      serverResults.set(args.p_operation_id, result);
+      // Simulate a committed RPC whose network response never reaches the browser.
+      throw new Error('Network response lost after Cloud committed the operation.');
+    });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    try {
+      await expect(SyncService.push()).rejects.toThrow('One or more sync push batches failed.');
+      expect(appliedServerDeltas).toBe(1);
+      expect(await db.syncQueue.get(queueItemId)).toEqual(expect.objectContaining({
+        operationId: 'response-lost-operation',
+        failureKind: 'retryable',
+      }));
+
+      // Skip the backoff delay only inside this deterministic test.
+      await db.syncQueue.update(queueItemId, { nextRetryAt: 0 });
+      await SyncService.push();
+
+      expect(supabaseMock.rpc).toHaveBeenCalledTimes(2);
+      expect(appliedServerDeltas).toBe(1);
+      expect((await db.filmStocks.get('film-idempotent-replay'))?.stockCount).toBe(11);
+      expect(await db.syncQueue.get(queueItemId)).toBeUndefined();
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it('confirms an unregistered shooting record when Cloud returns null inventory fields', async () => {
+    await db.rolls.add({
+      id: 'roll-without-stock',
+      userId: 'user-1',
+      name: 'Found roll',
+      cameraIds: [],
+      status: 'active',
+      addedAt: 1782864000000,
+    });
+    await db.syncQueue.add({
+      kind: 'operation',
+      userId: 'user-1',
+      operationId: 'unregistered-roll-operation',
+      operationType: 'create_roll_with_inventory',
+      operationPayload: {
+        roll: {
+          id: 'roll-without-stock',
+          userId: 'user-1',
+          name: 'Found roll',
+          cameraIds: [],
+          status: 'active',
+          addedAt: 1782864000000,
+        },
+        consumeInventory: false,
+      },
+      timestamp: 1782864000000,
+    });
+    supabaseMock.rpc.mockResolvedValue({
+      data: {
+        operationId: 'unregistered-roll-operation',
+        rollId: 'roll-without-stock',
+        filmStockId: null,
+        stockCount: null,
+      },
+      error: null,
+    });
+
+    await SyncService.push();
+
+    expect(supabaseMock.rpc).toHaveBeenCalledWith('create_roll_with_inventory', {
+      p_operation_id: 'unregistered-roll-operation',
+      p_roll: expect.not.objectContaining({ filmStockId: expect.anything() }),
+      p_consume_inventory: false,
+      p_ledger: null,
+    });
+    expect(await db.syncQueue.count()).toBe(0);
+    expect(await db.rolls.get('roll-without-stock')).toEqual(expect.not.objectContaining({
+      filmStockId: expect.anything(),
+    }));
+  });
+
   it('keeps consecutive inventory adjustments as distinct idempotent RPC operations', async () => {
     await db.filmStocks.add({
       id: 'film-operation-2',
@@ -543,6 +657,39 @@ describe('SyncService schema parity', () => {
       pendingCount: 0,
       needsAttentionCount: 1,
     });
+  });
+
+  it('marks rejected inventory operations as needing attention and preserves the operation', async () => {
+    await db.syncQueue.add({
+      kind: 'operation',
+      userId: 'user-1',
+      operationId: 'rejected-stock-adjustment',
+      operationType: 'adjust_film_stock',
+      operationPayload: { filmStockId: 'film-1', delta: -1 },
+      timestamp: 1782864000000,
+    });
+    supabaseMock.rpc.mockResolvedValueOnce({
+      data: null,
+      error: { status: 409, code: '23503', message: 'FILM_STOCK_NOT_FOUND' },
+    });
+
+    await expect(SyncService.push()).rejects.toThrow('One or more sync push batches failed.');
+
+    const queued = await db.syncQueue.where('operationId').equals('rejected-stock-adjustment').first();
+    expect(queued).toEqual(expect.objectContaining({
+      kind: 'operation',
+      operationType: 'adjust_film_stock',
+      operationPayload: { filmStockId: 'film-1', delta: -1 },
+      attemptCount: 1,
+      failureKind: 'needs_attention',
+      lastErrorCode: '23503',
+      lastErrorMessage: 'FILM_STOCK_NOT_FOUND',
+    }));
+    expect(queued?.nextRetryAt).toBeUndefined();
+
+    supabaseMock.rpc.mockClear();
+    await SyncService.push();
+    expect(supabaseMock.rpc).not.toHaveBeenCalled();
   });
 
   it('reopens only legacy missing-RPC inventory operations for a safe retry', async () => {

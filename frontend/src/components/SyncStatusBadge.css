@@ -62,8 +62,9 @@ button.sync-status-badge-action:focus-visible {
 }
 
 .sync-status-badge.needs_attention {
-  color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.25);
+  color: var(--accent);
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
 }
 
 .sync-status-badge-spin {

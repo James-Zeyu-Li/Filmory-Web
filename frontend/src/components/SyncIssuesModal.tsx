@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { AlertTriangle, CircleHelp, RefreshCw, Undo2, X } from 'lucide-react';
+import { AlertTriangle, CircleHelp, Undo2, X } from 'lucide-react';
 import { Modal } from './Modal';
 import { Button } from './ui/Button';
 import { useConfirm } from '../contexts/useConfirm';
@@ -10,7 +10,6 @@ import { db, isSyncOperationQueueItem, type SyncOperationQueueItem } from '../db
 import {
   canKeepRollWithoutInventory,
   keepRollWithoutInventory,
-  retrySyncIssue,
   undoSyncIssue,
 } from '../services/syncIssueService';
 import './SyncIssuesModal.css';
@@ -104,15 +103,10 @@ export const SyncIssuesModal: React.FC<SyncIssuesModalProps> = ({ isOpen, onClos
     }
   };
 
-  const handleRetry = (issue: SyncIssue) => {
-    const userId = localStorage.getItem('grainfolio_user_id');
-    if (!userId) return;
-    void runAction(issue, () => retrySyncIssue(issue.operation.id, userId), t('syncIssues.retrySuccess'));
-  };
-
   const handleUndo = async (issue: SyncIssue) => {
     const userId = localStorage.getItem('grainfolio_user_id');
     if (!userId) return;
+    onClose();
     const accepted = await confirm({
       title: t('syncIssues.undoConfirmTitle'),
       message: t('syncIssues.undoConfirmMessage'),
@@ -126,6 +120,7 @@ export const SyncIssuesModal: React.FC<SyncIssuesModalProps> = ({ isOpen, onClos
   const handleKeepWithoutInventory = async (issue: SyncIssue) => {
     const userId = localStorage.getItem('grainfolio_user_id');
     if (!userId) return;
+    onClose();
     const accepted = await confirm({
       title: t('syncIssues.keepWithoutInventoryConfirmTitle'),
       message: t('syncIssues.keepWithoutInventoryConfirmMessage'),
@@ -176,15 +171,6 @@ export const SyncIssuesModal: React.FC<SyncIssuesModalProps> = ({ isOpen, onClos
                       <p>{t(getIssueMessageKey(issue.operation.lastErrorCode))}</p>
                     </div>
                     <div className="sync-issue-actions">
-                      <Button
-                        type="button"
-                        variant="primary"
-                        onClick={() => handleRetry(issue)}
-                        disabled={isProcessing}
-                        icon={<RefreshCw size={16} className={isProcessing ? 'sync-issues-spin' : undefined} />}
-                      >
-                        {t('syncIssues.retry')}
-                      </Button>
                       {issue.canKeepWithoutInventory && (
                         <Button
                           type="button"

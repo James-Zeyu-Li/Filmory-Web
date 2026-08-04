@@ -160,7 +160,8 @@ export interface Roll {
   cameraIds: string[];
   lensIds?: string[];
   filmBackId?: string;
-  filmStockId: string;
+  // A shooting record can be retained after its source stock was removed.
+  filmStockId?: string;
   status: 'active' | 'archived';
   startDate?: number;
   endDate?: number;

@@ -7,7 +7,6 @@ import { LanguageProvider } from '../contexts/LanguageContext';
 import { db } from '../db/schema';
 
 const syncIssueServiceMock = vi.hoisted(() => ({
-  retrySyncIssue: vi.fn(),
   undoSyncIssue: vi.fn(),
   keepRollWithoutInventory: vi.fn(),
   canKeepRollWithoutInventory: vi.fn(),
@@ -19,11 +18,11 @@ const userId = 'mock-user-id';
 const notify = vi.fn();
 const confirm = vi.fn();
 
-const renderModal = () => render(
+const renderModal = (onClose = vi.fn()) => render(
   <LanguageProvider>
     <ConfirmContext.Provider value={{ confirm }}>
       <FeedbackContext.Provider value={{ notify, dismiss: vi.fn() }}>
-        <SyncIssuesModal isOpen={true} onClose={vi.fn()} />
+        <SyncIssuesModal isOpen={true} onClose={onClose} />
       </FeedbackContext.Provider>
     </ConfirmContext.Provider>
   </LanguageProvider>,
@@ -36,11 +35,9 @@ describe('SyncIssuesModal', () => {
     localStorage.setItem('grainfolio_user_id', userId);
     confirm.mockReset();
     notify.mockReset();
-    syncIssueServiceMock.retrySyncIssue.mockReset();
     syncIssueServiceMock.undoSyncIssue.mockReset();
     syncIssueServiceMock.keepRollWithoutInventory.mockReset();
     syncIssueServiceMock.canKeepRollWithoutInventory.mockReset();
-    syncIssueServiceMock.retrySyncIssue.mockResolvedValue(undefined);
     syncIssueServiceMock.undoSyncIssue.mockResolvedValue(undefined);
     syncIssueServiceMock.keepRollWithoutInventory.mockResolvedValue(undefined);
     syncIssueServiceMock.canKeepRollWithoutInventory.mockResolvedValue(false);
@@ -60,29 +57,10 @@ describe('SyncIssuesModal', () => {
     renderModal();
 
     expect(await screen.findByText('Kodak Gold 200')).toBeInTheDocument();
-    expect(screen.getByText('关联的胶卷库存已不可用。请重试、撤销，或改为未登记库存记录。')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '重试' })).toBeInTheDocument();
+    expect(screen.getByText('关联的胶卷库存已不可用。请撤销本机更改，或调整记录方式。')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '重试' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: '撤销本机更改' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '改为未登记库存' })).not.toBeInTheDocument();
-  });
-
-  it('retries the original queue item rather than creating a replacement operation', async () => {
-    const queueItemId = await db.syncQueue.add({
-      kind: 'operation', userId, operationId: 'failed-adjustment', operationType: 'adjust_film_stock',
-      operationPayload: { filmStockId: 'film-1', delta: 1 }, timestamp: Date.now(),
-      failureKind: 'needs_attention', lastErrorCode: '23503',
-    });
-    renderModal();
-
-    fireEvent.click(await screen.findByRole('button', { name: '重试' }));
-
-    await waitFor(() => {
-      expect(syncIssueServiceMock.retrySyncIssue).toHaveBeenCalledWith(queueItemId, userId);
-    });
-    expect(await db.syncQueue.get(queueItemId)).toEqual(expect.objectContaining({
-      id: queueItemId,
-      operationId: 'failed-adjustment',
-    }));
   });
 
   it('requires confirmation before undoing a rejected adjustment', async () => {
@@ -92,13 +70,15 @@ describe('SyncIssuesModal', () => {
       failureKind: 'needs_attention', lastErrorCode: '23503',
     });
     confirm.mockResolvedValue(false);
-    renderModal();
+    const onClose = vi.fn();
+    renderModal(onClose);
 
     fireEvent.click(await screen.findByRole('button', { name: '撤销本机更改' }));
 
     await waitFor(() => {
       expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ isDanger: true }));
     });
+    expect(onClose).toHaveBeenCalledTimes(1);
     expect(syncIssueServiceMock.undoSyncIssue).not.toHaveBeenCalled();
     expect(await db.syncQueue.get(queueItemId)).toBeDefined();
   });

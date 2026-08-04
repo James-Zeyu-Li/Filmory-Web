@@ -125,7 +125,7 @@ export const undoSyncIssue = async (queueItemId: number, userId: string): Promis
  * inventory. This is available only while the referenced local film stock exists.
  */
 export const keepRollWithoutInventory = async (queueItemId: number, userId: string): Promise<void> => {
-  await db.transaction('rw', db.filmStocks, db.syncQueue, async () => {
+  await db.transaction('rw', db.filmStocks, db.rolls, db.syncQueue, async () => {
     const operation = await getFailedOperation(queueItemId, userId);
     if (operation.operationType !== 'create_roll_with_inventory') {
       throw new Error('Only shooting-record inventory operations can be changed.');
@@ -136,20 +136,19 @@ export const keepRollWithoutInventory = async (queueItemId: number, userId: stri
       throw new Error('This shooting record does not have registered inventory to release.');
     }
 
-    const film = await db.filmStocks.get(roll.filmStockId);
-    if (!film || film.userId !== userId) {
-      throw new Error('The registered film stock is no longer available. Choose another film before retrying.');
-    }
-
     suppressSyncRecordsForCurrentTransaction();
-    await db.filmStocks.update(film.id!, {
-      stockCount: (film.stockCount || 0) + 1,
-    });
+    // Cloud has confirmed this inventory source no longer exists. Keep the
+    // shooting record, but remove its stale inventory relationship locally
+    // and from the replayed RPC payload.
+    await db.filmStocks.delete(roll.filmStockId);
+    const unregisteredRoll: Roll = { ...roll, filmStockId: undefined };
+    await db.rolls.update(roll.id!, { filmStockId: undefined });
     await db.syncQueue.put({
       ...clearFailureState(operation),
       id: operation.id,
       operationPayload: {
         ...operation.operationPayload,
+        roll: unregisteredRoll,
         consumeInventory: false,
       },
     });
@@ -163,9 +162,9 @@ export const canKeepRollWithoutInventory = async (operation: SyncOperationQueueI
 
   try {
     const { roll, consumeInventory } = getCreateRollPayload(operation as FailedInventoryOperation);
-    if (!consumeInventory || !roll.filmStockId) return false;
-    const film = await db.filmStocks.get(roll.filmStockId);
-    return film?.userId === userId;
+    if (!consumeInventory || !roll.filmStockId || !isMissingFilmStockFailure(operation as FailedInventoryOperation)) return false;
+    const localRoll = await db.rolls.get(roll.id!);
+    return localRoll?.userId === userId;
   } catch {
     return false;
   }

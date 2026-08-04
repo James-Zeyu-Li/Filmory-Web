@@ -821,7 +821,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                 <Aperture size={12} style={{ flexShrink: 0 }} /> {(roll.lensIds || []).map(getLensName).join(', ')}
               </p>
             )}
-            {enableFilmMode && roll.filmStockId !== 'digital-placeholder' && (
+            {enableFilmMode && roll.filmStockId && roll.filmStockId !== 'digital-placeholder' && (
               <p className="roll-card-meta">
                 <Film size={12} style={{ flexShrink: 0 }} />
                 {getFilmName(roll.filmStockId)}
@@ -894,7 +894,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
               <Aperture size={12} style={{ flexShrink: 0 }} /> {(roll.lensIds || []).map(getLensName).join(', ')}
             </p>
           )}
-          {enableFilmMode && roll.filmStockId !== 'digital-placeholder' && (
+          {enableFilmMode && roll.filmStockId && roll.filmStockId !== 'digital-placeholder' && (
             <p className="roll-card-meta">
               <Film size={12} style={{ flexShrink: 0 }} />
               {getFilmName(roll.filmStockId)}

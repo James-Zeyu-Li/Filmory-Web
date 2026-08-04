@@ -5,6 +5,8 @@
 .sync-issues-header {
   align-items: flex-start;
   gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .sync-issues-title-group {
@@ -20,10 +22,10 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  border: 1px solid color-mix(in srgb, var(--danger-color) 35%, transparent);
+  border: 1px solid var(--accent-border);
   border-radius: 12px;
-  color: var(--danger-color);
-  background: color-mix(in srgb, var(--danger-color) 12%, transparent);
+  color: var(--accent);
+  background: var(--accent-bg);
 }
 
 .sync-issues-header h2 {
@@ -65,6 +67,7 @@
   gap: 16px;
   padding: 16px;
   border: 1px solid var(--border-color);
+  border-left: 3px solid var(--accent);
   border-radius: var(--radius-md);
   background: var(--bg-tertiary);
 }
@@ -76,7 +79,7 @@
 .sync-issue-type {
   display: inline-block;
   margin-bottom: 6px;
-  color: var(--text-secondary);
+  color: var(--accent);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -120,14 +123,6 @@
 .sync-issues-empty p {
   margin: 0;
   line-height: 1.5;
-}
-
-.sync-issues-spin {
-  animation: sync-issues-spin 1s linear infinite;
-}
-
-@keyframes sync-issues-spin {
-  to { transform: rotate(360deg); }
 }
 
 @media (max-width: 540px) {

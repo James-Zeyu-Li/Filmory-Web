@@ -161,8 +161,11 @@ describe('sync issue recovery service', () => {
     expect(await db.syncQueue.count()).toBe(0);
   });
 
-  it('keeps a rejected shooting record while restoring stock and reusing its operation id', async () => {
+  it('keeps a rejected shooting record without its stale inventory link and reuses the operation id', async () => {
     await db.filmStocks.add({ ...film, stockCount: 3 });
+    await db.rolls.add({
+      id: 'roll-1', userId, name: 'Weekend walk', cameraIds: [], filmStockId: film.id, status: 'active', addedAt: 1782864000000,
+    });
     const queueItemId = await db.syncQueue.add({
       kind: 'operation',
       userId,
@@ -185,11 +188,15 @@ describe('sync issue recovery service', () => {
 
     await keepRollWithoutInventory(queueItemId, userId);
 
-    expect((await db.filmStocks.get(film.id!))?.stockCount).toBe(4);
+    expect(await db.filmStocks.get(film.id!)).toBeUndefined();
+    expect((await db.rolls.get('roll-1'))?.filmStockId).toBeUndefined();
     expect(await db.syncQueue.get(queueItemId)).toEqual(expect.objectContaining({
       id: queueItemId,
       operationId: 'roll-operation-1',
-      operationPayload: expect.objectContaining({ consumeInventory: false }),
+      operationPayload: expect.objectContaining({
+        consumeInventory: false,
+        roll: expect.not.objectContaining({ filmStockId: expect.anything() }),
+      }),
     }));
     expect(syncEventsMock.requestImmediateSync).toHaveBeenCalledWith('sync-issue-keep-roll-without-inventory');
   });

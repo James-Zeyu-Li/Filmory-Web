@@ -227,14 +227,16 @@ type SyncTrigger = {
 };
 
 type InventoryOperationResult = {
-  filmStockId?: string;
-  stockCount?: number;
+  operationId: string;
+  filmStockId?: string | null;
+  stockCount?: number | null;
 };
 
 const isInventoryOperationResult = (value: unknown): value is InventoryOperationResult => (
   isSyncRecord(value) &&
-  (value.filmStockId === undefined || typeof value.filmStockId === 'string') &&
-  (value.stockCount === undefined || typeof value.stockCount === 'number')
+  typeof value.operationId === 'string' &&
+  (value.filmStockId === undefined || value.filmStockId === null || typeof value.filmStockId === 'string') &&
+  (value.stockCount === undefined || value.stockCount === null || typeof value.stockCount === 'number')
 );
 
 class SyncPushError extends Error {
@@ -712,12 +714,15 @@ export class SyncService {
   ): Promise<void> {
     const filmStockId = result.filmStockId;
     const confirmedStockCount = result.stockCount;
-    if (!filmStockId || typeof confirmedStockCount !== 'number') return;
 
     await db.transaction('rw', db.filmStocks, db.syncQueue, async () => {
-      // Delete the confirmed operation first. The remaining local operations
-      // are then rebased onto the Cloud-confirmed count in this same commit.
+      // Every accepted RPC must leave the durable outbox, including an
+      // unregistered shooting record that intentionally has no stock result.
       await db.syncQueue.delete(completedQueueItemId);
+      if (!filmStockId || typeof confirmedStockCount !== 'number') return;
+
+      // The remaining local operations are rebased onto the Cloud-confirmed
+      // count in the same transaction so rapid local changes stay visible.
       const pendingQueue = await getUserQueue(userId);
       const pendingDelta = getPendingInventoryDeltas(pendingQueue).get(filmStockId) || 0;
       suppressSyncRecordsForCurrentTransaction();
@@ -761,7 +766,7 @@ export class SyncService {
     }
 
     if (error) throw error;
-    if (!isInventoryOperationResult(data)) {
+    if (!isInventoryOperationResult(data) || data.operationId !== item.operationId) {
       throw new Error('Inventory operation returned an invalid result.');
     }
 
