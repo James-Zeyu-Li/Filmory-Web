@@ -7,10 +7,12 @@ const mockSupabaseData = { data: [], error: null };
 vi.mock('../services/supabaseClient', () => {
   return {
     supabase: {
-      from: vi.fn(() => ({
+      from: vi.fn((tableName: string) => ({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
-        gt: vi.fn().mockResolvedValue(mockSupabaseData),
+        gt: vi.fn().mockImplementation(async () => (
+          tableName === 'cameras' ? mockSupabaseData : { data: [], error: null }
+        )),
         order: vi.fn().mockResolvedValue(mockSupabaseData)
       }))
     }
@@ -28,8 +30,6 @@ describe('SyncService LWW (Last-Write-Wins) Resolution', () => {
     localStorage.setItem('grainfolio_user_id', 'test_user');
     // Set a very old lastSync so pull() will trigger
     localStorage.setItem('grainfolio_last_sync', new Date(0).toISOString());
-    // Seed some data so it doesn't return early
-    await db.filmStocks.add({ id: 'dummy', userId: 'test', isSystem: 0, stockCount: 1, createdAt: Date.now() } as any);
   });
 
   afterEach(() => {

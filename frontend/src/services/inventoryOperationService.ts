@@ -70,27 +70,40 @@ export const createRollWithInventory = async ({ roll, ledger }: CreateRollWithIn
 };
 
 export const adjustFilmStock = async (
-  film: Pick<FilmStock, 'id' | 'userId' | 'stockCount'>,
+  film: Pick<FilmStock, 'id' | 'userId'>,
   requestedDelta: number,
 ): Promise<number> => {
   if (!film.id || !film.userId || !Number.isInteger(requestedDelta)) {
     throw new Error('A film stock id, user id, and whole-number adjustment are required.');
   }
 
-  const currentStock = film.stockCount || 0;
-  const nextStock = Math.max(0, currentStock + requestedDelta);
-  const appliedDelta = nextStock - currentStock;
-  if (appliedDelta === 0) return nextStock;
+  let nextStock = 0;
+  let didQueueOperation = false;
 
   await db.transaction('rw', db.filmStocks, db.syncQueue, async () => {
+    // Read inside the transaction so rapid clicks never calculate a delta from
+    // an obsolete React/Dexie snapshot.
+    const currentFilm = await db.filmStocks.get(film.id!);
+    if (!currentFilm || currentFilm.userId !== film.userId) {
+      throw new Error('Film stock is unavailable for the current user.');
+    }
+
+    const currentStock = currentFilm.stockCount || 0;
+    nextStock = Math.max(0, currentStock + requestedDelta);
+    const appliedDelta = nextStock - currentStock;
+    if (appliedDelta === 0) return;
+
     suppressSyncRecordsForCurrentTransaction();
     await db.filmStocks.update(film.id!, { stockCount: nextStock });
     await db.syncQueue.add(createOperation(film.userId!, 'adjust_film_stock', {
       filmStockId: film.id,
       delta: appliedDelta,
     }));
+    didQueueOperation = true;
   });
 
-  requestImmediateSync('inventory-stock-adjust');
+  if (didQueueOperation) {
+    requestImmediateSync('inventory-stock-adjust');
+  }
   return nextStock;
 };

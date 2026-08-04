@@ -4,6 +4,7 @@ import {
   isSyncOperationQueueItem,
   isSyncRecordQueueItem,
   suppressSyncRecordsForCurrentTransaction,
+  type FilmStock,
   type SyncOperationQueueItem,
   type SyncQueueItem,
   type SyncRecordQueueItem,
@@ -46,6 +47,18 @@ type SyncRow = SyncRecord & {
 const isSyncRecord = (value: unknown): value is SyncRecord => (
   typeof value === 'object' && value !== null && !Array.isArray(value)
 );
+
+const isFilmStockSyncRow = (value: unknown): value is FilmStock => {
+  if (!isSyncRecord(value)) return false;
+  return typeof value.id === 'string'
+    && typeof value.brand === 'string'
+    && typeof value.name === 'string'
+    && typeof value.iso === 'number'
+    && (value.colorType === 'color' || value.colorType === 'bw')
+    && typeof value.format === 'string'
+    && typeof value.isSystem === 'number'
+    && typeof value.addedAt === 'number';
+};
 
 const convertKeysToSnakeCase = (obj: unknown): unknown => {
   if (!isSyncRecord(obj)) {
@@ -193,6 +206,8 @@ const VISIBLE_FALLBACK_POLL_INTERVAL_MS = 60_000;
 const REALTIME_SUBSCRIBED_STATUS = 'SUBSCRIBED';
 const REALTIME_RETRY_STATUSES = new Set(['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED']);
 const MISSING_RPC_SCHEMA_CACHE_CODE = 'PGRST202';
+const MISSING_COLUMN_SCHEMA_CACHE_CODE = 'PGRST204';
+const FILM_STOCK_METADATA_COLUMNS = ['price_per_roll', 'avatar_url'];
 const SYNC_INTENT_DELAYS: Record<SyncIntent, number> = {
   debounced: SYNC_DEBOUNCE_MS,
   immediate: 0,
@@ -260,8 +275,18 @@ const classifySyncFailure = (error: unknown): SyncFailure => {
 const isRecoverableLegacyInventoryRpcFailure = (item: SyncQueueItem): item is SyncOperationQueueItem => (
   isSyncOperationQueueItem(item) &&
   item.failureKind === 'needs_attention' &&
+  item.recoveryAttemptedAt === undefined &&
   item.lastErrorCode === MISSING_RPC_SCHEMA_CACHE_CODE &&
   item.lastErrorMessage?.includes(`public.${item.operationType}`) === true
+);
+
+const isRecoverableFilmStockMetadataSchemaFailure = (item: SyncQueueItem): item is SyncRecordQueueItem => (
+  isSyncRecordQueueItem(item) &&
+  item.tableName === 'filmStocks' &&
+  item.failureKind === 'needs_attention' &&
+  item.recoveryAttemptedAt === undefined &&
+  item.lastErrorCode === MISSING_COLUMN_SCHEMA_CACHE_CODE &&
+  FILM_STOCK_METADATA_COLUMNS.some(column => item.lastErrorMessage?.includes(column))
 );
 
 const getRetryDelayMs = (attemptCount: number) => Math.min(
@@ -393,6 +418,7 @@ export class SyncService {
     if (recoverableItems.length === 0) return 0;
 
     await db.syncQueue.where('id').anyOf(recoverableItems.map(item => item.id)).modify(item => {
+      item.recoveryAttemptedAt = Date.now();
       delete item.attemptCount;
       delete item.failureKind;
       delete item.lastErrorCode;
@@ -402,6 +428,31 @@ export class SyncService {
     });
 
     recordSyncDiagnostic('legacy_inventory_rpc_reopened', {
+      queueItemCount: recoverableItems.length,
+    });
+    return recoverableItems.length;
+  }
+
+  // Re-open only records blocked by film-stock columns introduced in a known
+  // migration. Other PGRST204 failures remain actionable rather than guessed.
+  private static async recoverFilmStockMetadataSchemaFailures(userId: string): Promise<number> {
+    const recoverableItems = (await getUserQueue(userId))
+      .filter(isRecoverableFilmStockMetadataSchemaFailure)
+      .filter((item): item is SyncRecordQueueItem & { id: number } => item.id !== undefined);
+
+    if (recoverableItems.length === 0) return 0;
+
+    await db.syncQueue.where('id').anyOf(recoverableItems.map(item => item.id)).modify(item => {
+      item.recoveryAttemptedAt = Date.now();
+      delete item.attemptCount;
+      delete item.failureKind;
+      delete item.lastErrorCode;
+      delete item.lastErrorMessage;
+      delete item.lastAttemptAt;
+      delete item.nextRetryAt;
+    });
+
+    recordSyncDiagnostic('legacy_film_stock_schema_reopened', {
       queueItemCount: recoverableItems.length,
     });
     return recoverableItems.length;
@@ -860,8 +911,6 @@ export class SyncService {
     let receivedRecordCount = 0;
 
     try {
-      const pendingInventoryDeltas = getPendingInventoryDeltas(await getUserQueue(userId));
-
       // Fetch all independent tables concurrently. Applying them remains sequential so
       // Dexie conflict resolution and queued writes keep deterministic behavior.
       const remoteChanges = await Promise.all((Object.entries(tableMap) as Array<[SyncTableName, string]>).map(async ([dexieTable, supaTable]) => {
@@ -934,9 +983,12 @@ export class SyncService {
               if (!isSyncRecord(camelPayload)) continue;
               delete camelPayload.updatedAt;
               delete camelPayload.deletedAt;
-              if (dexieTable === 'filmStocks' && typeof camelPayload.stockCount === 'number') {
-                const pendingDelta = pendingInventoryDeltas.get(rowId) || 0;
-                camelPayload.stockCount = Math.max(0, camelPayload.stockCount + pendingDelta);
+              // Cloud keeps added_at nullable for historic rows, while Dexie
+              // requires addedAt. updated_at is the only reliable timestamp
+              // available during an incremental pull, so use it as the
+              // compatibility fallback rather than rejecting the whole pull.
+              if (dexieTable === 'filmStocks' && typeof camelPayload.addedAt !== 'number') {
+                camelPayload.addedAt = getTimestamp(row.updated_at);
               }
               toPut.push({ ...camelPayload, id: rowId });
             }
@@ -956,7 +1008,30 @@ export class SyncService {
         }
 
         if (toPut.length > 0) {
-          await table.bulkPut(toPut);
+          if (dexieTable === 'filmStocks') {
+            await db.transaction('rw', db.filmStocks, db.syncQueue, async () => {
+              // Re-read the outbox at commit time. A user may adjust inventory
+              // while the Cloud request is in flight, after Pull's initial snapshot.
+              const pendingDeltas = getPendingInventoryDeltas(await getUserQueue(userId));
+              const rebasedRows = toPut.map(row => {
+                if (!row.id || typeof row.stockCount !== 'number') return row;
+                return {
+                  ...row,
+                  stockCount: Math.max(0, row.stockCount + (pendingDeltas.get(row.id) || 0)),
+                };
+              });
+              const filmStockRows: FilmStock[] = [];
+              for (const row of rebasedRows) {
+                if (!isFilmStockSyncRow(row)) {
+                  throw new Error('Cloud film stock data does not match the local schema.');
+                }
+                filmStockRows.push(row);
+              }
+              await db.filmStocks.bulkPut(filmStockRows);
+            });
+          } else {
+            await table.bulkPut(toPut);
+          }
           console.log(`[Sync Pull] Saved ${toPut.length} records to local Dexie ${dexieTable}`);
         }
         if (toDelete.length > 0) await table.bulkDelete(toDelete);
@@ -1033,7 +1108,10 @@ export class SyncService {
         const isInitialSync = userId && !localStorage.getItem(getSyncWatermarkKey(userId));
 
         if (userId) {
-          await this.recoverLegacyInventoryRpcFailures(userId);
+          await Promise.all([
+            this.recoverLegacyInventoryRpcFailures(userId),
+            this.recoverFilmStockMetadataSchemaFailures(userId),
+          ]);
         }
 
         if (isInitialSync) {

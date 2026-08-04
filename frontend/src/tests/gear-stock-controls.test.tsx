@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { db } from '../db/schema';
@@ -73,5 +73,19 @@ describe('Gear film stock controls', () => {
       expect((await db.filmStocks.get('film-1'))?.stockCount).toBe(2);
     });
     expect(screen.queryByRole('heading', { name: '编辑胶卷库存' })).not.toBeInTheDocument();
+  });
+
+  it('does not let the stock count input change from the mouse wheel', async () => {
+    const user = userEvent.setup();
+    renderGearView();
+
+    await user.click(await screen.findByText('Kodak Gold 200'));
+    const stockCountInput = screen.getByLabelText('库存数量');
+    stockCountInput.focus();
+
+    fireEvent.wheel(stockCountInput, { deltaY: -100 });
+
+    expect(stockCountInput).not.toHaveFocus();
+    expect(stockCountInput).toHaveValue(3);
   });
 });

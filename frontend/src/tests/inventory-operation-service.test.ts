@@ -120,6 +120,32 @@ describe('inventory operation outbox', () => {
     ]);
   });
 
+  it('derives every adjustment from the current transactional stock value', async () => {
+    await db.filmStocks.add({
+      id: 'film-rapid-adjustment',
+      userId: 'user-1',
+      brand: 'Kodak',
+      name: 'Gold 200',
+      iso: 200,
+      colorType: 'color',
+      format: '135',
+      isSystem: 0,
+      stockCount: 8,
+      addedAt: 1782864000000,
+    });
+    await db.syncQueue.clear();
+
+    const staleFilm = { id: 'film-rapid-adjustment', userId: 'user-1' };
+    await adjustFilmStock(staleFilm, 1);
+    await adjustFilmStock(staleFilm, 1);
+
+    expect((await db.filmStocks.get('film-rapid-adjustment'))?.stockCount).toBe(10);
+    expect(await db.syncQueue.toArray()).toEqual([
+      expect.objectContaining({ operationPayload: { filmStockId: 'film-rapid-adjustment', delta: 1 } }),
+      expect.objectContaining({ operationPayload: { filmStockId: 'film-rapid-adjustment', delta: 1 } }),
+    ]);
+  });
+
   it('keeps digital rolls on the normal record queue', async () => {
     await createRollWithInventory({
       roll: {

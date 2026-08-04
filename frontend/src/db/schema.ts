@@ -19,6 +19,7 @@ interface SyncQueueBase {
   lastErrorMessage?: string;
   lastAttemptAt?: number;
   nextRetryAt?: number;
+  recoveryAttemptedAt?: number;
 }
 
 export interface SyncRecordQueueItem extends SyncQueueBase {

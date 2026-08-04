@@ -503,7 +503,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
         isSystem: 0,
         addedAt: Date.now()
       });
-      await adjustFilmStock({ id: newId, userId: user?.id || 'offline', stockCount: 0 }, 1);
+      await adjustFilmStock({ id: newId, userId: user?.id || 'offline' }, 1);
       setSelectedFilmId(newId);
     }
     setFilmSearchText(filmLabel);

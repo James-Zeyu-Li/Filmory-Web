@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '../db/schema';
 import { clearSyncDiagnosticEntries, getSyncDiagnosticEntries } from '../services/syncDiagnostics';
+import { adjustFilmStock } from '../services/inventoryOperationService';
 import { SyncService } from '../services/syncService';
 import { LOCAL_CHANGE_EVENT } from '../services/syncEvents';
 
@@ -117,6 +118,44 @@ describe('SyncService schema parity', () => {
         camera_system_id: expect.anything(),
         back_type: expect.anything(),
       }),
+    ]);
+  });
+
+  it('pushes film-stock metadata without allowing an LWW stock snapshot', async () => {
+    await db.syncQueue.add({
+      userId: 'user-1',
+      tableName: 'filmStocks',
+      action: 'upsert',
+      recordId: 'film-metadata-1',
+      payload: {
+        id: 'film-metadata-1',
+        userId: 'user-1',
+        brand: 'Kodak',
+        name: 'Portra 400',
+        iso: 400,
+        colorType: 'color',
+        format: '135',
+        isSystem: 0,
+        stockCount: 8,
+        pricePerRoll: 22.5,
+        avatarUrl: 'data:image/webp;base64,cover',
+        addedAt: 1782864000000,
+      },
+      timestamp: 1782864000000,
+    });
+
+    await SyncService.push();
+
+    expect(supabaseMock.from).toHaveBeenCalledWith('film_stocks');
+    expect(supabaseMock.upsert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        id: 'film-metadata-1',
+        price_per_roll: 22.5,
+        avatar_url: 'data:image/webp;base64,cover',
+      }),
+    ]);
+    expect(supabaseMock.upsert).toHaveBeenCalledWith([
+      expect.not.objectContaining({ stock_count: expect.anything() }),
     ]);
   });
 
@@ -358,6 +397,113 @@ describe('SyncService schema parity', () => {
     expect((await db.filmStocks.get('film-pull-rebase'))?.stockCount).toBe(13);
   });
 
+  it('normalizes a legacy Cloud film stock without added_at', async () => {
+    const remoteUpdatedAt = new Date(1782864001000).toISOString();
+    vi.mocked(localStorage.getItem).mockImplementation((key: string) => (
+      key === 'grainfolio_user_id'
+        ? 'user-1'
+        : key === 'grainfolio_last_sync_user-1'
+          ? new Date(0).toISOString()
+          : null
+    ));
+    supabaseMock.from.mockImplementation((tableName: string) => ({
+      select: () => ({
+        eq: () => ({
+          gt: async () => ({
+            data: tableName === 'film_stocks'
+              ? [{
+                id: 'legacy-film-stock',
+                user_id: 'user-1',
+                brand: 'Kodak',
+                name: 'Gold 200',
+                iso: 200,
+                color_type: 'color',
+                format: '135',
+                is_system: 0,
+                stock_count: 2,
+                added_at: null,
+                updated_at: remoteUpdatedAt,
+              }]
+              : [],
+            error: null,
+          }),
+        }),
+      }),
+    }));
+
+    await expect(SyncService.pull()).resolves.toEqual({ remoteUserProfileFound: false });
+    expect(await db.filmStocks.get('legacy-film-stock')).toEqual(expect.objectContaining({
+      addedAt: new Date(remoteUpdatedAt).getTime(),
+      stockCount: 2,
+    }));
+  });
+
+  it('preserves an inventory adjustment queued while Pull is in flight', async () => {
+    const remoteUpdatedAt = new Date(1782864001000).toISOString();
+    await db.filmStocks.add({
+      id: 'film-pull-in-flight',
+      userId: 'user-1',
+      brand: 'Kodak',
+      name: 'Gold 200',
+      iso: 200,
+      colorType: 'color',
+      format: '135',
+      isSystem: 0,
+      stockCount: 12,
+      addedAt: 1782864000000,
+    });
+    await db.syncQueue.clear();
+    vi.mocked(localStorage.getItem).mockImplementation((key: string) => (
+      key === 'grainfolio_user_id'
+        ? 'user-1'
+        : key === 'grainfolio_last_sync_user-1'
+          ? new Date(0).toISOString()
+          : null
+    ));
+
+    let resolveFilmPull: ((value: { data: Record<string, unknown>[]; error: null }) => void) | undefined;
+    const filmPullResponse = new Promise<{ data: Record<string, unknown>[]; error: null }>(resolve => {
+      resolveFilmPull = resolve;
+    });
+    supabaseMock.from.mockImplementation((tableName: string) => ({
+      select: () => ({
+        eq: () => ({
+          gt: () => tableName === 'film_stocks'
+            ? filmPullResponse
+            : Promise.resolve({ data: [], error: null }),
+        }),
+      }),
+    }));
+
+    const pullPromise = SyncService.pull();
+    await vi.waitFor(() => expect(resolveFilmPull).toBeTypeOf('function'));
+    await adjustFilmStock({ id: 'film-pull-in-flight', userId: 'user-1' }, 1);
+    resolveFilmPull?.({
+      data: [{
+        id: 'film-pull-in-flight',
+        user_id: 'user-1',
+        brand: 'Kodak',
+        name: 'Gold 200',
+        iso: 200,
+        color_type: 'color',
+        format: '135',
+        is_system: 0,
+        stock_count: 12,
+        added_at: 1782864000000,
+        updated_at: remoteUpdatedAt,
+      }],
+      error: null,
+    });
+
+    await pullPromise;
+
+    expect((await db.filmStocks.get('film-pull-in-flight'))?.stockCount).toBe(13);
+    expect(await db.syncQueue.toArray()).toContainEqual(expect.objectContaining({
+      kind: 'operation',
+      operationPayload: { filmStockId: 'film-pull-in-flight', delta: 1 },
+    }));
+  });
+
   it('marks RLS failures as needing attention and excludes them from automatic retries', async () => {
     await db.syncQueue.add({
       userId: 'user-1',
@@ -441,10 +587,59 @@ describe('SyncService schema parity', () => {
     expect(reopened?.lastErrorCode).toBeUndefined();
     expect(reopened?.lastErrorMessage).toBeUndefined();
     expect(reopened?.attemptCount).toBeUndefined();
+    expect(reopened?.recoveryAttemptedAt).toEqual(expect.any(Number));
     expect(blocked).toEqual(expect.objectContaining({
       operationId: 'permission-denied-adjustment',
       failureKind: 'needs_attention',
       lastErrorCode: '42501',
+    }));
+  });
+
+  it('reopens only known film-stock metadata schema failures once', async () => {
+    await db.syncQueue.bulkAdd([
+      {
+        kind: 'record' as const,
+        userId: 'user-1',
+        tableName: 'filmStocks',
+        action: 'upsert' as const,
+        recordId: 'film-metadata-1',
+        payload: { id: 'film-metadata-1', userId: 'user-1' },
+        timestamp: 1782864000000,
+        attemptCount: 1,
+        failureKind: 'needs_attention' as const,
+        lastErrorCode: 'PGRST204',
+        lastErrorMessage: "Could not find the 'price_per_roll' column of 'film_stocks' in the schema cache",
+      },
+      {
+        kind: 'record' as const,
+        userId: 'user-1',
+        tableName: 'filmStocks',
+        action: 'upsert' as const,
+        recordId: 'film-unknown-schema-1',
+        payload: { id: 'film-unknown-schema-1', userId: 'user-1' },
+        timestamp: 1782864000001,
+        attemptCount: 1,
+        failureKind: 'needs_attention' as const,
+        lastErrorCode: 'PGRST204',
+        lastErrorMessage: "Could not find the 'unknown_column' column of 'film_stocks' in the schema cache",
+      },
+    ]);
+
+    const service = SyncService as unknown as {
+      recoverFilmStockMetadataSchemaFailures: (userId: string) => Promise<number>;
+    };
+
+    await expect(service.recoverFilmStockMetadataSchemaFailures('user-1')).resolves.toBe(1);
+
+    const [reopened, blocked] = await db.syncQueue.orderBy('timestamp').toArray();
+    expect(reopened).toEqual(expect.objectContaining({
+      recordId: 'film-metadata-1',
+      recoveryAttemptedAt: expect.any(Number),
+    }));
+    expect(reopened?.failureKind).toBeUndefined();
+    expect(blocked).toEqual(expect.objectContaining({
+      recordId: 'film-unknown-schema-1',
+      failureKind: 'needs_attention',
     }));
   });
 

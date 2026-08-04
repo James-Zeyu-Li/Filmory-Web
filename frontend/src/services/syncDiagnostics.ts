@@ -17,6 +17,7 @@ export type SyncDiagnosticEvent =
   | 'inventory_operation_completed'
   | 'inventory_operation_failed'
   | 'legacy_inventory_rpc_reopened'
+  | 'legacy_film_stock_schema_reopened'
   | 'pull_started'
   | 'pull_completed'
   | 'pull_failed'

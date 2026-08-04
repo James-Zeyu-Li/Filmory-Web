@@ -946,9 +946,10 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
         };
       }
     });
-    requestImmediateSync('film-stock-save');
-    if (stockAdjustment) {
+    if (stockAdjustment && stockAdjustment.delta !== 0) {
       await adjustFilmStock(stockAdjustment.film, stockAdjustment.delta);
+    } else {
+      requestImmediateSync('film-stock-save');
     }
 
     setNewFilm(createDefaultNewFilmDraft());
@@ -2844,14 +2845,18 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
             </div>
           )}
           <div className="form-group">
-            <label>{editingFilmId ? t('gear.stockCount') : t('gear.addStockCount')}</label>
+            <label htmlFor="film-stock-count">
+              {editingFilmId ? t('gear.stockCount') : t('gear.addStockCount')}
+            </label>
             <input
+              id="film-stock-count"
               type="number"
               className="form-control"
               min={editingFilmId ? '0' : '1'}
               placeholder={editingFilmId ? t('gear.stockCountPlaceholder') : t('gear.addStockCountPlaceholder')}
               value={newFilm.stockCount === undefined ? '' : newFilm.stockCount}
               onChange={e => setNewFilm({...newFilm, stockCount: e.target.value === '' ? undefined : parseInt(e.target.value, 10)})}
+              onWheel={event => event.currentTarget.blur()}
               onKeyDown={handleKeyDown}
               enterKeyHint="next"
             />
