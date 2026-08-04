@@ -1,7 +1,11 @@
 import React from 'react';
 
 // Eager load all SVG assets from the assets directory using Vite's glob import
-const svgModules = import.meta.glob('../assets/filmstock_icons/svg/*.svg', { as: 'url', eager: true });
+const svgModules = import.meta.glob('../assets/filmstock_icons/svg/*.svg', {
+  query: '?url',
+  import: 'default',
+  eager: true,
+});
 
 interface FilmSvgAvatarProps {
   brand: string;
