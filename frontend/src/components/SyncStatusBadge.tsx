@@ -3,10 +3,6 @@ import { CloudOff, RefreshCw, TriangleAlert, HardDriveDownload } from 'lucide-re
 import { useSyncQueueSummary, useSyncStatus } from '../hooks/useSyncStatus';
 import './SyncStatusBadge.css';
 
-interface SyncStatusBadgeProps {
-  compact?: boolean;
-}
-
 const statusCopy = {
   local: '本地模式',
   offline: '离线等待',
@@ -16,7 +12,7 @@ const statusCopy = {
   needs_attention: '需要处理',
 } as const;
 
-export const SyncStatusBadge: React.FC<SyncStatusBadgeProps> = ({ compact = false }) => {
+export const SyncStatusBadge: React.FC = () => {
   const status = useSyncStatus();
   const { pendingCount, needsAttentionCount } = useSyncQueueSummary(status);
   const count = status === 'needs_attention' ? needsAttentionCount : pendingCount;
@@ -36,9 +32,11 @@ export const SyncStatusBadge: React.FC<SyncStatusBadgeProps> = ({ compact = fals
 
   return (
     <div
-      className={`sync-status-badge ${status} ${compact ? 'compact' : ''}`}
+      className={`sync-status-badge ${status}`}
       title={label}
+      role="status"
       aria-live="polite"
+      aria-atomic="true"
     >
       <span className="sync-status-badge-icon">{icon}</span>
       <span>{label}</span>

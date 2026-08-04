@@ -20,6 +20,7 @@ describe('SyncStatusBadge', () => {
     render(<SyncStatusBadge />);
 
     expect(screen.getByText('本地模式')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveAttribute('aria-atomic', 'true');
   });
 
   it('shows syncing while the initial cloud pull has not finished', () => {

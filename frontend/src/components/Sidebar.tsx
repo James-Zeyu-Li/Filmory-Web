@@ -11,7 +11,6 @@ import {
   UserRound
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
-import { SyncStatusBadge } from './SyncStatusBadge';
 import { useLanguage } from '../contexts/useLanguage';
 import './Sidebar.css';
 
@@ -166,10 +165,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenAccountC
           <Settings size={20} />
           <span>{t('nav.preferences')}</span>
         </button>
-        <div className="nav-spacer" style={{ height: '16px' }} />
-        <div className="footer-status">
-          <SyncStatusBadge />
-        </div>
       </div>
     </aside>
     </>

@@ -17,12 +17,6 @@
   gap: 12px;
 }
 
-.mobile-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
 .mobile-logo {
   width: 28px;
   height: 28px;
@@ -59,15 +53,5 @@
 @media (max-width: 1024px) {
   .mobile-header {
     display: flex;
-  }
-}
-
-@media (max-width: 560px) {
-  .mobile-header-actions .sync-status-badge span:last-child {
-    display: none;
-  }
-
-  .mobile-header-actions .sync-status-badge {
-    padding-inline: 8px;
   }
 }

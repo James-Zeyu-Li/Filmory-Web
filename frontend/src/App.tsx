@@ -20,6 +20,7 @@ import { ConfirmProvider } from './contexts/ConfirmContext';
 import { FeedbackProvider } from './contexts/FeedbackContext';
 import { CurrencyProvider } from './contexts/CurrencyContext';
 import { TrialGateProvider } from './contexts/TrialGateContext';
+import { SyncStatusBadge } from './components/SyncStatusBadge';
 import { useAuth } from './contexts/useAuth';
 import { useLanguage } from './contexts/useLanguage';
 import { LoginView } from './views/Auth/LoginView';
@@ -182,6 +183,10 @@ function AppContent() {
           </Routes>
         </AnimatePresence>
       </main>
+
+      <div className="global-sync-status">
+        <SyncStatusBadge />
+      </div>
 
       <AnimatePresence>
         {isAccountCenterOpen && (

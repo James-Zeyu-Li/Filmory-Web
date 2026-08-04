@@ -123,20 +123,6 @@
   border-top: 1px solid var(--border-color);
 }
 
-.footer-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-left: 8px;
-}
-
-.footer-status span {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-
 /* === Collapsed State === */
 .sidebar.collapsed {
   width: 72px;
@@ -144,8 +130,7 @@
 }
 
 .sidebar.collapsed .brand-text,
-.sidebar.collapsed .nav-item span,
-.sidebar.collapsed .footer-status {
+.sidebar.collapsed .nav-item span {
   display: none;
 }
 
@@ -175,8 +160,7 @@
     padding: 24px 16px;
   }
   .sidebar.collapsed .brand-text,
-  .sidebar.collapsed .nav-item span,
-  .sidebar.collapsed .footer-status {
+  .sidebar.collapsed .nav-item span {
     display: flex;
   }
   .sidebar.collapsed .sidebar-brand {

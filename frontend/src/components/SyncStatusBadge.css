@@ -12,11 +12,6 @@
   font-weight: 600;
 }
 
-.sync-status-badge.compact {
-  min-height: 26px;
-  padding-inline: 9px;
-}
-
 .sync-status-badge-icon {
   display: inline-flex;
   align-items: center;

@@ -57,3 +57,52 @@
   overflow-x: hidden;
   height: 100%;
 }
+
+.global-sync-status {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 70;
+  pointer-events: none;
+}
+
+.global-sync-status .sync-status-badge {
+  background: rgba(22, 24, 31, 0.92);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+}
+
+@media (max-width: 1024px) {
+  .global-sync-status {
+    right: 16px;
+    bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  .global-sync-status .sync-status-badge {
+    min-height: 26px;
+    padding-inline: 9px;
+  }
+}
+
+@media (max-width: 560px) {
+  .global-sync-status {
+    left: 16px;
+    right: 16px;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .global-sync-status .sync-status-badge {
+    max-width: min(100%, 220px);
+  }
+}
+
+@media (max-width: 420px) {
+  .global-sync-status .sync-status-badge span:last-child {
+    display: none;
+  }
+
+  .global-sync-status .sync-status-badge {
+    padding-inline: 8px;
+  }
+}
