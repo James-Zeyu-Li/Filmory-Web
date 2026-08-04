@@ -1727,18 +1727,26 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                         </span>
                         <div style={{ display: 'flex', gap: '6px' }}>
                           <button
+                            type="button"
                             className="secondary"
                             style={{ padding: '2px 8px', fontSize: '11px', minWidth: '22px', height: '22px', width: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                             title={t('gear.decreaseStock')}
-                            onClick={() => handleUpdateStock(film.id!, -1)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleUpdateStock(film.id!, -1);
+                            }}
                           >
                             -
                           </button>
                           <button
+                            type="button"
                             className="secondary"
                             style={{ padding: '2px 8px', fontSize: '11px', minWidth: '22px', height: '22px', width: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                             title={t('gear.increaseStock')}
-                            onClick={() => handleUpdateStock(film.id!, 1)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleUpdateStock(film.id!, 1);
+                            }}
                           >
                             +
                           </button>
