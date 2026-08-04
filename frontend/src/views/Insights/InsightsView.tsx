@@ -4,7 +4,7 @@ import { FinanceView } from '../Finance/FinanceView';
 import { useLanguage } from '../../contexts/useLanguage';
 import './InsightsView.css';
 
-export const InsightsView: React.FC<{ enableFilmMode: boolean }> = () => {
+export const InsightsView: React.FC = () => {
   const { t } = useLanguage();
 
   return (

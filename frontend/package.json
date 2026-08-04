@@ -15,7 +15,6 @@
     "@supabase/supabase-js": "^2.108.2",
     "dexie": "^4.4.3",
     "dexie-react-hooks": "^4.4.0",
-    "exifreader": "^4.41.0",
     "file-saver": "^2.0.5",
     "framer-motion": "^12.40.0",
     "jszip": "^3.10.1",

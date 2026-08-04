@@ -8,7 +8,7 @@ vi.mock('../views/Finance/FinanceView', () => ({
 
 describe('InsightsView', () => {
   it('renders the spending page only after stats moved back into dashboard', () => {
-    render(<InsightsView enableFilmMode={true} />);
+    render(<InsightsView />);
 
     expect(screen.getByRole('heading', { name: '花费' })).toBeInTheDocument();
     expect(screen.getByTestId('finance-view')).toBeInTheDocument();

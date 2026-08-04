@@ -175,7 +175,7 @@ function AppContent() {
             <Route path="/dashboard" element={<PageTransition disableMotion={disablePageTransition}><DashboardView enableFilmMode={enableFilmMode} onNavigate={(path, options) => navigate(`/${path}`, { state: options?.skipPageTransition ? { skipPageTransition: true } : undefined })} /></PageTransition>} />
             <Route path="/rolls" element={<PageTransition disableMotion={disablePageTransition}><RollsView enableFilmMode={enableFilmMode} /></PageTransition>} />
             <Route path="/gear" element={<PageTransition disableMotion={disablePageTransition}><GearView enableFilmMode={enableFilmMode} /></PageTransition>} />
-            <Route path="/insights" element={<PageTransition disableMotion={disablePageTransition}><InsightsView enableFilmMode={enableFilmMode} /></PageTransition>} />
+            <Route path="/insights" element={<PageTransition disableMotion={disablePageTransition}><InsightsView /></PageTransition>} />
             <Route path="/compare" element={<PageTransition disableMotion={disablePageTransition}><CompareView /></PageTransition>} />
             
             {/* Catch-all redirects to dashboard if not matched */}
