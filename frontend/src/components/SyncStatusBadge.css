@@ -12,6 +12,21 @@
   font-weight: 600;
 }
 
+button.sync-status-badge-action {
+  cursor: pointer;
+  font: inherit;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+button.sync-status-badge-action:hover {
+  background: var(--bg-tertiary);
+}
+
+button.sync-status-badge-action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .sync-status-badge-icon {
   display: inline-flex;
   align-items: center;

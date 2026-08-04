@@ -1,0 +1,152 @@
+.sync-issues-modal {
+  min-width: 0;
+}
+
+.sync-issues-header {
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.sync-issues-title-group {
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sync-issues-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid color-mix(in srgb, var(--danger-color) 35%, transparent);
+  border-radius: 12px;
+  color: var(--danger-color);
+  background: color-mix(in srgb, var(--danger-color) 12%, transparent);
+}
+
+.sync-issues-header h2 {
+  margin: 0;
+}
+
+.sync-issues-header p {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.sync-issues-close {
+  position: static;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+}
+
+.sync-issues-body {
+  gap: 12px;
+}
+
+.sync-issues-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sync-issue-card {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+}
+
+.sync-issue-copy {
+  min-width: 0;
+}
+
+.sync-issue-type {
+  display: inline-block;
+  margin-bottom: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sync-issue-copy h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+
+.sync-issue-copy p {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.sync-issue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sync-issue-actions button {
+  min-height: 44px;
+}
+
+.sync-issues-empty {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+}
+
+.sync-issues-empty p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.sync-issues-spin {
+  animation: sync-issues-spin 1s linear infinite;
+}
+
+@keyframes sync-issues-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 540px) {
+  .sync-issues-title-group {
+    gap: 10px;
+  }
+
+  .sync-issues-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+
+  .sync-issue-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .sync-issue-actions button {
+    width: 100%;
+  }
+}
