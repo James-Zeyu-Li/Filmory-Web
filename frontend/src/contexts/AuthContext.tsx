@@ -19,6 +19,7 @@ import { clearWorkspaceTabPreferences } from '../services/workspacePreferences';
 import type { AuthTransitionMode } from './authContextCore';
 import {
   buildLocalUserProfile,
+  hasUserProfileSemanticChanges,
   resolveUserProfileDisplayName,
 } from '../services/userProfile';
 import { ensureTrialDefaultTheme } from '../services/themePreference';
@@ -100,12 +101,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             updatedAt: new Date().getTime(),
           };
 
-    await db.userProfiles.put(buildLocalUserProfile({
+    const nextProfile = buildLocalUserProfile({
       userId: nextUser.id,
       role: nextRole,
       existingProfile: profileForBuild,
       displayName,
-    }));
+    });
+
+    if (hasUserProfileSemanticChanges(existingProfile, nextProfile)) {
+      await db.userProfiles.put(nextProfile);
+    }
   }, []);
 
   const resolveAccountRole = useCallback(async (nextUser: User | null): Promise<AccountRole> => {

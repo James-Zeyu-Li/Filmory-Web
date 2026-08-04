@@ -5,6 +5,20 @@ import type { TranslationKey } from '../i18n/translations';
 
 export const DISPLAY_NAME_MAX_LENGTH = 40;
 
+const USER_PROFILE_SEMANTIC_FIELDS = [
+  'id',
+  'userId',
+  'tier',
+  'role',
+  'displayName',
+  'highResQuotaUsed',
+  'membershipRequestStatus',
+  'membershipRequestedAt',
+  'membershipContactEmail',
+  'membershipRequestNote',
+  'membershipRequestSource',
+] as const satisfies readonly (keyof UserProfile)[];
+
 type UserProfileTranslator = (key: TranslationKey, values?: Record<string, string | number>) => string;
 
 export const normalizeDisplayName = (value?: string | null) => (
@@ -62,6 +76,15 @@ export const resolveUserProfileDisplayName = ({
 
   return getUserMetadataDisplayName(user);
 };
+
+export const hasUserProfileSemanticChanges = (
+  existingProfile: UserProfile | undefined,
+  nextProfile: UserProfile,
+) => (
+  !existingProfile || USER_PROFILE_SEMANTIC_FIELDS.some(
+    field => existingProfile[field] !== nextProfile[field]
+  )
+);
 
 export const buildLocalUserProfile = ({
   userId,

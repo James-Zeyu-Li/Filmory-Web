@@ -878,6 +878,61 @@ describe('SyncService schema parity', () => {
     expect(supabaseMock.removeChannel).toHaveBeenCalled();
   });
 
+  it('runs the startup sync once when realtime subscribes normally', () => {
+    vi.useFakeTimers();
+    vi.stubEnv('VITE_ENABLE_SUPABASE_SYNC', 'true');
+    vi.stubEnv('VITE_SUPABASE_URL', 'http://127.0.0.1:54321');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'eyJ.local-dev-jwt');
+
+    const syncSpy = vi.spyOn(SyncService, 'sync').mockResolvedValue(undefined);
+
+    try {
+      SyncService.start();
+      const statusCallback = supabaseMock.subscribe.mock.calls[0]?.[0];
+      expect(statusCallback).toEqual(expect.any(Function));
+
+      statusCallback('SUBSCRIBED');
+      vi.advanceTimersByTime(0);
+      expect(syncSpy).toHaveBeenCalledTimes(1);
+
+      statusCallback('SUBSCRIBED');
+      vi.advanceTimersByTime(3_000);
+      expect(syncSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      SyncService.stop();
+      syncSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it('falls back to one startup sync when realtime never reports a status', () => {
+    vi.useFakeTimers();
+    vi.stubEnv('VITE_ENABLE_SUPABASE_SYNC', 'true');
+    vi.stubEnv('VITE_SUPABASE_URL', 'http://127.0.0.1:54321');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'eyJ.local-dev-jwt');
+
+    const syncSpy = vi.spyOn(SyncService, 'sync').mockResolvedValue(undefined);
+
+    try {
+      SyncService.start();
+
+      vi.advanceTimersByTime(2_999);
+      expect(syncSpy).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(1);
+      vi.advanceTimersToNextTimer();
+      expect(syncSpy).toHaveBeenCalledTimes(1);
+
+      SyncService.stop();
+      vi.advanceTimersByTime(3_000);
+      expect(syncSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      SyncService.stop();
+      syncSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
   it('uses a visible-page fallback only while realtime is unavailable', () => {
     vi.useFakeTimers();
     vi.stubEnv('VITE_ENABLE_SUPABASE_SYNC', 'true');
@@ -894,11 +949,11 @@ describe('SyncService schema parity', () => {
 
     try {
       SyncService.start();
-      vi.advanceTimersByTime(0);
-      requestSyncSpy = vi.spyOn(SyncService, 'requestSync').mockImplementation(() => undefined);
-
       const statusCallback = supabaseMock.subscribe.mock.calls[0]?.[0];
       expect(statusCallback).toEqual(expect.any(Function));
+      statusCallback('SUBSCRIBED');
+      vi.advanceTimersByTime(0);
+      requestSyncSpy = vi.spyOn(SyncService, 'requestSync').mockImplementation(() => undefined);
 
       vi.advanceTimersByTime(60_000);
       expect(requestSyncSpy).not.toHaveBeenCalled();
@@ -1070,13 +1125,15 @@ describe('SyncService schema parity', () => {
 
     try {
       SyncService.start();
+      const statusCallback = supabaseMock.subscribe.mock.calls[0]?.[0];
+      expect(statusCallback).toEqual(expect.any(Function));
+      statusCallback('SUBSCRIBED');
       vi.advanceTimersByTime(0);
       requestSyncSpy = vi.spyOn(SyncService, 'requestSync').mockImplementation(() => undefined);
 
       vi.advanceTimersByTime(60_000);
       expect(requestSyncSpy).not.toHaveBeenCalled();
 
-      const statusCallback = supabaseMock.subscribe.mock.calls[0]?.[0];
       statusCallback('TIMED_OUT', new Error('timeout'));
       expect(requestSyncSpy).toHaveBeenCalledWith('realtime-unavailable', 0);
       requestSyncSpy.mockClear();
@@ -1193,6 +1250,9 @@ describe('SyncService schema parity', () => {
         key === 'grainfolio_user_id' ? 'user-2' : null
       ));
       SyncService.start();
+      const secondStatusCallback = supabaseMock.subscribe.mock.calls[1]?.[0];
+      expect(secondStatusCallback).toEqual(expect.any(Function));
+      secondStatusCallback('SUBSCRIBED');
       vi.advanceTimersByTime(0);
       syncSpy.mockClear();
 

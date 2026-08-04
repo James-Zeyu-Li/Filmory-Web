@@ -3,6 +3,7 @@ import {
   buildLocalUserProfile,
   getDisplayNameValidationMessage,
   getUserMetadataDisplayName,
+  hasUserProfileSemanticChanges,
   normalizeDisplayName,
   resolveUserProfileDisplayName,
 } from '../services/userProfile';
@@ -69,5 +70,29 @@ describe('user profile helpers', () => {
       membershipRequestStatus: 'pending',
       membershipRequestedAt: 123,
     });
+  });
+
+  it('does not treat a refreshed timestamp as a profile change', () => {
+    const existingProfile = {
+      id: 'user-1',
+      userId: 'user-1',
+      tier: 'vip' as const,
+      role: 'user' as const,
+      displayName: 'Analog James',
+      highResQuotaUsed: 4,
+      membershipRequestStatus: 'pending' as const,
+      updatedAt: 100,
+    };
+    const refreshedProfile = {
+      ...existingProfile,
+      updatedAt: 200,
+    };
+
+    expect(hasUserProfileSemanticChanges(existingProfile, refreshedProfile)).toBe(false);
+    expect(hasUserProfileSemanticChanges(existingProfile, {
+      ...refreshedProfile,
+      displayName: 'Updated Name',
+    })).toBe(true);
+    expect(hasUserProfileSemanticChanges(undefined, refreshedProfile)).toBe(true);
   });
 });

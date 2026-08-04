@@ -188,7 +188,6 @@ export const summarizeSyncQueue = (queue: SyncQueueItem[], userId: string | null
 };
 
 const supabaseTables = Object.values(tableMap);
-export { LOCAL_CHANGE_EVENT } from './syncEvents';
 export const SYNC_STATUS_EVENT = 'grainfolio-sync-status';
 export type SyncStatusState = 'local' | 'offline' | 'pending' | 'syncing' | 'synced' | 'needs_attention';
 export type SyncQueueSummary = {
@@ -203,6 +202,7 @@ const RESUME_SYNC_DEBOUNCE_MS = 400;
 const RETRY_SYNC_DELAY_MS = 5000;
 const MAX_RETRY_SYNC_DELAY_MS = 5 * 60_000;
 const VISIBLE_FALLBACK_POLL_INTERVAL_MS = 60_000;
+const REALTIME_STARTUP_TIMEOUT_MS = 3_000;
 const REALTIME_SUBSCRIBED_STATUS = 'SUBSCRIBED';
 const REALTIME_RETRY_STATUSES = new Set(['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED']);
 const MISSING_RPC_SCHEMA_CACHE_CODE = 'PGRST202';
@@ -320,6 +320,8 @@ export class SyncService {
   private static realtimeLifecycleId = 0;
   private static isRealtimeSubscribed = false;
   private static isRealtimeFallbackRequired = false;
+  private static isStartupSyncPending = false;
+  private static startupSyncTimer: ReturnType<typeof setTimeout> | null = null;
 
   static isAutoSyncEnabled(): boolean {
     return hasAutoSyncFlag() && hasValidSupabaseKeyPair();
@@ -475,12 +477,15 @@ export class SyncService {
 
     this.stop();
     this.activeUserId = userId;
+    this.isStartupSyncPending = true;
     const lifecycleId = this.realtimeLifecycleId;
 
     const unsubscribeRealtime = this.setupRealtimeSubscription(userId, lifecycleId);
 
     const handleOnline = () => {
-      this.requestSyncIntent('background', 'online', 0);
+      if (!this.requestStartupSync('online')) {
+        this.requestSyncIntent('background', 'online', 0);
+      }
       this.updateVisibleFallbackPolling();
     };
 
@@ -520,7 +525,7 @@ export class SyncService {
     }
 
     dispatchSyncStatus('syncing');
-    this.requestSyncIntent('background', 'start', 0);
+    this.scheduleStartupSyncFallback(userId, lifecycleId);
 
   }
 
@@ -531,6 +536,7 @@ export class SyncService {
     this.activeUserId = null;
     this.isRealtimeSubscribed = false;
     this.isRealtimeFallbackRequired = false;
+    this.isStartupSyncPending = false;
     this.shouldRunAgain = false;
     this.pendingSyncTriggers = [];
     this.activeSyncRunId = undefined;
@@ -546,9 +552,40 @@ export class SyncService {
       this.retryTimer = null;
     }
 
+    this.clearStartupSyncTimer();
+
     this.stopVisibleFallbackPolling();
 
     dispatchSyncStatus('local');
+  }
+
+  private static clearStartupSyncTimer(): void {
+    if (this.startupSyncTimer === null) return;
+    clearTimeout(this.startupSyncTimer);
+    this.startupSyncTimer = null;
+  }
+
+  private static requestStartupSync(reason: string): boolean {
+    if (!this.isStartupSyncPending || !this.activeUserId) return false;
+
+    this.isStartupSyncPending = false;
+    this.clearStartupSyncTimer();
+    this.requestSyncIntent('background', reason, 0);
+    return true;
+  }
+
+  private static scheduleStartupSyncFallback(userId: string, lifecycleId: number): void {
+    if (!this.isStartupSyncPending || this.startupSyncTimer !== null) return;
+
+    this.startupSyncTimer = setTimeout(() => {
+      this.startupSyncTimer = null;
+      if (this.activeUserId !== userId || this.realtimeLifecycleId !== lifecycleId) return;
+
+      this.isRealtimeSubscribed = false;
+      this.isRealtimeFallbackRequired = true;
+      this.updateVisibleFallbackPolling();
+      this.requestStartupSync('realtime-startup-timeout');
+    }, REALTIME_STARTUP_TIMEOUT_MS);
   }
 
   private static updateVisibleFallbackPolling(): void {
@@ -589,10 +626,14 @@ export class SyncService {
     recordSyncDiagnostic('realtime_status', { realtimeStatus: status });
 
     if (status === REALTIME_SUBSCRIBED_STATUS) {
+      const wasRealtimeFallbackRequired = this.isRealtimeFallbackRequired;
       this.isRealtimeSubscribed = true;
       this.isRealtimeFallbackRequired = false;
       this.stopVisibleFallbackPolling();
-      this.requestSyncIntent('background', 'realtime-subscribed', 0);
+      const startedInitialSync = this.requestStartupSync('realtime-subscribed');
+      if (!startedInitialSync && wasRealtimeFallbackRequired) {
+        this.requestSyncIntent('background', 'realtime-subscribed', 0);
+      }
       return;
     }
 
@@ -602,7 +643,9 @@ export class SyncService {
     this.isRealtimeFallbackRequired = true;
     console.warn('[Sync Realtime] Subscription unavailable; starting visible-page fallback.', status, error);
     this.updateVisibleFallbackPolling();
-    this.requestSyncIntent('background', 'realtime-unavailable', 0);
+    if (!this.requestStartupSync('realtime-unavailable')) {
+      this.requestSyncIntent('background', 'realtime-unavailable', 0);
+    }
   }
 
   static requestSyncIntent(intent: SyncIntent, reason: string = intent, delayMs = SYNC_INTENT_DELAYS[intent]): void {
