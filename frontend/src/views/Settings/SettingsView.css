@@ -60,9 +60,9 @@
 
 /* ─── Body ─────────────────────────────────────────────────── */
 .settings-body {
-  padding: 20px;
   max-width: 100%;
   width: 100%;
+  flex: 1;
 }
 
 .settings-section {
@@ -87,6 +87,8 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   overflow: hidden;
+  container-type: inline-size;
+  container-name: settings-group;
 }
 
 .settings-list-item {
@@ -94,6 +96,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  flex: 0 0 auto;
+  min-height: 0;
   padding: 16px;
   border-bottom: 1px solid var(--border-color);
   transition: background-color var(--transition-fast);
@@ -112,7 +116,41 @@
 }
 
 .settings-list-item-vertical {
-  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.settings-theme-item .settings-item-content,
+.settings-theme-item .settings-item-action {
+  flex: 0 0 auto;
+}
+
+.settings-theme-item .settings-item-content {
+  flex: 1 1 auto;
+}
+
+.settings-theme-item .theme-segmented-control {
+  flex-shrink: 0;
+}
+
+.settings-list-item-vertical .settings-item-action,
+.settings-list-item-vertical .settings-inline-actions {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.settings-list-item-vertical .settings-inline-actions .form-control {
+  flex: 1;
+  max-width: none;
+  min-width: 140px;
+}
+
+.settings-list-item-vertical .settings-inline-actions button {
+  flex: 1;
 }
 
 /* ─── Item Content ─────────────────────────────────────────── */
@@ -120,7 +158,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  flex: 1;
+  flex: 1 1 200px;
   min-width: 0;
 }
 
@@ -249,11 +287,10 @@
 }
 
 .settings-sub-card-body {
-  padding: 14px 16px 16px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  border-top: 1px solid var(--border-color);
+  gap: 12px;
+  padding: 0 16px 16px 62px;
 }
 
 /* ─── Account Role Badge ───────────────────────────────────── */
@@ -563,6 +600,11 @@
   .settings-list-item-vertical {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .settings-theme-item .settings-item-content,
+  .settings-theme-item .settings-item-action {
+    flex: 0 0 auto;
   }
 
   .settings-item-action,

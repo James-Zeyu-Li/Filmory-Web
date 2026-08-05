@@ -145,17 +145,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    setSession(nextMode === 'dev-bypass' || nextMode === 'trial' ? null : nextSession);
-    setUser(nextUser);
-    setAuthMode(nextMode);
-    setAccountRole(nextRole);
-
-    if (nextUser) {
-      clearAuthTransitionState();
-    }
-
-    if (nextUser) {
-      await persistLocalUserProfile(nextUser, nextRole, nextMode);
+    // App starts cloud sync from the authenticated React state. Persist this first so
+    // SyncService.start() never observes an authenticated user without a local user id.
+    const currentLocalUserId = localStorage.getItem('grainfolio_user_id');
+    if (currentLocalUserId && currentLocalUserId !== nextUser?.id) {
+      SyncService.stop();
     }
 
     if (nextUser) {
@@ -168,6 +162,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem('grainfolio_user_id');
       localStorage.removeItem(DEV_AUTH_STORAGE_KEY);
       localStorage.removeItem(TRIAL_AUTH_STORAGE_KEY);
+    }
+
+    setSession(nextMode === 'dev-bypass' || nextMode === 'trial' ? null : nextSession);
+    setUser(nextUser);
+    setAuthMode(nextMode);
+    setAccountRole(nextRole);
+
+    if (nextUser) {
+      clearAuthTransitionState();
+    }
+
+    if (nextUser) {
+      await persistLocalUserProfile(nextUser, nextRole, nextMode);
     }
     setIsLoading(false);
   }, [clearAuthTransitionState, persistLocalUserProfile, resolveAccountRole]);

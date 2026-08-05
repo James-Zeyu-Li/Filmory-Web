@@ -1,12 +1,17 @@
 .account-center {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  min-height: 0;
 }
 
 .account-center-header {
   align-items: flex-start;
-  margin-bottom: 2px;
+}
+
+.account-center-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .account-center-header p {
@@ -145,8 +150,16 @@
 }
 
 .account-profile-form .form-control {
+  width: 100%;
+  min-width: 0;
+}
+
+.account-profile-input {
+  display: flex;
   flex: 1 1 auto;
   min-width: 0;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .account-detail-grid {
@@ -189,8 +202,26 @@
   color: var(--success-color, #22c55e);
 }
 
-.account-detail-item .sync-disabled {
+.account-detail-item .sync-synced {
+  color: var(--success-color, #22c55e);
+}
+
+.account-detail-item .sync-syncing,
+.account-detail-item .sync-pending {
+  color: var(--accent);
+}
+
+.account-detail-item .sync-offline,
+.account-detail-item .sync-local,
+.account-detail-item .sync-needs_attention {
   color: var(--text-secondary);
+}
+
+.account-delete-trigger {
+  width: fit-content;
+  min-height: 32px;
+  padding: 7px 10px;
+  font-size: 12px;
 }
 
 .account-trial-actions,
@@ -243,5 +274,90 @@
   .account-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+}
+
+/* ─── Danger Zone ─────────────────────────────────────────── */
+.account-delete-entry {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+@media (max-width: 560px) {
+  .account-delete-trigger {
+    width: 100%;
+  }
+}
+
+.account-field-label {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.account-delete-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.account-delete-dialog h3,
+.account-delete-dialog p {
+  margin: 0;
+}
+
+.account-delete-dialog h3 {
+  color: var(--text-primary);
+  font-size: 18px;
+}
+
+.account-delete-dialog p {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.account-delete-dialog code {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.account-delete-dialog label {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.account-delete-dialog input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.account-delete-error {
+  color: var(--danger) !important;
+}
+
+.account-delete-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 560px) {
+  .account-delete-dialog-actions {
+    flex-direction: column-reverse;
+  }
+
+  .account-delete-dialog-actions button {
+    width: 100%;
+    min-height: 44px;
   }
 }

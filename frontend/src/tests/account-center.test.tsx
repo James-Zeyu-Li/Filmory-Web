@@ -53,6 +53,16 @@ vi.mock('../contexts/useFeedback', () => ({
   }),
 }));
 
+vi.mock('../contexts/useConfirm', () => ({
+  useConfirm: () => ({
+    confirm: vi.fn().mockResolvedValue(true),
+  }),
+}));
+
+vi.mock('../services/accountService', () => ({
+  deleteCurrentAccount: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('../hooks/useData', () => ({
   useUserProfile: () => mockProfile,
 }));
@@ -62,8 +72,10 @@ vi.mock('../hooks/useUserTier', () => ({
 }));
 
 vi.mock('../services/syncService', () => ({
+  SYNC_STATUS_EVENT: 'grainfolio-sync-status',
   SyncService: {
     isAutoSyncEnabled: () => false,
+    getStatus: () => 'local',
   },
 }));
 
@@ -141,13 +153,23 @@ describe('AccountCenterModal', () => {
     expect(screen.getByText('Analog James')).toBeInTheDocument();
     expect(screen.getByText('user@grainfolio.app')).toBeInTheDocument();
     expect(screen.getByText('免费版')).toBeInTheDocument();
-    expect(screen.getByText('暂未开启')).toBeInTheDocument();
+    expect(screen.getByText('本地模式')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '退出登录' }));
 
     await waitFor(() => expect(mockLogout).toHaveBeenCalled());
     expect(mockOnClose).toHaveBeenCalled();
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/login'));
+  });
+
+  it('keeps account deletion as a compact entry and opens a separate confirmation dialog', () => {
+    renderAccountCenter();
+
+    expect(screen.queryByText('永久注销账号')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '注销我的账号' }));
+
+    expect(screen.getByRole('heading', { name: '确认永久注销' })).toBeInTheDocument();
+    expect(screen.getByLabelText('输入 DELETE 确认注销')).toBeInTheDocument();
   });
 
   it('saves display name to local profile and Supabase metadata for a real account', async () => {
@@ -241,7 +263,7 @@ describe('AccountCenterModal', () => {
     renderAccountCenter();
 
     expect(screen.getByText('Developer Mode')).toBeInTheDocument();
-    expect(screen.getByText('管理员')).toBeInTheDocument();
+    expect(screen.queryByText('管理员')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: '切换真实账号登录' })).toBeInTheDocument();
   });
 });

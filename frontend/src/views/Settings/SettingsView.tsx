@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { BackupService } from '../../services/backupService';
-import { Shield, Download, X, LogOut, UserX, Sun, Moon, Monitor, Coins, Film, BadgeCheck, ArrowUp, ArrowDown, Folder, Languages, ChevronDown } from 'lucide-react';
+import { Shield, Download, X, Sun, Moon, Monitor, Coins, Film, ArrowUp, ArrowDown, Folder, Languages, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../contexts/useAuth';
 import { useTheme } from '../../contexts/useTheme';
-import { deleteCurrentAccount } from '../../services/accountService';
 import { Modal } from '../../components/Modal';
 import { useConfirm } from '../../contexts/useConfirm';
 import { useFeedback } from '../../contexts/useFeedback';
@@ -28,7 +27,7 @@ interface SettingsViewProps {
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setEnableFilmMode, onClose }) => {
-  const { user, logout, completeSignedOutTransition, accountRole, isDevBypass, isAdmin } = useAuth();
+  const { user, isDevBypass } = useAuth();
   const { theme, setTheme } = useTheme();
   const { currency, setCurrency, currencySymbol } = useCurrency();
   const { language, setLanguage, t } = useLanguage();
@@ -37,9 +36,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [processMessage, setProcessMessage] = useState('');
-  const [deleteConfirmationStep, setDeleteConfirmationStep] = useState(0);
-  const [deleteInput, setDeleteInput] = useState('');
-  const [deleteError, setDeleteError] = useState('');
   const [isCurrencyConversionOpen, setIsCurrencyConversionOpen] = useState(false);
   const [targetCurrency, setTargetCurrency] = useState<CurrencyCode>(() => (
     currency === 'CNY' ? 'USD' : 'CNY'
@@ -78,76 +74,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
     const nextEnabled = !enableFilmMode ? true : enabled;
     setRollsCollectionsEnabled(nextEnabled);
     writeRollsCollectionsTabEnabled(nextEnabled);
-  };
-
-  const handleLogout = async () => {
-    try {
-      setIsProcessing(true);
-      setProcessMessage(t('settings.processingLogout'));
-      await logout();
-      onClose();
-    } catch (e) {
-      console.error(e);
-      notify({
-        type: 'error',
-        title: t('settings.logoutFailedTitle'),
-        message: e instanceof Error ? e.message : t('settings.retryLater')
-      });
-    } finally {
-      setIsProcessing(false);
-      setProcessMessage('');
-    }
-  };
-
-  const handleDeleteAccount = async () => {
-    if (deleteConfirmationStep === 0) {
-      setDeleteConfirmationStep(1);
-      setDeleteError('');
-      return;
-    }
-    
-    if (deleteConfirmationStep === 1) {
-      if (deleteInput !== 'DELETE') {
-        setDeleteError(t('settings.deleteInputError'));
-        return;
-      }
-      
-      const finalConfirm = await confirm({
-        title: t('settings.deleteFinalTitle'),
-        message: t('settings.deleteFinalMessage'),
-        confirmText: t('settings.deleteFinalConfirm'),
-        cancelText: t('common.cancel'),
-        isDanger: true
-      });
-      if (!finalConfirm) {
-        setDeleteConfirmationStep(0);
-        setDeleteInput('');
-        setDeleteError('');
-        return;
-      }
-      
-      try {
-        setIsProcessing(true);
-        setProcessMessage(t('settings.deletingAccount'));
-        
-        // Dev bypass is local-only; real Supabase users use the account deletion RPC.
-        if (!isDevBypass) {
-          await deleteCurrentAccount();
-        }
-        
-        completeSignedOutTransition('deletingAccount');
-        onClose();
-      } catch (error) {
-        const message = error instanceof Error ? error.message : t('settings.unknownError');
-        notify({
-          type: 'error',
-          title: t('settings.deleteFailedTitle'),
-          message
-        });
-        setIsProcessing(false);
-        setProcessMessage('');
-      }
-    }
   };
 
   const handleExport = async () => {
@@ -197,7 +123,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
         from: currency,
         rate,
         to: targetCurrency,
-        target: targetOption?.label || targetCurrency,
+        target: targetOption ? t(`currency.${targetOption.code}` as any) : targetCurrency,
       }),
       confirmText: t('settings.conversionConfirmAction'),
       cancelText: t('common.cancel'),
@@ -237,29 +163,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
     <Modal 
       isOpen={true} 
       onClose={onClose} 
-      style={{ maxWidth: '620px', width: '92%', padding: 0, overflow: 'hidden' }}
+      style={{ maxWidth: '620px', width: '92%', maxHeight: '100%', display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}
       overlayStyle={{ zIndex: 9999 }}
     >
-      <header className="settings-modal-header">
-        <div className="settings-modal-header-left">
-          <div className="settings-modal-icon">
+      <header className="modal-shell-header settings-modal-header">
+        <div className="modal-shell-header-left settings-modal-header-left">
+          <div className="modal-shell-icon settings-modal-icon">
             <Shield size={18} />
           </div>
           <div>
-            <h2 className="settings-modal-title">{t('settings.title')}</h2>
-            <p className="settings-modal-subtitle">{user?.email || (isDevBypass ? t('settings.devMode') : t('settings.notLoggedIn'))}</p>
+            <h2 className="modal-shell-title settings-modal-title">{t('settings.title')}</h2>
+            <p className="modal-shell-subtitle settings-modal-subtitle">{user?.email || (isDevBypass ? t('settings.devMode') : t('settings.notLoggedIn'))}</p>
           </div>
         </div>
-        <div className="settings-modal-header-right">
-          <span className={`account-role-badge ${isAdmin ? 'admin' : ''}`}>
-            <BadgeCheck size={12} />
-            {isDevBypass ? t('settings.testAdmin') : accountRole === 'admin' ? t('settings.admin') : t('settings.normalAccount')}
-          </span>
+        <div className="modal-shell-header-right settings-modal-header-right">
           <button className="icon-btn" onClick={onClose}><X size={18} /></button>
         </div>
       </header>
 
-      <div className="view-body settings-body" style={{ padding: '20px', maxHeight: '70vh', overflowY: 'auto' }}>
+      <div className="view-body modal-shell-body settings-body">
         {/* UI Preferences Card */}
         <div className="settings-section">
           <div className="section-header">
@@ -290,7 +212,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
               </div>
             </div>
 
-            <div className="settings-list-item settings-list-item-vertical">
+            <div className="settings-list-item settings-theme-item">
               <div className="settings-item-content">
                 <div className="settings-item-icon safe"><Sun size={18} /></div>
                 <div className="settings-item-text">
@@ -425,7 +347,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
               )}
             </div>
 
-            <div className="settings-list-item settings-list-item-vertical">
+            <div className="settings-list-item settings-currency-item">
               <div className="settings-item-content">
                 <div className="settings-item-icon safe"><Coins size={18} /></div>
                 <div className="settings-item-text">
@@ -441,7 +363,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
                 >
                   {CURRENCY_OPTIONS.map(option => (
                     <option key={option.code} value={option.code}>
-                      {option.symbol} {option.label}
+                      {option.symbol} {t(`currency.${option.code}` as any)}
                     </option>
                   ))}
                 </select>
@@ -487,83 +409,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
           </div>
         </div>
 
-        {/* Account Management Card */}
-        <div className="settings-section">
-          <div className="section-header">
-            <h3>{t('settings.accountSecurity')}</h3>
-          </div>
-          
-          <div className="settings-list-group">
-            <div className="settings-list-item">
-              <div className="settings-item-content">
-                <div className="settings-item-icon"><LogOut size={18} /></div>
-                <div className="settings-item-text">
-                  <h4>{t('settings.logoutTitle')}</h4>
-                  <p>{t('settings.logoutDesc')}</p>
-                </div>
-              </div>
-              <div className="settings-item-action">
-                <button className="secondary" onClick={handleLogout} disabled={isProcessing}>
-                  {t('settings.logoutAction')}
-                </button>
-              </div>
-            </div>
-
-            <div className={`settings-list-item danger-zone ${deleteConfirmationStep === 1 ? 'settings-list-item-vertical' : ''}`}>
-              <div className="settings-item-content">
-                <div className="settings-item-icon danger"><UserX size={18} /></div>
-                <div className="settings-item-text">
-                  <h4>{t('settings.deleteTitle')}</h4>
-                  <p>{t('settings.deleteDesc')}</p>
-                </div>
-              </div>
-              <div className="settings-item-action settings-danger-action">
-                {deleteConfirmationStep === 0 ? (
-                    <button className="danger" onClick={handleDeleteAccount} disabled={isProcessing}>
-                      {t('settings.deleteStart')}
-                    </button>
-                ) : (
-                  <div className="delete-account-confirm-panel">
-                    <div className="delete-account-confirm-copy">
-                      <strong>{t('settings.deleteConfirmTitle')}</strong>
-                      <p>
-                        {t('settings.deleteConfirmDescPrefix')} <code>DELETE</code> {t('settings.deleteConfirmDescSuffix')}
-                      </p>
-                    </div>
-                    {deleteError && (
-                      <p className="delete-account-error">
-                        {deleteError}
-                      </p>
-                    )}
-                    <input 
-                      type="text" 
-                      placeholder="DELETE"
-                      aria-label={t('settings.deleteInputAria')}
-                      value={deleteInput}
-                      onChange={(e) => {
-                        setDeleteInput(e.target.value);
-                        if (deleteError) setDeleteError('');
-                      }}
-                    />
-                    <div className="delete-account-confirm-actions">
-                      <button className="danger delete-account-confirm-primary" onClick={handleDeleteAccount} disabled={isProcessing}>
-                        {t('settings.deleteConfirmAction')}
-                      </button>
-                      <button className="secondary delete-account-confirm-secondary" onClick={() => {
-                        setDeleteConfirmationStep(0);
-                        setDeleteInput('');
-                        setDeleteError('');
-                      }}>
-                        {t('common.cancel')}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
       </div>
 
       {/* Processing Overlay */}
@@ -580,13 +425,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
         style={{ maxWidth: '520px', width: '90%' }}
         overlayStyle={{ zIndex: 10001 }}
       >
-        <h3>手动汇率批量换算</h3>
+        <h3>{t('settings.manualConversionTitle')}</h3>
         <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: 1.6 }}>
-          当前记账货币为 {currency}。请输入手动汇率，将当前账号里的器材价格、胶卷单价、胶卷记录成本、冲洗费和收支金额一次性换算到目标货币。
+          {t('settings.manualConversionDescription', { currency })}
         </p>
         <form onSubmit={handleCurrencyConversion}>
           <div className="form-group">
-            <label>目标货币</label>
+            <label>{t('settings.targetCurrency')}</label>
             <select
               className="form-control"
               value={targetCurrency}
@@ -595,30 +440,34 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
             >
               {CURRENCY_OPTIONS.map(option => (
                 <option key={option.code} value={option.code}>
-                  {option.symbol} {option.label}
+                  {option.symbol} {t(`currency.${option.code}` as any)}
                 </option>
               ))}
             </select>
           </div>
           <div className="form-group">
-            <label>手动汇率：1 {currency} = ? {targetCurrency}</label>
+            <label>{t('settings.manualRateLabel', { currency, target: targetCurrency })}</label>
             <input
               type="number"
               className="form-control"
               min="0"
               step="0.000001"
-              placeholder={`例如：当前 ${currencySymbol}1 换算成多少 ${targetCurrency}`}
+              placeholder={t('settings.manualRatePlaceholder', {
+                symbol: currencySymbol,
+                target: targetCurrency,
+                currency,
+              })}
               value={conversionRate}
               onChange={e => setConversionRate(e.target.value)}
               required
             />
           </div>
           <p style={{ color: 'var(--danger)', fontSize: '12px', lineHeight: 1.5 }}>
-            注意：这是一次性批量修改现有金额数值，不会保存原币种，也不会联网获取汇率。
+            {t('settings.manualConversionWarning')}
           </p>
           <div className="modal-actions">
-            <button type="button" onClick={() => setIsCurrencyConversionOpen(false)}>取消</button>
-            <button type="submit" className="warning">确认换算</button>
+            <button type="button" onClick={() => setIsCurrencyConversionOpen(false)}>{t('settings.cancelConversion')}</button>
+            <button type="submit" className="warning">{t('settings.confirmConversion')}</button>
           </div>
         </form>
       </Modal>

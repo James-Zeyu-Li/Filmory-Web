@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SettingsView } from '../views/Settings/SettingsView';
 import { deleteCurrentAccount } from '../services/accountService';
@@ -81,7 +81,7 @@ describe('SettingsView account boundary', () => {
     vi.mocked(deleteCurrentAccount).mockResolvedValue(undefined);
   });
 
-  it('keeps personal profile and membership controls out of settings', () => {
+  it('keeps personal profile and account management controls out of settings', () => {
     render(
       <SettingsView
         enableFilmMode={true}
@@ -90,7 +90,8 @@ describe('SettingsView account boundary', () => {
       />
     );
 
-    expect(screen.getByText('账号与安全')).toBeInTheDocument();
+    expect(screen.queryByText('账号与安全')).not.toBeInTheDocument();
+    expect(screen.queryByText('注销我的账号')).not.toBeInTheDocument();
     expect(screen.queryByText('会员状态')).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText('输入你想显示的名字')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '保存名字' })).not.toBeInTheDocument();
@@ -113,32 +114,7 @@ describe('SettingsView account boundary', () => {
     expect(screen.getByText('显示项目集与独立记录视图')).toBeInTheDocument();
   });
 
-  it('runs the signed-out transition after account deletion without calling logout again', async () => {
-    mockConfirm.mockResolvedValue(true);
-
-    render(
-      <SettingsView
-        enableFilmMode={true}
-        setEnableFilmMode={mockSetEnableFilmMode}
-        onClose={vi.fn()}
-      />
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: '注销我的账号' }));
-    fireEvent.change(screen.getByLabelText('输入 DELETE 确认注销'), {
-      target: { value: 'DELETE' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: '确认永久销毁' }));
-
-    await waitFor(() => {
-      expect(deleteCurrentAccount).toHaveBeenCalledTimes(1);
-      expect(mockAuthState.completeSignedOutTransition).toHaveBeenCalledWith('deletingAccount');
-    });
-
-    expect(mockAuthState.logout).not.toHaveBeenCalled();
-  });
-
-  it('renders logout and delete account copy in English', () => {
+  it('renders preferences and data ownership copy in English', () => {
     currentLanguage = 'en-US';
 
     render(
@@ -149,15 +125,10 @@ describe('SettingsView account boundary', () => {
       />
     );
 
-    expect(screen.getByText('Account & Security')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Log out' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument();
-    expect(screen.getByText('Sign out on this device without deleting local offline data.')).toBeInTheDocument();
+    expect(screen.queryByText('Account & Security')).not.toBeInTheDocument();
     expect(screen.getByText('Data Ownership')).toBeInTheDocument();
     expect(screen.getByText('Export metadata as Excel')).toBeInTheDocument();
     expect(screen.getByText('Export cameras, lenses, film stock, roll records, and ledger entries. Original images are not bundled.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Export records now' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Delete account permanently' })).toBeInTheDocument();
-    expect(screen.getByText('Permanently destroy your Grainfolio account and cloud data. This cannot be undone.')).toBeInTheDocument();
   });
 });

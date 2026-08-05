@@ -9,8 +9,10 @@ import {
   LogOut,
   Shield,
   UserRound,
+  UserX,
   X,
 } from 'lucide-react';
+import { deleteCurrentAccount } from '../services/accountService';
 import { Modal } from './Modal';
 import { UpgradeModal } from './UpgradeModal';
 import { useAuth } from '../contexts/useAuth';
@@ -19,7 +21,7 @@ import { useLanguage } from '../contexts/useLanguage';
 import { db } from '../db/schema';
 import { useUserProfile } from '../hooks/useData';
 import { useUserTier } from '../hooks/useUserTier';
-import { SyncService } from '../services/syncService';
+import { useSyncStatus } from '../hooks/useSyncStatus';
 import { AUTH_ROUTES } from '../services/authFlow';
 import {
   buildLocalUserProfile,
@@ -40,17 +42,21 @@ export const AccountCenterModal: React.FC<AccountCenterModalProps> = ({ isOpen, 
   const navigate = useNavigate();
   const { t } = useLanguage();
   const { notify } = useFeedback();
-  const { user, authMode, accountRole, isDevBypass, isTrial, logout } = useAuth();
+  const { user, authMode, accountRole, isDevBypass, isTrial, logout, completeSignedOutTransition } = useAuth();
   const userProfile = useUserProfile();
   const { tier, isLoading: isTierLoading, capabilities } = useUserTier();
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [displayNameDraft, setDisplayNameDraft] = useState<string | null>(null);
+  const [deleteConfirmationStep, setDeleteConfirmationStep] = useState(0);
+  const [deleteInput, setDeleteInput] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const isAuthenticatedAccount = Boolean(user && authMode === 'supabase');
   const canManageProfile = Boolean(user || isDevBypass);
-  const isCloudSyncEnabled = SyncService.isAutoSyncEnabled();
+  const syncStatus = useSyncStatus();
   const storedDisplayName = normalizeDisplayName(userProfile?.displayName) || getUserMetadataDisplayName(user);
   const displayName = userProfile?.displayName
     || (typeof user?.user_metadata?.display_name === 'string' ? user.user_metadata.display_name : '')
@@ -153,6 +159,46 @@ export const AccountCenterModal: React.FC<AccountCenterModalProps> = ({ isOpen, 
     await handleLogout();
   };
 
+  const closeDeleteConfirmation = () => {
+    setDeleteConfirmationStep(0);
+    setDeleteInput('');
+    setDeleteError('');
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmationStep === 0) {
+      setDeleteConfirmationStep(1);
+      setDeleteInput('');
+      setDeleteError('');
+      return;
+    }
+
+    if (deleteConfirmationStep === 1) {
+      if (deleteInput.trim() !== 'DELETE') {
+        setDeleteError(t('settings.deleteInputError'));
+        return;
+      }
+
+      try {
+        setIsDeletingAccount(true);
+        if (!isDevBypass) {
+          await deleteCurrentAccount();
+        }
+        completeSignedOutTransition('deletingAccount');
+        onClose();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : t('settings.unknownError');
+        notify({
+          type: 'error',
+          title: t('settings.deleteFailedTitle'),
+          message
+        });
+      } finally {
+        setIsDeletingAccount(false);
+      }
+    }
+  };
+
   const statusIcon = isTrial
     ? <AlertTriangle size={18} />
     : isDevBypass
@@ -182,24 +228,37 @@ export const AccountCenterModal: React.FC<AccountCenterModalProps> = ({ isOpen, 
       <Modal
         isOpen={isOpen}
         onClose={onClose}
-        style={{ maxWidth: '560px', width: 'calc(100vw - 32px)' }}
+        style={{
+          maxWidth: '620px',
+          width: 'calc(100vw - 32px)',
+          maxHeight: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          padding: 0,
+          overflow: 'hidden',
+        }}
       >
         <div className="account-center">
-          <div className="modal-header account-center-header">
-            <div>
-              <h2>{t('account.title')}</h2>
-              <p>{t('account.subtitle')}</p>
+          <div className="modal-shell-header modal-header account-center-header">
+            <div className="modal-shell-header-left">
+              <div>
+                <h2 className="modal-shell-title">{t('account.title')}</h2>
+                <p className="modal-shell-subtitle">{t('account.subtitle')}</p>
+              </div>
             </div>
-            <button
-              type="button"
-              className="icon-btn"
-              onClick={onClose}
-              aria-label={t('common.cancel')}
-            >
-              <X size={18} />
-            </button>
+            <div className="modal-shell-header-right">
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={onClose}
+                aria-label={t('common.cancel')}
+              >
+                <X size={18} />
+              </button>
+            </div>
           </div>
 
+          <div className="modal-shell-body account-center-body">
           <section className={`account-status-card ${isTrial ? 'trial' : ''} ${isDevBypass ? 'dev' : ''}`}>
             <div className="account-status-icon">{statusIcon}</div>
             <div>
@@ -230,14 +289,20 @@ export const AccountCenterModal: React.FC<AccountCenterModalProps> = ({ isOpen, 
                 <p>{t('account.profileSectionDesc')}</p>
               </div>
               <form onSubmit={handleDisplayNameSave} className="account-profile-form">
-                <input
-                  type="text"
-                  className="form-control"
-                  value={displayNameInput}
-                  onChange={event => setDisplayNameDraft(event.target.value)}
-                  placeholder={t('account.displayNamePlaceholder')}
-                  maxLength={40}
-                />
+                <div className="account-profile-input">
+                  <label className="account-field-label" htmlFor="account-display-name">
+                    {t('account.displayNameLabel')}
+                  </label>
+                  <input
+                    id="account-display-name"
+                    type="text"
+                    className="form-control"
+                    value={displayNameInput}
+                    onChange={event => setDisplayNameDraft(event.target.value)}
+                    placeholder={t('account.displayNamePlaceholder')}
+                    maxLength={40}
+                  />
+                </div>
                 <button type="submit" className="secondary" disabled={isSavingProfile}>
                   {isSavingProfile ? t('common.loading') : t('account.displayNameSave')}
                 </button>
@@ -248,18 +313,14 @@ export const AccountCenterModal: React.FC<AccountCenterModalProps> = ({ isOpen, 
           {canManageProfile && (
             <div className="account-detail-grid">
               <div className="account-detail-item">
-                <span>{t('account.role')}</span>
-                <strong>{accountRole === 'admin' ? t('account.roleAdmin') : t('account.roleUser')}</strong>
-              </div>
-              <div className="account-detail-item">
                 <span>{t('account.activeRollLimit')}</span>
                 <strong>{activeRollLimitLabel}</strong>
               </div>
               <div className="account-detail-item account-detail-wide">
                 <span>{t('account.cloudSync')}</span>
-                <strong className={isCloudSyncEnabled ? 'sync-enabled' : 'sync-disabled'}>
+                <strong className={`sync-${syncStatus}`}>
                   <Cloud size={14} />
-                  {isCloudSyncEnabled ? t('account.cloudSyncOn') : t('account.cloudSyncOff')}
+                  {t(`syncStatus.${syncStatus === 'needs_attention' ? 'needsAttention' : syncStatus}` as any)}
                 </strong>
               </div>
             </div>
@@ -297,13 +358,70 @@ export const AccountCenterModal: React.FC<AccountCenterModalProps> = ({ isOpen, 
                   {isLoggingOut ? t('common.loading') : t('account.switchToRealAccount')}
                 </button>
               )}
-              <button type="button" className="secondary" onClick={handleLogout} disabled={isLoggingOut}>
+              <button type="button" className="secondary" onClick={handleLogout} disabled={isLoggingOut || isDeletingAccount}>
                 <LogOut size={16} />
                 {isLoggingOut ? t('common.loading') : t('account.logout')}
               </button>
             </div>
           )}
+
+          {(isAuthenticatedAccount || isDevBypass) && (
+            <div className="account-delete-entry">
+              <button
+                type="button"
+                className={`${isDevBypass ? 'secondary' : 'danger'} account-delete-trigger`}
+                onClick={handleDeleteAccount}
+                disabled={isLoggingOut || isDeletingAccount}
+                aria-haspopup="dialog"
+              >
+                <UserX size={16} />
+                {isDevBypass ? t('account.devDeleteAction') : t('settings.deleteStart')}
+              </button>
+            </div>
+          )}
+          </div>
         </div>
+      </Modal>
+
+      <Modal
+        isOpen={deleteConfirmationStep === 1}
+        onClose={closeDeleteConfirmation}
+        style={{ maxWidth: '420px', width: 'calc(100vw - 32px)' }}
+        overlayStyle={{ zIndex: 10001 }}
+      >
+        <section className="account-delete-dialog" aria-labelledby="delete-account-dialog-title">
+          <h3 id="delete-account-dialog-title">
+            {isDevBypass ? t('account.devDeleteTitle') : t('settings.deleteConfirmTitle')}
+          </h3>
+          <p>
+            {isDevBypass
+              ? t('account.devDeleteDesc')
+              : <>{t('settings.deleteConfirmDescPrefix')} <code>DELETE</code> {t('settings.deleteConfirmDescSuffix')}</>}
+          </p>
+          <label htmlFor="delete-account-confirmation">{t('settings.deleteInputAria')}</label>
+          <input
+            id="delete-account-confirmation"
+            type="text"
+            placeholder="DELETE"
+            value={deleteInput}
+            onChange={(event) => {
+              setDeleteInput(event.target.value);
+              if (deleteError) setDeleteError('');
+            }}
+            aria-invalid={Boolean(deleteError)}
+            aria-describedby={deleteError ? 'delete-account-error' : undefined}
+            autoFocus
+          />
+          {deleteError && <p id="delete-account-error" className="account-delete-error" role="alert">{deleteError}</p>}
+          <div className="account-delete-dialog-actions">
+            <button type="button" className="secondary" onClick={closeDeleteConfirmation} disabled={isDeletingAccount}>
+              {t('common.cancel')}
+            </button>
+            <button type="button" className="danger" onClick={handleDeleteAccount} disabled={isDeletingAccount}>
+              {t('settings.deleteConfirmAction')}
+            </button>
+          </div>
+        </section>
       </Modal>
 
       <UpgradeModal
