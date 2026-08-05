@@ -5,6 +5,7 @@ import {
   Film,
   LayoutDashboard,
   BarChart2,
+  ChartNoAxesCombined,
   Columns,
   ChevronLeft,
   ChevronRight,
@@ -92,6 +93,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenAccountC
           to="/dashboard"
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           onClick={onClose}
+          aria-label={t('nav.dashboard')}
+          title={t('nav.dashboard')}
         >
           <LayoutDashboard size={20} />
           <span>{t('nav.dashboard')}</span>
@@ -101,6 +104,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenAccountC
           to="/rolls"
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           onClick={onClose}
+          aria-label={t('nav.rolls')}
+          title={t('nav.rolls')}
         >
           <Film size={20} />
           <span>{t('nav.rolls')}</span>
@@ -110,28 +115,47 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenAccountC
           to="/gear"
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           onClick={onClose}
+          aria-label={t('nav.gear')}
+          title={t('nav.gear')}
         >
           <Camera size={20} />
           <span>{t('nav.gear')}</span>
         </NavLink>
 
-        <NavLink 
-          to="/insights"
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-          onClick={onClose}
-        >
-          <BarChart2 size={20} />
-          <span>{t('nav.insights')}</span>
-        </NavLink>
+        <div className="sidebar-nav-secondary">
+          <NavLink
+            to="/insights"
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            onClick={onClose}
+            aria-label={t('nav.insights')}
+            title={t('nav.insights')}
+          >
+            <BarChart2 size={20} />
+            <span>{t('nav.insights')}</span>
+          </NavLink>
 
-        <NavLink 
-          to="/compare"
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-          onClick={onClose}
-        >
-          <Columns size={20} />
-          <span>{t('nav.compare')}</span>
-        </NavLink>
+          <NavLink
+            to="/film-insights"
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            onClick={onClose}
+            aria-label={t('nav.filmInsights')}
+            title={t('nav.filmInsights')}
+          >
+            <ChartNoAxesCombined size={20} />
+            <span>{t('nav.filmInsights')}</span>
+          </NavLink>
+
+          <NavLink
+            to="/compare"
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            onClick={onClose}
+            aria-label={t('nav.compare')}
+            title={t('nav.compare')}
+          >
+            <Columns size={20} />
+            <span>{t('nav.compare')}</span>
+          </NavLink>
+        </div>
 
       </nav>
 
@@ -141,6 +165,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenAccountC
           onClick={() => setIsCollapsed(!isCollapsed)}
           style={{ background: 'transparent', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', outline: 'none' }}
           title={isCollapsed ? t('nav.expandTitle') : t('nav.collapseTitle')}
+          aria-label={isCollapsed ? t('nav.expandTitle') : t('nav.collapseTitle')}
         >
           {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
           <span>{t('nav.collapse')}</span>
@@ -151,6 +176,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenAccountC
           className="nav-item"
           onClick={handleOpenAccountCenter}
           style={{ background: 'transparent', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', outline: 'none' }}
+          aria-label={t('nav.account')}
+          title={t('nav.account')}
         >
           <UserRound size={20} />
           <span>{t('nav.account')}</span>
@@ -161,6 +188,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenAccountC
           className="nav-item"
           onClick={onOpenSettings}
           style={{ background: 'transparent', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', outline: 'none' }}
+          aria-label={t('nav.preferences')}
+          title={t('nav.preferences')}
         >
           <Settings size={20} />
           <span>{t('nav.preferences')}</span>

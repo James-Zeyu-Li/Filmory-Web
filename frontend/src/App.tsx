@@ -7,6 +7,7 @@ import { RollsView } from './views/Rolls/RollsView';
 import { GearView } from './views/Gear/GearView';
 import { CompareView } from './views/Compare/CompareView';
 import { InsightsView } from './views/Insights/InsightsView';
+import { FilmInsightsView } from './views/FilmInsights/FilmInsightsView';
 import { SettingsView } from './views/Settings/SettingsView';
 import { seedDatabaseIfNeeded } from './services/seedService';
 import { SyncService } from './services/syncService';
@@ -175,7 +176,8 @@ function AppContent() {
             <Route path="/dashboard" element={<PageTransition disableMotion={disablePageTransition}><DashboardView enableFilmMode={enableFilmMode} onNavigate={(path, options) => navigate(`/${path}`, { state: options?.skipPageTransition ? { skipPageTransition: true } : undefined })} /></PageTransition>} />
             <Route path="/rolls" element={<PageTransition disableMotion={disablePageTransition}><RollsView enableFilmMode={enableFilmMode} /></PageTransition>} />
             <Route path="/gear" element={<PageTransition disableMotion={disablePageTransition}><GearView enableFilmMode={enableFilmMode} /></PageTransition>} />
-            <Route path="/insights" element={<PageTransition disableMotion={disablePageTransition}><InsightsView /></PageTransition>} />
+            <Route path="/insights" element={<PageTransition disableMotion={disablePageTransition}><InsightsView enableFilmMode={enableFilmMode} /></PageTransition>} />
+            <Route path="/film-insights" element={<PageTransition disableMotion={disablePageTransition}><FilmInsightsView /></PageTransition>} />
             <Route path="/compare" element={<PageTransition disableMotion={disablePageTransition}><CompareView /></PageTransition>} />
             
             {/* Catch-all redirects to dashboard if not matched */}

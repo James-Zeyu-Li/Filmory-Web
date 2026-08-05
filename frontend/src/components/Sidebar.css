@@ -46,6 +46,15 @@
   flex: 1;
 }
 
+.sidebar-nav-secondary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
 .nav-item {
   display: flex;
   align-items: center;
@@ -62,6 +71,7 @@
   transition: all var(--transition-fast);
   text-align: left;
   justify-content: flex-start;
+  position: relative;
 }
 
 /* Mobile Drawer Styles */
@@ -100,7 +110,7 @@
 .nav-item:hover {
   background-color: var(--bg-tertiary);
   color: var(--text-primary);
-  border-color: rgba(255,255,255,0.03);
+  border-color: var(--border-color);
 }
 
 .nav-item.active {
@@ -108,6 +118,25 @@
   color: var(--accent);
   border-color: var(--accent-border);
   font-weight: 600;
+}
+
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent);
+}
+
+.collapse-btn {
+  color: var(--text-muted);
+}
+
+.collapse-btn:hover {
+  color: var(--text-primary);
 }
 
 .nav-item svg {
