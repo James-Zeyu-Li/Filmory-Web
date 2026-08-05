@@ -75,6 +75,33 @@ describe('Gear film stock controls', () => {
     expect(screen.queryByRole('heading', { name: '编辑胶卷库存' })).not.toBeInTheDocument();
   });
 
+  it('queues an adjustment after a remote stock update re-renders the card', async () => {
+    const user = userEvent.setup();
+    renderGearView();
+
+    await screen.findByText('Kodak Gold 200');
+    await db.syncQueue.clear();
+
+    // Mirror SyncService pull writes: update Dexie without generating a record queue item.
+    window.__grainfolio_is_pulling = true;
+    await db.filmStocks.update('film-1', { stockCount: 5 });
+    window.__grainfolio_is_pulling = false;
+
+    await screen.findByText('5 卷');
+    await user.click(screen.getByTitle('增加库存'));
+
+    await waitFor(async () => {
+      expect((await db.filmStocks.get('film-1'))?.stockCount).toBe(6);
+    });
+    expect(await db.syncQueue.toArray()).toEqual([
+      expect.objectContaining({
+        kind: 'operation',
+        operationType: 'adjust_film_stock',
+        operationPayload: { filmStockId: 'film-1', delta: 1 },
+      }),
+    ]);
+  });
+
   it('does not let the stock count input change from the mouse wheel', async () => {
     const user = userEvent.setup();
     renderGearView();
@@ -87,5 +114,29 @@ describe('Gear film stock controls', () => {
 
     expect(stockCountInput).not.toHaveFocus();
     expect(stockCountInput).toHaveValue(3);
+  });
+
+  it('keeps preset film details collapsed until customize is opened and blocks price wheel changes', async () => {
+    const user = userEvent.setup();
+    renderGearView();
+
+    await user.click(screen.getAllByRole('button', { name: '添加胶卷' })[0]);
+    await user.click(screen.getByRole('button', { name: 'Kodak' }));
+    await user.click(screen.getByRole('button', { name: 'Gold 200 · ISO 200' }));
+
+    expect(screen.getByRole('button', { name: '展开自定义' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('品牌/厂商')).not.toBeInTheDocument();
+
+    const priceInput = screen.getByPlaceholderText('单卷价格, 例如: 85 (选填)');
+    await user.click(priceInput);
+    await user.type(priceInput, '85');
+    fireEvent.wheel(priceInput, { deltaY: -100 });
+
+    expect(priceInput).not.toHaveFocus();
+    expect(priceInput).toHaveValue(85);
+
+    await user.click(screen.getByRole('button', { name: '展开自定义' }));
+    expect(screen.getByDisplayValue('Kodak')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Gold 200')).toBeInTheDocument();
   });
 });

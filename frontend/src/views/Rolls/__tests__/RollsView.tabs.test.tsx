@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
+import userEvent from '@testing-library/user-event';
 import { RollsView } from '../RollsView';
 import { ConfirmProvider } from '../../../contexts/ConfirmContext';
 import { FeedbackProvider } from '../../../contexts/FeedbackContext';
@@ -111,5 +112,41 @@ describe('RollsView tabs and empty states', () => {
     expect(screen.queryByRole('button', { name: '独立记录' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '新建项目集' })).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: '新建拍摄记录' }).length).toBeGreaterThan(1);
+  });
+
+  it('lets users rename an existing shooting record from the drawer', async () => {
+    const user = userEvent.setup();
+
+    await db.cameras.add({
+      id: 'camera-1',
+      userId: 'mock-user-id',
+      name: 'Leica M6',
+      type: 'film',
+      format: '135',
+      addedAt: Date.now(),
+    });
+
+    await db.rolls.add({
+      id: 'roll-1',
+      userId: 'mock-user-id',
+      name: '旧名称',
+      cameraIds: ['camera-1'],
+      filmStockId: 'film-stock-1',
+      startDate: Date.now(),
+      status: 'active',
+    });
+
+    renderRollsView(false);
+
+    await user.click(await screen.findByText('旧名称'));
+
+    const nameInput = await screen.findByDisplayValue('旧名称');
+    await user.clear(nameInput);
+    await user.type(nameInput, '东京街拍');
+    await user.click(screen.getByRole('button', { name: '保存全部更改' }));
+
+    await waitFor(async () => {
+      expect((await db.rolls.get('roll-1'))?.name).toBe('东京街拍');
+    });
   });
 });

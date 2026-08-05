@@ -73,6 +73,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   const { tier: userTier, isLoading: isUserTierLoading } = useUserTier();
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const navigate = useNavigate();
+  const coverFileInputRef = useRef<HTMLInputElement>(null);
   
   // Live queries
   const cameras = useCameras();
@@ -160,6 +161,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   const [qaFilmFormat, setQaFilmFormat] = useState<'135' | '120'>('135');
 
   // Metadata Form (Drawer)
+  const [drawerRollTitle, setDrawerRollTitle] = useState('');
   const [rollLocation, setRollLocation] = useState('');
   const [rollNotes, setRollNotes] = useState('');
   const [developNotes, setDevelopNotes] = useState('');
@@ -205,6 +207,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
 
   const openRollDrawer = (roll: Roll) => {
     setSelectedRollId(roll.id!);
+    setDrawerRollTitle(roll.name || '');
     setRollLocation(roll.location || '');
     setRollNotes(roll.notes || '');
     setDevelopNotes(roll.developNotes || '');
@@ -217,6 +220,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     hydratedDrawerRollIdRef.current = selectedRoll.id;
 
     queueMicrotask(() => {
+      setDrawerRollTitle(selectedRoll.name || '');
       setRollLocation(selectedRoll.location || '');
       setRollNotes(selectedRoll.notes || '');
       setDevelopNotes(selectedRoll.developNotes || '');
@@ -563,6 +567,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     
     await db.transaction('rw', db.rolls, db.ledgerTransactions, async () => {
         await db.rolls.update(selectedRollId, {
+          name: drawerRollTitle.trim() || selectedRoll?.name || t('rolls.unknownRoll'),
           location: rollLocation,
           notes: rollNotes,
           developNotes: developNotes,
@@ -588,7 +593,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
               type: 'expense',
               category: 'develop',
               relatedEntityId: selectedRollId,
-              notes: t('rolls.developLedgerNote', { name: selectedRoll?.name || t('rolls.unknownRoll') }),
+              notes: t('rolls.developLedgerNote', { name: drawerRollTitle.trim() || selectedRoll?.name || t('rolls.unknownRoll') }),
               addedAt: Date.now()
             });
           }
@@ -1211,9 +1216,9 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
       <Drawer isOpen={isDrawerOpen && !!selectedRoll} onClose={() => setIsDrawerOpen(false)} width={600}>
         {selectedRoll && (
           <>
-            <div className="drawer-header">
+            <div className="drawer-header roll-drawer-header">
               <h2>{selectedRoll.name}</h2>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div className="roll-drawer-header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                {selectedRoll.status === 'active' && (
                 <button className="outline-btn" style={{borderColor: 'var(--success)', color: 'var(--success)', fontSize: '12px', padding: '4px 8px'}} onClick={(e) => { handleArchiveRoll(selectedRoll.id!, e); setIsDrawerOpen(false); }}>
                   {t('rolls.markCompleted')}
@@ -1228,47 +1233,58 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
             </div>
             </div>
             
-            <div className="drawer-content">
+            <div className="drawer-content roll-drawer-content">
               {/* Cover Upload Section */}
-              <div className="drawer-section">
+              <div className="drawer-section roll-drawer-section roll-drawer-cover-section">
                 <h3>{t('rolls.coverPhoto')}</h3>
-                <div className="cover-upload-container">
-                  <div className={`dropzone ${isDragOver ? 'drag-over' : ''} ${isUploading ? 'uploading' : ''}`}
-                       onDragOver={(e) => { e.preventDefault(); if (!isUploading) setIsDragOver(true); }}
-                       onDragLeave={() => setIsDragOver(false)}
-                       onDrop={isUploading ? undefined : handleDrop}
-                       style={{ height: '100%', padding: 0, border: 'none', borderRadius: 0 }}
-                  >
-                    {getCoverUrl(selectedRoll) && !isUploading ? (
-                       <div className="cover-preview" style={{ backgroundImage: `url(${getCoverUrl(selectedRoll)})`, width: '100%', height: '100%' }}>
-                          <label className="cover-upload-btn" onClick={e => e.stopPropagation()}>
-                             {t('rolls.changeCover')}
-                             <input type="file" accept="image/*" onChange={handleFileSelect} hidden />
-                          </label>
-                       </div>
-                    ) : isUploading ? (
-                       <div style={{ width: '100%', textAlign: 'center', padding: '0 20px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                          <p style={{ fontWeight: 600 }}>{t('rolls.uploadingCover')}</p>
-                          <div style={{ width: '100%', maxWidth: '300px', height: '8px', background: 'var(--border-color)', borderRadius: '4px', overflow: 'hidden', margin: '12px auto' }}>
-                            <div style={{ width: `${uploadProgress}%`, height: '100%', background: 'var(--accent)', transition: 'width 0.2s ease' }} />
+                <div className="roll-cover-editor">
+                  <div className="cover-upload-container">
+                    <div className={`dropzone ${isDragOver ? 'drag-over' : ''} ${isUploading ? 'uploading' : ''}`}
+                         onDragOver={(e) => { e.preventDefault(); if (!isUploading) setIsDragOver(true); }}
+                         onDragLeave={() => setIsDragOver(false)}
+                         onDrop={isUploading ? undefined : handleDrop}
+                         style={{ height: '100%', padding: 0, border: 'none', borderRadius: 0 }}
+                    >
+                      {getCoverUrl(selectedRoll) && !isUploading ? (
+                        <div className="cover-preview" style={{ backgroundImage: `url(${getCoverUrl(selectedRoll)})`, width: '100%', height: '100%' }} />
+                      ) : isUploading ? (
+                        <div className="roll-cover-uploading">
+                          <span>{uploadProgress}%</span>
+                          <div className="roll-cover-progress-track">
+                            <div className="roll-cover-progress-value" style={{ width: `${uploadProgress}%` }} />
                           </div>
-                       </div>
-                    ) : (
-                       <label className="cover-upload-placeholder" style={{ width: '100%', height: '100%' }}>
-                         <Upload size={24} />
-                         <span>{t('rolls.uploadCoverHint')}</span>
-                         <input type="file" accept="image/*" onChange={handleFileSelect} hidden />
-                       </label>
-                    )}
+                        </div>
+                      ) : (
+                        <div className="cover-upload-placeholder" style={{ width: '100%', height: '100%' }}>
+                          <Upload size={22} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="roll-cover-editor-content">
+                    <p>{getCoverUrl(selectedRoll) ? t('rolls.coverCustom') : t('rolls.uploadCoverHint')}</p>
+                    <button
+                      type="button"
+                      className="secondary roll-cover-action"
+                      onClick={() => coverFileInputRef.current?.click()}
+                      disabled={isUploading}
+                    >
+                      {isUploading
+                        ? t('rolls.uploadingCover')
+                        : getCoverUrl(selectedRoll)
+                          ? t('rolls.changeCover')
+                          : t('rolls.uploadCover')}
+                    </button>
+                    <input ref={coverFileInputRef} type="file" accept="image/*" onChange={handleFileSelect} disabled={isUploading} hidden />
                   </div>
                 </div>
               </div>
               
-              <div className="drawer-section">
+              <div className="drawer-section roll-drawer-section roll-drawer-gear-section">
                 <h3>{t('rolls.gearAndFilm')}</h3>
-                <div className="form-group">
-                  <label>{t('rolls.camera')}</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px', marginBottom: '12px' }}>
+                <div className="form-group roll-drawer-choice-field">
+                  <label className="roll-drawer-field-label">{t('rolls.camera')}</label>
+                  <div className="roll-drawer-chip-list" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {cameras.map(c => {
                       const isSelected = (selectedRoll.cameraIds || []).includes(c.id!);
                       return (
@@ -1290,8 +1306,8 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                     })}
                   </div>
                   
-                  <label>{t('rolls.lensMultiOptional')}</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px', marginBottom: '12px' }}>
+                  <label className="roll-drawer-field-label">{t('rolls.lensMultiOptional')}</label>
+                  <div className="roll-drawer-chip-list" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {lenses.length === 0 ? (
                       <div className="roll-form-hint">{t('rolls.noLensHint')}</div>
                     ) : (
@@ -1318,15 +1334,15 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                   </div>
 
                   {selectedRoll.filmBackId && (
-                    <div className="roll-form-hint" style={{ marginBottom: '12px' }}>
+                    <div className="roll-form-hint roll-drawer-inline-hint">
                       {t('rolls.currentBack', { name: getFilmBackName(selectedRoll.filmBackId) })}
                     </div>
                   )}
 
                   {enableFilmMode && (
                     <>
-                      <label>{t('rolls.filmStock')}</label>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px', marginBottom: '16px' }}>
+                      <label className="roll-drawer-field-label">{t('rolls.filmStock')}</label>
+                      <div className="roll-drawer-chip-list" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                         {visibleFilmStocks.map(f => {
                           const isSelected = selectedRoll.filmStockId === f.id;
                           return (
@@ -1349,10 +1365,23 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                 </div>
               </div>
 
-              <div className="drawer-section">
+              <div className="drawer-section roll-drawer-section roll-drawer-shooting-section">
                 <h3>{t('rolls.shootingInfo')}</h3>
                 
-                <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+                <div className="roll-drawer-name-row" style={{ display: 'flex', gap: '16px' }}>
+                  <div className="form-group" style={{ flex: 1, margin: 0 }}>
+                    <label>{t('rolls.rollName')}</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder={t('rolls.rollNamePlaceholder')}
+                      value={drawerRollTitle}
+                      onChange={e => setDrawerRollTitle(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="roll-drawer-date-row" style={{ display: 'flex', gap: '16px' }}>
                   <div className="form-group" style={{ flex: 1, margin: 0 }}>
                     <label>{t('rolls.startDateLabel')}</label>
                     <input 
@@ -1421,7 +1450,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                 </div>
               </div>
               
-              <div className="drawer-section">
+              <div className="drawer-section roll-drawer-section roll-drawer-lab-section">
                 <h3 style={{ color: 'var(--accent)' }}>{t('rolls.labRecord')}</h3>
                 <div className="form-group">
                   <label>{t('rolls.developmentCost', { symbol: currencySymbol })}</label>
@@ -1434,7 +1463,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
               </div>
             </div>
             
-            <div className="drawer-footer">
+            <div className="drawer-footer roll-drawer-footer">
               <button className="primary full-width" onClick={handleSaveDetails}>
                 {t('rolls.saveAllChanges')}
               </button>
@@ -1444,57 +1473,33 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
       </Drawer>
 
       {/* --- NEW ROLL MODAL --- */}
-      <Modal isOpen={isNewRollModalOpen} onClose={() => setIsNewRollModalOpen(false)}>
+      <Modal
+        isOpen={isNewRollModalOpen}
+        onClose={() => setIsNewRollModalOpen(false)}
+        style={{ maxWidth: '600px', maxHeight: 'calc(100dvh - 40px)' }}
+      >
             <h3>{t('rolls.newRollModalTitle')}</h3>
-            <form onSubmit={handleCreateRoll}>
-              <div className="form-group">
+            <form className="new-roll-form" onSubmit={handleCreateRoll}>
+              <div className="form-group new-roll-intro-section">
                 <label>{t('rolls.rollName')}</label>
                 <input type="text" className="form-control" placeholder={t('rolls.rollNamePlaceholder')} value={rollTitle} onChange={e => setRollTitle(e.target.value)} required />
               </div>
 
-              <div className="form-group">
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <label>{t('rolls.cameraRequired')}</label>
-                  <button type="button" className="text-btn" onClick={() => setQuickAddCameraOpen(true)}>{t('rolls.quickAddCamera')}</button>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
-                  {cameras.map(c => {
-                    const isSelected = selectedCameraIds.includes(c.id!);
-                    return (
-                      <div 
-                        key={c.id} 
-                        onClick={() => {
-                          if (isSelected) setSelectedCameraIds(prev => prev.filter(id => id !== c.id));
-                          else setSelectedCameraIds(prev => [...prev, c.id!]);
-                        }}
-                        style={{ 
-                          padding: '6px 12px', border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border-color)'}`, 
-                          borderRadius: '16px', fontSize: '12px', cursor: 'pointer',
-                          background: isSelected ? 'var(--accent)' : 'transparent',
-                          color: isSelected ? '#fff' : 'inherit'
-                        }}
-                      >
-                        {c.name}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>{t('rolls.lensOptional')}</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
-                  {lenses.length === 0 ? (
-                    <div className="roll-form-hint">{t('rolls.noLensHint')}</div>
-                  ) : (
-                    lenses.map(lens => {
-                      const isSelected = selectedLensIds.includes(lens.id!);
+              <div className="new-roll-section new-roll-field-grid new-roll-field-grid--equipment">
+                <div className="form-group">
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <label>{t('rolls.cameraRequired')}</label>
+                    <button type="button" className="text-btn" onClick={() => setQuickAddCameraOpen(true)}>{t('rolls.quickAddCamera')}</button>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+                    {cameras.map(c => {
+                      const isSelected = selectedCameraIds.includes(c.id!);
                       return (
                         <div
-                          key={lens.id}
+                          key={c.id}
                           onClick={() => {
-                            if (isSelected) setSelectedLensIds(prev => prev.filter(id => id !== lens.id));
-                            else setSelectedLensIds(prev => [...prev, lens.id!]);
+                            if (isSelected) setSelectedCameraIds(prev => prev.filter(id => id !== c.id));
+                            else setSelectedCameraIds(prev => [...prev, c.id!]);
                           }}
                           style={{
                             padding: '6px 12px', border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border-color)'}`,
@@ -1503,16 +1508,46 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                             color: isSelected ? '#fff' : 'inherit'
                           }}
                         >
-                          {lens.name}
+                          {c.name}
                         </div>
                       );
-                    })
-                  )}
+                    })}
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>{t('rolls.lensOptional')}</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+                    {lenses.length === 0 ? (
+                      <div className="roll-form-hint">{t('rolls.noLensHint')}</div>
+                    ) : (
+                      lenses.map(lens => {
+                        const isSelected = selectedLensIds.includes(lens.id!);
+                        return (
+                          <div
+                            key={lens.id}
+                            onClick={() => {
+                              if (isSelected) setSelectedLensIds(prev => prev.filter(id => id !== lens.id));
+                              else setSelectedLensIds(prev => [...prev, lens.id!]);
+                            }}
+                            style={{
+                              padding: '6px 12px', border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border-color)'}`,
+                              borderRadius: '16px', fontSize: '12px', cursor: 'pointer',
+                              background: isSelected ? 'var(--accent)' : 'transparent',
+                              color: isSelected ? '#fff' : 'inherit'
+                            }}
+                          >
+                            {lens.name}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
               </div>
 
               {selectedRequiresFilmBack && (
-                <div className="form-group">
+                <div className="form-group new-roll-section">
                   <label>{t('rolls.filmBackRequired')}</label>
                   <div className="film-back-picker">
                     {compatibleFilmBacks.length === 0 ? (
@@ -1543,86 +1578,86 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
 
               {enableFilmMode && (
                 <>
-                  <div className="form-group">
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <label>{t('rolls.filmRequired')}</label>
-                      <button type="button" className="text-btn" onClick={openQuickAddFilm}>{t('rolls.quickAdd')}</button>
-                    </div>
-                    <div style={{ position: 'relative' }}>
-                      <div className="search-input-wrapper">
-                        <Search className="search-icon" size={16} />
-                        <input 
-                            type="text" 
-                            className="form-control premium-search-input" 
-                            placeholder={t('rolls.filmSearchPlaceholder')}
-                            value={filmSearchText} 
-                            onFocus={() => setIsFilmDropdownOpen(true)}
-                            onBlur={() => setTimeout(() => setIsFilmDropdownOpen(false), 200)}
-                            onChange={e => {
-                                setFilmSearchText(e.target.value);
-                                setIsFilmDropdownOpen(true);
-                                const matched = visibleFilmStocks.find(f => `${f.brand} ${f.name}`.toLowerCase() === e.target.value.trim().toLowerCase());
-                                if (matched) setSelectedFilmId(matched.id!);
-                                else setSelectedFilmId('');
-                            }}
-                            required={enableFilmMode}
-                            style={{ borderColor: selectedFilmId ? 'var(--success)' : 'var(--border-color)' }}
-                        />
+                  <div className="new-roll-section new-roll-field-grid new-roll-field-grid--film">
+                    <div className="form-group">
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <label>{t('rolls.filmRequired')}</label>
+                        <button type="button" className="text-btn" onClick={openQuickAddFilm}>{t('rolls.quickAdd')}</button>
                       </div>
-                      
-                      {isFilmDropdownOpen && (
-                        <motion.ul 
-                          className="custom-dropdown-menu glass-dropdown"
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ duration: 0.15, ease: "easeOut" }}
-                        >
-                          {visibleFilmStocks.filter(f => `${f.brand} ${f.name}`.toLowerCase().includes(filmSearchText.toLowerCase())).length > 0 ? (
-                            visibleFilmStocks.filter(f => `${f.brand} ${f.name}`.toLowerCase().includes(filmSearchText.toLowerCase())).map(f => (
-                              <li key={f.id} className="custom-dropdown-item" onClick={() => {
-                                  setFilmSearchText(`${f.brand} ${f.name}`);
-                                  setSelectedFilmId(f.id!);
-                                  setIsFilmDropdownOpen(false);
-                              }}>
-                                <div className="dropdown-item-title">{f.brand} {f.name}</div>
-                                <div className="dropdown-item-meta">{t('rolls.filmStockMeta', { iso: f.iso, count: f.stockCount || 0 })}</div>
+                      <div style={{ position: 'relative' }}>
+                        <div className="search-input-wrapper">
+                          <Search className="search-icon" size={16} />
+                          <input
+                              type="text"
+                              className="form-control premium-search-input"
+                              placeholder={t('rolls.filmSearchPlaceholder')}
+                              value={filmSearchText}
+                              onFocus={() => setIsFilmDropdownOpen(true)}
+                              onBlur={() => setTimeout(() => setIsFilmDropdownOpen(false), 200)}
+                              onChange={e => {
+                                  setFilmSearchText(e.target.value);
+                                  setIsFilmDropdownOpen(true);
+                                  const matched = visibleFilmStocks.find(f => `${f.brand} ${f.name}`.toLowerCase() === e.target.value.trim().toLowerCase());
+                                  if (matched) setSelectedFilmId(matched.id!);
+                                  else setSelectedFilmId('');
+                              }}
+                              required={enableFilmMode}
+                              style={{ borderColor: selectedFilmId ? 'var(--success)' : 'var(--border-color)' }}
+                          />
+                        </div>
+                        {isFilmDropdownOpen && (
+                          <motion.ul
+                            className="custom-dropdown-menu glass-dropdown"
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.15, ease: "easeOut" }}
+                          >
+                            {visibleFilmStocks.filter(f => `${f.brand} ${f.name}`.toLowerCase().includes(filmSearchText.toLowerCase())).length > 0 ? (
+                              visibleFilmStocks.filter(f => `${f.brand} ${f.name}`.toLowerCase().includes(filmSearchText.toLowerCase())).map(f => (
+                                <li key={f.id} className="custom-dropdown-item" onClick={() => {
+                                    setFilmSearchText(`${f.brand} ${f.name}`);
+                                    setSelectedFilmId(f.id!);
+                                    setIsFilmDropdownOpen(false);
+                                }}>
+                                  <div className="dropdown-item-title">{f.brand} {f.name}</div>
+                                  <div className="dropdown-item-meta">{t('rolls.filmStockMeta', { iso: f.iso, count: f.stockCount || 0 })}</div>
+                                </li>
+                              ))
+                            ) : (
+                              <div className="dropdown-empty-state">{t('rolls.filmNotFound')}</div>
+                            )}
+                            {!visibleFilmStocks.some(f => `${f.brand} ${f.name}`.toLowerCase() === filmSearchText.trim().toLowerCase()) && filmSearchText.trim() !== '' && (
+                              <li className="custom-dropdown-item create-new-item" onClick={() => setIsFilmDropdownOpen(false)}>
+                                <div className="dropdown-item-title dropdown-item-new"><Sparkles size={14} style={{ display: 'inline-block', verticalAlign: 'text-bottom', marginRight: '4px' }}/> {t('rolls.quickCreateFilm', { name: filmSearchText })}</div>
+                                <div className="dropdown-item-meta">{t('rolls.quickCreateFilmHint')}</div>
                               </li>
-                            ))
-                          ) : (
-                            <div className="dropdown-empty-state">{t('rolls.filmNotFound')}</div>
-                          )}
-                          {!visibleFilmStocks.some(f => `${f.brand} ${f.name}`.toLowerCase() === filmSearchText.trim().toLowerCase()) && filmSearchText.trim() !== '' && (
-                            <li className="custom-dropdown-item create-new-item" onClick={() => setIsFilmDropdownOpen(false)}>
-                              <div className="dropdown-item-title dropdown-item-new"><Sparkles size={14} style={{ display: 'inline-block', verticalAlign: 'text-bottom', marginRight: '4px' }}/> {t('rolls.quickCreateFilm', { name: filmSearchText })}</div>
-                              <div className="dropdown-item-meta">{t('rolls.quickCreateFilmHint')}</div>
-                            </li>
-                          )}
-                        </motion.ul>
+                            )}
+                          </motion.ul>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label>{t('rolls.rollFilmCost', { symbol: currencySymbol })}</label>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <button type="button" className="secondary icon-btn" onClick={() => setRollFilmPrice(p => Math.max(0, (Number(p) || 0) - 5))} title="-5">-5</button>
+                        <button type="button" className="secondary icon-btn" onClick={() => setRollFilmPrice(p => Math.max(0, (Number(p) || 0) - 1))} title="-1">-1</button>
+                        <input type="number" className="form-control" style={{ textAlign: 'center', margin: 0 }} placeholder={t('rolls.costPlaceholder')} value={rollFilmPrice} onChange={e => setRollFilmPrice(e.target.value ? Number(e.target.value) : '')} />
+                        <button type="button" className="secondary icon-btn" onClick={() => setRollFilmPrice(p => (Number(p) || 0) + 1)} title="+1">+1</button>
+                        <button type="button" className="secondary icon-btn" onClick={() => setRollFilmPrice(p => (Number(p) || 0) + 5)} title="+5">+5</button>
+                      </div>
+                      {rollFilmPrice !== '' && (
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px', fontSize: '13px', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={generateFilmExpense} onChange={e => setGenerateFilmExpense(e.target.checked)} />
+                          <span>{t('rolls.syncFilmExpense')}</span>
+                        </label>
                       )}
-                      
                     </div>
-                  </div>
-                  
-                  <div className="form-group">
-                    <label>{t('rolls.rollFilmCost', { symbol: currencySymbol })}</label>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <button type="button" className="secondary icon-btn" onClick={() => setRollFilmPrice(p => Math.max(0, (Number(p) || 0) - 5))} title="-5">-5</button>
-                      <button type="button" className="secondary icon-btn" onClick={() => setRollFilmPrice(p => Math.max(0, (Number(p) || 0) - 1))} title="-1">-1</button>
-                      <input type="number" className="form-control" style={{ textAlign: 'center', margin: 0 }} placeholder={t('rolls.costPlaceholder')} value={rollFilmPrice} onChange={e => setRollFilmPrice(e.target.value ? Number(e.target.value) : '')} />
-                      <button type="button" className="secondary icon-btn" onClick={() => setRollFilmPrice(p => (Number(p) || 0) + 1)} title="+1">+1</button>
-                      <button type="button" className="secondary icon-btn" onClick={() => setRollFilmPrice(p => (Number(p) || 0) + 5)} title="+5">+5</button>
-                    </div>
-                    {rollFilmPrice !== '' && (
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px', fontSize: '13px', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={generateFilmExpense} onChange={e => setGenerateFilmExpense(e.target.checked)} />
-                        <span>{t('rolls.syncFilmExpense')}</span>
-                      </label>
-                    )}
                   </div>
                 </>
               )}
 
-              <div className="modal-actions" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+              <div className="modal-actions new-roll-actions" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)' }}>
                   <input type="checkbox" checked={keepModalOpen} onChange={e => setKeepModalOpen(e.target.checked)} />
                   {t('rolls.saveAndCreateNext')}

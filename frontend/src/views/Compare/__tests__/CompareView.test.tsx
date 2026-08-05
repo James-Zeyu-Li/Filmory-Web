@@ -4,8 +4,8 @@ import { CompareView } from '../CompareView';
 
 // Mock URL.createObjectURL since JSDOM doesn't support it natively
 beforeAll(() => {
-  global.URL.createObjectURL = vi.fn(() => 'mock-url');
-  global.URL.revokeObjectURL = vi.fn();
+  globalThis.URL.createObjectURL = vi.fn(() => 'mock-url');
+  globalThis.URL.revokeObjectURL = vi.fn();
 });
 
 describe('CompareView', () => {

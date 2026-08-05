@@ -325,6 +325,10 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     }
   };
 
+  const preventNumberInputWheelChange = (event: React.WheelEvent<HTMLInputElement>) => {
+    event.currentTarget.blur();
+  };
+
   // Actions
 
   // Filter and Sort logic
@@ -432,6 +436,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
   const visibleFilmModelOptions = filmModelOptions.filter(film =>
     `${film.brand} ${film.name} ${film.iso}`.toLowerCase().includes(filmModelSearch.trim().toLowerCase())
   );
+  const hasSelectedFilmPreset = !editingFilmId && Boolean(newFilm.brand && newFilm.name);
 
   const handleAddFilmBack = async () => {
     if (!newFilmBackName.trim() || !user) return;
@@ -529,7 +534,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     setFilmDictSearch('');
     setFilmModelSearch('');
     setIsDictDropdownOpen(false);
-    setShowManualFilmForm(true);
+    setShowManualFilmForm(false);
   };
 
   const filteredLensPresets = COMMON_LENSES.filter(lens => {
@@ -1195,7 +1200,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     setFilmBrandSearch('');
     setFilmModelSearch('');
     setFilmDictSearch('');
-    setShowManualFilmForm(true);
+    setShowManualFilmForm(false);
     setIsFilmModalOpen(true);
   };
 
@@ -2793,16 +2798,78 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
               )}
             </div>
           )}
+                    <div className="form-group">
+            <label htmlFor="film-stock-count">
+              {editingFilmId ? t('gear.stockCount') : t('gear.addStockCount')}
+            </label>
+            <input
+              id="film-stock-count"
+              type="number"
+              className="form-control"
+              min={editingFilmId ? '0' : '1'}
+              placeholder={editingFilmId ? t('gear.stockCountPlaceholder') : t('gear.addStockCountPlaceholder')}
+              value={newFilm.stockCount === undefined ? '' : newFilm.stockCount}
+              onChange={e => setNewFilm({...newFilm, stockCount: e.target.value === '' ? undefined : parseInt(e.target.value, 10)})}
+              onWheel={preventNumberInputWheelChange}
+              onKeyDown={handleKeyDown}
+              enterKeyHint="next"
+            />
+          </div>
+          <div className="form-group">
+            <label>{t('gear.averagePricePerRoll', { symbol: currencySymbol })}</label>
+            <input
+              type="number"
+              className="form-control"
+              placeholder={t('gear.pricePerRollPlaceholder')}
+              value={newFilm.pricePerRoll || ''}
+              onChange={e => setNewFilm({...newFilm, pricePerRoll: e.target.value ? Number(e.target.value) : undefined})}
+              onWheel={preventNumberInputWheelChange}
+              onKeyDown={handleKeyDown}
+              enterKeyHint="next"
+            />
+          </div>
 
           {(!editingFilmId && !showManualFilmForm) ? (
-            <div style={{ textAlign: 'center', margin: '8px 0 24px 0' }}>
-              <button type="button" className="text-btn" onClick={() => setShowManualFilmForm(true)}>{t('gear.manualFilmToggle')}</button>
+            hasSelectedFilmPreset ? (
+              <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                  <div>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>{t('gear.manualFilmConfig')}</div>
+                    <div style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: 600 }}>{newFilm.brand} {newFilm.name}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                      ISO {newFilm.iso} · {newFilm.colorType === 'color' ? t('gear.color') : t('gear.bw')} · {newFilm.format}
+                    </div>
+                  </div>
+                  <button type="button" className="text-btn" onClick={() => setShowManualFilmForm(true)}>
+                    {t('gear.customizeFilmDetails')}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', margin: '8px 0 24px 0' }}>
+                <button type="button" className="text-btn" onClick={() => setShowManualFilmForm(true)}>{t('gear.manualFilmToggle')}</button>
+              </div>
+            )
+          ) : (editingFilmId && !showManualFilmForm) ? (
+            <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>{t('gear.manualFilmConfig')}</div>
+                  <div style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: 600 }}>{newFilm.brand} {newFilm.name}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    ISO {newFilm.iso} · {newFilm.colorType === 'color' ? t('gear.color') : t('gear.bw')} · {newFilm.format}
+                  </div>
+                </div>
+                <button type="button" className="text-btn" onClick={() => setShowManualFilmForm(true)}>
+                  {t('gear.customizeFilmDetails')}
+                </button>
+              </div>
             </div>
           ) : (
             <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px', marginBottom: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('gear.manualFilmConfig')}</span>
-                {!editingFilmId && <button type="button" className="text-btn" style={{ fontSize: '12px' }} onClick={() => setShowManualFilmForm(false)}>{t('gear.collapse')}</button>}
+                <button type="button" className="text-btn" style={{ fontSize: '12px' }} onClick={() => setShowManualFilmForm(false)}>{t('gear.collapse')}</button>
               </div>
               <div className="form-group">
                 <label>{t('gear.brandMaker')}</label>
@@ -2842,63 +2909,38 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                   required={showManualFilmForm || !!editingFilmId}
                 />
               </div>
-            </div>
-          )}
-          <div className="form-group">
-            <label htmlFor="film-stock-count">
-              {editingFilmId ? t('gear.stockCount') : t('gear.addStockCount')}
-            </label>
-            <input
-              id="film-stock-count"
-              type="number"
-              className="form-control"
-              min={editingFilmId ? '0' : '1'}
-              placeholder={editingFilmId ? t('gear.stockCountPlaceholder') : t('gear.addStockCountPlaceholder')}
-              value={newFilm.stockCount === undefined ? '' : newFilm.stockCount}
-              onChange={e => setNewFilm({...newFilm, stockCount: e.target.value === '' ? undefined : parseInt(e.target.value, 10)})}
-              onWheel={event => event.currentTarget.blur()}
-              onKeyDown={handleKeyDown}
-              enterKeyHint="next"
-            />
-          </div>
-          <div className="form-group">
-            <label>{t('gear.colorType')}</label>
-            <select
-              className="form-control"
-              value={newFilm.colorType}
-              onChange={e => setNewFilm({...newFilm, colorType: e.target.value as any})}
-              onKeyDown={handleKeyDown}
-            >
-              <option value="color">{t('gear.colorFilm')}</option>
-              <option value="bw">{t('gear.bwFilm')}</option>
-            </select>
-          </div>
-          {editingFilmId && (
-            <div className="form-group">
+              <div className="form-group">
+                <label>{t('gear.colorType')}</label>
+                <select
+                  className="form-control"
+                  value={newFilm.colorType}
+                  onChange={e => setNewFilm({...newFilm, colorType: e.target.value as any})}
+                  onKeyDown={handleKeyDown}
+                >
+                  <option value="color">{t('gear.colorFilm')}</option>
+                  <option value="bw">{t('gear.bwFilm')}</option>
+                </select>
+              </div>
+              <div className="form-group">
                 <label>{t('gear.formatSize')}</label>
-              <select
-                className="form-control"
-                value={newFilm.format}
-                onChange={e => setNewFilm({...newFilm, format: e.target.value})}
-                onKeyDown={handleKeyDown}
-              >
-                <option value="135">{t('gear.format135')}</option>
-                <option value="120">{t('gear.format120')}</option>
-              </select>
+                <select
+                  className="form-control"
+                  value={newFilm.format}
+                  onChange={e => {
+                    const nextFormat = e.target.value as '135' | '120';
+                    setNewFilm({...newFilm, format: nextFormat});
+                    if (!editingFilmId) {
+                      setFilmFormatFilter(nextFormat);
+                    }
+                  }}
+                  onKeyDown={handleKeyDown}
+                >
+                  <option value="135">{t('gear.format135')}</option>
+                  <option value="120">{t('gear.format120')}</option>
+                </select>
+              </div>
             </div>
           )}
-          <div className="form-group">
-            <label>{t('gear.averagePricePerRoll', { symbol: currencySymbol })}</label>
-            <input
-              type="number"
-              className="form-control"
-              placeholder={t('gear.pricePerRollPlaceholder')}
-              value={newFilm.pricePerRoll || ''}
-              onChange={e => setNewFilm({...newFilm, pricePerRoll: e.target.value ? Number(e.target.value) : undefined})}
-              onKeyDown={handleKeyDown}
-              enterKeyHint="next"
-            />
-          </div>
           <div className="modal-actions" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)' }}>
               <input type="checkbox" checked={keepModalOpen} onChange={e => setKeepModalOpen(e.target.checked)} />

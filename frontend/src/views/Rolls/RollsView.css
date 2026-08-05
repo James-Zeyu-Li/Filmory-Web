@@ -501,6 +501,65 @@
   border-radius: var(--radius-md);
 }
 
+/* Keep the new-record form readable without changing spacing in other modals. */
+.new-roll-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.new-roll-form .form-group {
+  margin-bottom: 0;
+}
+
+.new-roll-intro-section {
+  padding-bottom: 20px;
+}
+
+.new-roll-section {
+  border-top: 1px solid var(--border-color);
+  padding-top: 20px;
+}
+
+.new-roll-field-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.new-roll-field-grid--equipment .form-group + .form-group,
+.new-roll-field-grid--film .form-group + .form-group {
+  border-top: 1px solid var(--border-color);
+  padding-top: 20px;
+}
+
+.new-roll-form .text-btn {
+  min-height: 36px;
+  padding: 6px 8px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.new-roll-form .text-btn:hover {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  filter: none;
+}
+
+.new-roll-actions {
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+@media (max-width: 640px) {
+  .new-roll-form .text-btn {
+    min-height: 40px;
+  }
+}
+
 .unified-rolls-view .rolls-toolbar {
   position: sticky;
   top: 89px;
@@ -550,24 +609,32 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border-color);
   background-color: var(--bg-secondary);
+  flex-shrink: 0;
 }
 
 .drawer-header h2 {
   font-size: 20px;
   font-weight: 700;
   color: var(--text-primary);
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .drawer-content {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 32px;
+  overscroll-behavior: contain;
 }
 
 .drawer-section {
@@ -577,13 +644,132 @@
 }
 
 .drawer-section h3 {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-bottom: 1px solid var(--border-color);
-  padding-bottom: 8px;
+  padding-bottom: 10px;
+  margin: 0;
+}
+
+.roll-drawer-header-actions {
+  flex-shrink: 0;
+}
+
+.roll-drawer-header-actions .icon-btn {
+  width: 40px;
+  height: 40px;
+  padding: 9px;
+}
+
+.roll-drawer-header-actions .outline-btn {
+  min-height: 36px;
+  padding: 6px 10px !important;
+}
+
+.roll-drawer-content .form-group {
+  margin-bottom: 0;
+}
+
+.roll-drawer-cover-section .cover-upload-container {
+  width: 76px;
+  height: 76px;
+  flex: 0 0 76px;
+  aspect-ratio: 1;
+  max-height: none;
+}
+
+.roll-cover-editor {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-tertiary);
+}
+
+.roll-cover-editor-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.roll-cover-editor-content p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.roll-cover-action {
+  min-height: 36px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.roll-cover-uploading {
+  width: 100%;
+  height: 100%;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.roll-cover-progress-track {
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--border-color);
+}
+
+.roll-cover-progress-value {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+
+.roll-drawer-choice-field {
+  gap: 8px;
+}
+
+.roll-drawer-choice-field + .roll-drawer-choice-field {
+  border-top: 1px solid var(--border-color);
+  padding-top: 16px;
+}
+
+.roll-drawer-field-label {
+  margin: 0;
+}
+
+.roll-drawer-chip-list {
+  margin: 0 !important;
+}
+
+.roll-drawer-inline-hint {
+  margin: 0;
+}
+
+.roll-drawer-shooting-section .form-group,
+.roll-drawer-lab-section .form-group {
+  margin: 0;
+}
+
+.roll-drawer-lab-section h3 {
+  color: var(--accent);
 }
 
 /* Cover Upload in Drawer */
@@ -652,9 +838,11 @@
 }
 
 .drawer-footer {
-  padding: 24px;
+  flex-shrink: 0;
+  padding: 20px 24px;
   border-top: 1px solid var(--border-color);
   background-color: var(--bg-secondary);
+  box-shadow: 0 -8px 20px rgba(0, 0, 0, 0.12);
 }
 
 .star-rating {
@@ -928,6 +1116,33 @@
 /* === MOBILE RESPONSIVE LAYOUT (Max width: 768px) === */
 
 @media (max-width: 768px) {
+  .roll-drawer-header {
+    padding: 14px 16px;
+  }
+
+  .roll-drawer-header-actions {
+    gap: 4px !important;
+  }
+
+  .roll-drawer-content {
+    padding: 20px 16px;
+    gap: 24px;
+  }
+
+  .roll-cover-editor-content {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .roll-drawer-date-row {
+    flex-direction: column;
+    gap: 12px !important;
+  }
+
+  .roll-drawer-footer {
+    padding: 12px 16px;
+  }
+
   .unified-rolls-view .rolls-toolbar {
     position: static;
   }
