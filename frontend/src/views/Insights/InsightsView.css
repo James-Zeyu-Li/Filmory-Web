@@ -5,6 +5,43 @@
 .insights-body {
   display: flex;
   flex-direction: column;
+  gap: 20px;
+}
+
+.insights-tabs {
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+}
+
+.insights-tabs button {
+  min-height: 36px;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: calc(var(--radius-md) - 3px);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.insights-tabs button:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.insights-tabs button.active {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.insights-tab-panel {
+  min-width: 0;
 }
 
 @media (max-width: 1024px) {
@@ -16,5 +53,13 @@
 @media (max-width: 768px) {
   .insights-page .view-body {
     padding: 16px 12px 0;
+  }
+
+  .insights-tabs {
+    align-self: stretch;
+  }
+
+  .insights-tabs button {
+    flex: 1;
   }
 }

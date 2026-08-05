@@ -451,6 +451,10 @@ export const translations = {
     'dashboard.noActiveCameras': '没有机器正在拍摄中。',
     'dashboard.cameraActiveRollCount': '{{count}} 卷进行中',
     'dashboard.unboundCamera': '未绑定相机',
+    'insights.title': '洞察',
+    'insights.subtitle': '回顾拍摄习惯和花费记录。',
+    'insights.shootingTab': '拍摄',
+    'insights.spendingTab': '花费',
 
     'settings.title': '设置与数据保护',
     'settings.devMode': '开发者模式',
