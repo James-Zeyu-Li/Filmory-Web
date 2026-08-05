@@ -1,15 +1,10 @@
 import { motion } from 'framer-motion';
-import { useState } from 'react';
 import {
-  Camera, Columns, LayoutDashboard,
-  Play, BarChart2, Calendar, ArrowRight, Film, Package, UploadCloud, Aperture, Layers
+  Camera, LayoutDashboard,
+  Play, Calendar, ArrowRight, Film, Package, Aperture, Layers
 } from 'lucide-react';
-import { ExcelImportModal } from '../../components/ExcelImportModal';
-import { StatsView } from '../Stats/StatsView';
 import './DashboardView.css';
 import { useRolls, useCameras, useFilmStocks, useFilmBacks, useLenses } from '../../hooks/useData';
-import { useAuth } from '../../contexts/useAuth';
-import { useTrialGate } from '../../contexts/useTrialGate';
 import { useLanguage } from '../../contexts/useLanguage';
 
 interface DashboardViewProps {
@@ -27,9 +22,6 @@ const cardVariants = {
 };
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, onNavigate }) => {
-  const [showExcelModal, setShowExcelModal] = useState(false);
-  const { authMode } = useAuth();
-  const { requireRegistration } = useTrialGate();
   const { t } = useLanguage();
   const rolls = useRolls();
   const cameras = useCameras();
@@ -61,9 +53,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
   });
   const activeFilmBackIds = Array.from(new Set(
     activeRolls.map(r => r.filmBackId).filter((id): id is string => Boolean(id))
-  ));
-  const activeLensIds = Array.from(new Set(
-    activeRolls.flatMap(r => r.lensIds || []).filter((id): id is string => Boolean(id))
   ));
   const showLoadedBackMetric = (
     cameras.some(camera => camera.format === '120') ||
@@ -119,7 +108,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
 
         {/* Row 1: Key Metrics */}
         <div className="dash-section">
-          <h3>{t('dashboard.today')}</h3>
+          <h2 className="dash-section-title">{t('dashboard.workspace')}</h2>
           <div className="metrics-grid">
             <div className="metric-card">
               <div className="metric-icon active"><Play size={18} /></div>
@@ -146,13 +135,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
                 <strong>{activeCameraSummaries.length} {t('common.cameraUnit')}</strong>
               </div>
             </div>
-            <div className="metric-card">
-              <div className="metric-icon lens"><Aperture size={18} /></div>
-              <div className="metric-data">
-                <span>{t('dashboard.activeLenses')}</span>
-                <strong>{activeLensIds.length} {t('common.lensUnit')}</strong>
-              </div>
-            </div>
             {showLoadedBackMetric && (
               <div className="metric-card">
                 <div className="metric-icon back"><Package size={18} /></div>
@@ -167,7 +149,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
 
         {/* Row 2: Launchpad (快捷入口) */}
         <div className="dash-section">
-          <h3>{t('dashboard.launchpad')}</h3>
+          <h2 className="dash-section-title">{t('dashboard.launchpad')}</h2>
           <div className="launchpad-row">
             <motion.button
               className="launchpad-pill portal-blue"
@@ -192,39 +174,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
             >
               <Camera size={16} /> <span>{t('dashboard.addCamera')}</span>
             </motion.button>
-            <motion.button
-              className="launchpad-pill portal-emerald"
-              custom={3} initial="hidden" animate="visible" variants={cardVariants}
-              onClick={() => onNavigate('insights')}
-            >
-              <BarChart2 size={16} /> <span>{t('dashboard.finance')}</span>
-            </motion.button>
-            <motion.button
-              className="launchpad-pill portal-purple"
-              custom={4} initial="hidden" animate="visible" variants={cardVariants}
-              onClick={() => onNavigate('compare')}
-            >
-              <Columns size={16} /> <span>{t('dashboard.compare')}</span>
-            </motion.button>
-            <motion.button
-              className="launchpad-pill"
-              custom={5} initial="hidden" animate="visible" variants={cardVariants}
-              onClick={() => {
-                if (authMode === 'trial') {
-                  requireRegistration('rolls');
-                  return;
-                }
-                setShowExcelModal(true);
-              }}
-            >
-              <UploadCloud size={16} /> <span>{t('dashboard.import')}</span>
-            </motion.button>
           </div>
         </div>
 
         {/* Row 3: Ongoing Rolls */}
         <div className="dash-section">
-          <h3>{t('dashboard.activeRollsTitle', { count: activeRolls.length })}</h3>
+          <h2 className="dash-section-title">{t('dashboard.activeRollsTitle', { count: activeRolls.length })}</h2>
           <div className="active-rolls-list">
             {activeRolls.length === 0 ? (
               <div className="active-rolls-empty">
@@ -279,32 +234,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
           </div>
         </div>
 
-        <div className="dash-section">
-          <h3>{t('dashboard.activeCamerasTitle', { count: activeCameraSummaries.length })}</h3>
-          <div className="dashboard-mini-list">
-            {activeCameraSummaries.length === 0 ? (
-              <div className="dashboard-empty-card">
-                <Camera size={22} />
-                <p>{t('dashboard.noActiveCameras')}</p>
-              </div>
-            ) : (
-              activeCameraSummaries.map(item => (
+        {activeCameraSummaries.length > 0 && (
+          <div className="dash-section">
+            <h2 className="dash-section-title">{t('dashboard.activeCamerasTitle', { count: activeCameraSummaries.length })}</h2>
+            <div className="dashboard-mini-list">
+              {activeCameraSummaries.map(item => (
                 <button key={item.id} className="dashboard-list-row" onClick={() => onNavigate('gear?tab=cameras')}>
                   <span>{item.name}</span>
                   <strong>{t('dashboard.cameraActiveRollCount', { count: item.rolls.length })}</strong>
                 </button>
-              ))
-            )}
+              ))}
+            </div>
           </div>
-        </div>
-
-        <div className="dash-section">
-          <h3>{t('dashboard.statsSection')}</h3>
-          <StatsView enableFilmMode={enableFilmMode} isEmbedded />
-        </div>
+        )}
 
       </div>
-      {showExcelModal && <ExcelImportModal onClose={() => setShowExcelModal(false)} />}
     </div>
   );
 };

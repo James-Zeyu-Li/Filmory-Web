@@ -17,10 +17,6 @@ vi.mock('../hooks/useData', () => ({
   useLenses: () => mockUseLenses(),
 }));
 
-vi.mock('../views/Stats/StatsView', () => ({
-  StatsView: () => <div data-testid="dashboard-stats-view">stats content</div>,
-}));
-
 describe('Dashboard metrics', () => {
   const onNavigate = vi.fn();
 
@@ -159,7 +155,7 @@ describe('Dashboard metrics', () => {
     expect(screen.getByText('1 个')).toBeInTheDocument();
   });
 
-  it('renders shooting stats below the active cameras section', () => {
+  it('keeps analytics out of the dashboard workspace', () => {
     mockUseRolls.mockReturnValue([]);
     mockUseCameras.mockReturnValue([]);
     mockUseFilmBacks.mockReturnValue([]);
@@ -170,7 +166,7 @@ describe('Dashboard metrics', () => {
       <DashboardView enableFilmMode={true} onNavigate={onNavigate} />
     );
 
-    expect(screen.getByRole('heading', { name: '拍摄统计' })).toBeInTheDocument();
-    expect(screen.getByTestId('dashboard-stats-view')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '拍摄统计' })).not.toBeInTheDocument();
+    expect(screen.queryByText('统计内容')).not.toBeInTheDocument();
   });
 });

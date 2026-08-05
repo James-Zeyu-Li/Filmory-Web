@@ -46,7 +46,7 @@ export const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose, children, width
               display: 'flex',
               flexDirection: 'column',
               boxShadow: '-4px 0 24px rgba(0, 0, 0, 0.1)',
-              overflowY: 'auto'
+              overflow: 'hidden'
             }}
           >
             {children}
