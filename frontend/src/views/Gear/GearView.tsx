@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { db, type Camera, type Lens, type FilmStock, type OtherEquipment } from '../../db/schema';
-import { Camera as CameraIcon, Plus, Trash2, SlidersHorizontal, Upload, X, Archive, Search, Aperture, Film, Package } from 'lucide-react';
+import { Camera as CameraIcon, Plus, Trash2, SlidersHorizontal, Upload, X, Archive, Search, Aperture, Film, Package, Check } from 'lucide-react';
 import {
   COMMON_CAMERAS,
   COMMON_FILM_STOCKS,
@@ -1413,20 +1413,46 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
               />
             </div>
 
-            <div ref={sortRef} style={{ position: 'relative' }}>
+            <div ref={sortRef} className="sort-dropdown-container">
               <button
-                className="tab-btn"
+                type="button"
+                className="sort-trigger-btn"
                 onClick={() => setIsSortOpen(!isSortOpen)}
-                style={{ height: '36px', padding: '0 12px', display: 'flex', gap: '6px', alignItems: 'center', backgroundColor: 'transparent', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)' }}
+                aria-haspopup="listbox"
+                aria-expanded={isSortOpen}
+                aria-controls="gear-sort-options"
               >
-                {sortBy === 'date' ? t('gear.sortDate') : t('gear.sortName')}
+                <span>{sortBy === 'date' ? t('gear.sortDate') : t('gear.sortName')}</span>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}><polyline points="6 9 12 15 18 9"></polyline></svg>
               </button>
               {isSortOpen && (
-                <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: '140px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '8px', zIndex: 100, boxShadow: '0 4px 20px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <div onClick={() => { setSortBy('date'); setIsSortOpen(false); }} style={{ padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', backgroundColor: sortBy === 'date' ? 'var(--accent-bg)' : 'transparent', color: sortBy === 'date' ? 'var(--accent)' : 'var(--text-primary)', fontSize: '13px' }}>{t('gear.sortDate')}</div>
-                  <div onClick={() => { setSortBy('name'); setIsSortOpen(false); }} style={{ padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', backgroundColor: sortBy === 'name' ? 'var(--accent-bg)' : 'transparent', color: sortBy === 'name' ? 'var(--accent)' : 'var(--text-primary)', fontSize: '13px' }}>{t('gear.sortName')}</div>
-                </div>
+                <>
+                  <div className="sort-menu-backdrop" onClick={() => setIsSortOpen(false)} />
+                  <div id="gear-sort-options" className="sort-dropdown-menu" role="listbox">
+                    <div className="sort-sheet-handle" />
+                    <div className="sort-sheet-title">{t('common.sortBy') || '排序方式'}</div>
+                    <button
+                      type="button"
+                      className={`sort-option ${sortBy === 'date' ? 'active' : ''}`}
+                      role="option"
+                      aria-selected={sortBy === 'date'}
+                      onClick={() => { setSortBy('date'); setIsSortOpen(false); }}
+                    >
+                      <span>{t('gear.sortDate')}</span>
+                      {sortBy === 'date' && <Check size={14} className="sort-option-check" />}
+                    </button>
+                    <button
+                      type="button"
+                      className={`sort-option ${sortBy === 'name' ? 'active' : ''}`}
+                      role="option"
+                      aria-selected={sortBy === 'name'}
+                      onClick={() => { setSortBy('name'); setIsSortOpen(false); }}
+                    >
+                      <span>{t('gear.sortName')}</span>
+                      {sortBy === 'name' && <Check size={14} className="sort-option-check" />}
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -1477,7 +1503,8 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                 const avatarFullUrl = getAvatarFullUrl(camera.avatarUrl);
 
                 return (
-                  <div key={camera.id} className="gear-card camera-card-with-avatar" onClick={(e) => { e.stopPropagation(); openEditCamera(camera); }} style={{ cursor: "pointer" }}>
+                  <div key={camera.id} className="gear-card camera-card-with-avatar" onClick={() => openEditCamera(camera)}>
+                    <button type="button" className="gear-card-open-action" onClick={(event) => { event.stopPropagation(); openEditCamera(camera); }} aria-label={`${t('gear.editCamera')}: ${camera.name}`} />
                     <div className="camera-avatar-container">
                       {avatarFullUrl ? (
                         <img
@@ -1577,7 +1604,8 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                 const avatarFullUrl = getAvatarFullUrl(lens.avatarUrl);
 
                 return (
-                <div key={lens.id} className="gear-card lens-card-horizontal" onClick={(e) => { e.stopPropagation(); openEditLens(lens); }} style={{ cursor: "pointer" }}>
+                <div key={lens.id} className="gear-card lens-card-horizontal" onClick={() => openEditLens(lens)}>
+                  <button type="button" className="gear-card-open-action" onClick={(event) => { event.stopPropagation(); openEditLens(lens); }} aria-label={`${t('gear.editLens')}: ${lens.name}`} />
                   <div className="camera-avatar-container" style={{ width: '80px', height: '80px' }}>
                     {avatarFullUrl ? (
                       <img
@@ -1674,7 +1702,8 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                 const avatarFullUrl = getAvatarFullUrl(film.avatarUrl);
 
                 return (
-                <div key={film.id} className="gear-card lens-card-horizontal" onClick={() => openEditFilm(film)} style={{ cursor: "pointer" }}>
+                <div key={film.id} className="gear-card lens-card-horizontal" onClick={() => openEditFilm(film)}>
+                  <button type="button" className="gear-card-open-action" onClick={(event) => { event.stopPropagation(); openEditFilm(film); }} aria-label={`${t('gear.editFilmStock')}: ${film.name}`} />
                   <div className="camera-avatar-container" style={{ width: '80px', height: '80px' }}>
                     {avatarFullUrl ? (
                       <img
@@ -1731,12 +1760,12 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                         <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                           <strong>{t('gear.stockCount')}:</strong> {t('gear.rollsInStock', { count: film.stockCount || 0 })}
                         </span>
-                        <div style={{ display: 'flex', gap: '6px' }}>
+                        <div className="stock-stepper-group">
                           <button
                             type="button"
-                            className="secondary"
-                            style={{ padding: '2px 8px', fontSize: '11px', minWidth: '22px', height: '22px', width: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            className="stock-stepper-btn"
                             title={t('gear.decreaseStock')}
+                            aria-label={t('gear.decreaseStock')}
                             onClick={(event) => {
                               event.stopPropagation();
                               void handleUpdateStock(film.id!, -1);
@@ -1746,9 +1775,9 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                           </button>
                           <button
                             type="button"
-                            className="secondary"
-                            style={{ padding: '2px 8px', fontSize: '11px', minWidth: '22px', height: '22px', width: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            className="stock-stepper-btn"
                             title={t('gear.increaseStock')}
+                            aria-label={t('gear.increaseStock')}
                             onClick={(event) => {
                               event.stopPropagation();
                               void handleUpdateStock(film.id!, 1);
@@ -1795,7 +1824,8 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
                 displayEquipments.map(eq => {
                   const isExpired = eq.type === 'chemical' && eq.expiryDate && eq.expiryDate < nowTimestamp;
                   return (
-                    <div key={eq.id} className={`gear-card equipment-card ${isExpired ? 'expired-alert' : ''}`} onClick={() => openEditEquipment(eq)} style={{ cursor: 'pointer' }}>
+                    <div key={eq.id} className={`gear-card equipment-card ${isExpired ? 'expired-alert' : ''}`} onClick={() => openEditEquipment(eq)}>
+                      <button type="button" className="gear-card-open-action" onClick={(event) => { event.stopPropagation(); openEditEquipment(eq); }} aria-label={`${t('gear.editGear')}: ${eq.name}`} />
                       <div className="gear-card-header">
                         <span className={`tag eq-${eq.type}`}>
                           {eq.type === 'chemical' ? t('gear.chemical') :

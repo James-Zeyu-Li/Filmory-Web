@@ -280,6 +280,10 @@
   margin: 0;
 }
 
+.active-rolls-empty-cta {
+  margin-top: 4px;
+}
+
 .active-roll-dash-card {
   display: flex;
   justify-content: space-between;

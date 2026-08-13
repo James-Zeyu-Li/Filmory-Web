@@ -9,7 +9,7 @@ import { useLanguage } from '../../contexts/useLanguage';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { requestImmediateSync } from '../../services/syncEvents';
 import { useCameras, useLenses, useRolls } from '../../hooks/useData';
-import { Wallet, TrendingUp, TrendingDown, Plus, Camera as CameraIcon, AlertTriangle } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, Plus, Camera as CameraIcon, AlertTriangle, Trash2 } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import './FinanceView.css';
 
@@ -30,7 +30,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
   const { confirm } = useConfirm();
   const { notify } = useFeedback();
   const { currencySymbol, formatCurrency } = useCurrency();
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTx, setNewTx] = useState<Partial<LedgerTransaction>>(createEmptyTransactionDraft);
 
@@ -44,6 +44,11 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
   const cameras = useCameras();
   const lenses = useLenses();
   const rolls = useRolls();
+  const formatTransactionDate = (date: number) => new Intl.DateTimeFormat(language, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date(date));
 
   // Missing Prices Logic
   const missingCameras = cameras.filter(c => c.status !== 'archived' && (c.purchasePrice === undefined || c.purchasePrice === null));
@@ -157,64 +162,64 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
         </header>
       )}
 
-      <div className="finance-dashboard" style={isEmbedded ? { padding: 0 } : {}}>
+      <div className={`finance-dashboard ${isEmbedded ? 'finance-dashboard--embedded' : ''}`}>
         {isEmbedded && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+          <div className="finance-embedded-action">
             <button className="primary" onClick={() => setIsModalOpen(true)}>
               <Plus size={16} /> {t('finance.addEntry')}
             </button>
           </div>
         )}
         {/* KPI Cards */}
-        <div className="stats-kpi-grid" style={{ marginBottom: '24px' }}>
-          <div className="kpi-card" style={{ background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(56, 189, 248, 0.05) 100%)', borderColor: 'rgba(56, 189, 248, 0.2)' }}>
-            <div className="kpi-icon" style={{ color: '#38bdf8' }}><CameraIcon size={24} /></div>
-            <div className="kpi-content">
+        <div className="finance-kpi-grid">
+          <div className="finance-kpi-card finance-kpi-card--gear">
+            <div className="finance-kpi-icon"><CameraIcon size={24} /></div>
+            <div className="finance-kpi-content">
               <h3>{t('finance.gearInvestment')}</h3>
-              <div className="kpi-value">{formatCurrency(totalGearAssets)}</div>
-              <span className="kpi-subtext">{t('finance.gearInvestmentDesc')}</span>
+              <div className="finance-kpi-value">{formatCurrency(totalGearAssets)}</div>
+              <span className="finance-kpi-subtext">{t('finance.gearInvestmentDesc')}</span>
             </div>
           </div>
-          <div className="kpi-card" style={{ background: 'linear-gradient(135deg, rgba(248, 113, 113, 0.1) 0%, rgba(248, 113, 113, 0.05) 100%)', borderColor: 'rgba(248, 113, 113, 0.2)' }}>
-            <div className="kpi-icon" style={{ color: '#f87171' }}><TrendingDown size={24} /></div>
-            <div className="kpi-content">
+          <div className="finance-kpi-card finance-kpi-card--film">
+            <div className="finance-kpi-icon"><TrendingDown size={24} /></div>
+            <div className="finance-kpi-content">
               <h3>{t('finance.filmLabCost')}</h3>
-              <div className="kpi-value">{formatCurrency(totalFilmBurned)}</div>
-              <span className="kpi-subtext">{t('finance.filmLabCostDesc')}</span>
+              <div className="finance-kpi-value">{formatCurrency(totalFilmBurned)}</div>
+              <span className="finance-kpi-subtext">{t('finance.filmLabCostDesc')}</span>
             </div>
           </div>
-          <div className="kpi-card" style={{ background: 'linear-gradient(135deg, rgba(52, 211, 153, 0.1) 0%, rgba(52, 211, 153, 0.05) 100%)', borderColor: 'rgba(52, 211, 153, 0.2)' }}>
-            <div className="kpi-icon" style={{ color: '#34d399' }}><TrendingUp size={24} /></div>
-            <div className="kpi-content">
+          <div className="finance-kpi-card finance-kpi-card--income">
+            <div className="finance-kpi-icon"><TrendingUp size={24} /></div>
+            <div className="finance-kpi-content">
               <h3>{t('finance.income')}</h3>
-              <div className="kpi-value">{formatCurrency(totalServiceIncome)}</div>
-              <span className="kpi-subtext">{t('finance.incomeDesc')}</span>
+              <div className="finance-kpi-value">{formatCurrency(totalServiceIncome)}</div>
+              <span className="finance-kpi-subtext">{t('finance.incomeDesc')}</span>
             </div>
           </div>
         </div>
 
         {/* Missing Prices Alert Panel */}
         {totalMissing > 0 && (
-          <div className="finance-alert-panel" style={{ background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f59e0b', marginTop: 0, marginBottom: '12px', fontSize: '15px' }}>
+          <div className="finance-alert-panel">
+            <h3>
               <AlertTriangle size={18} />
               {t('finance.missingPricesTitle', { count: totalMissing })}
             </h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: '0 0 16px 0' }}>
+            <p>
               {t('finance.missingPricesDesc')}
             </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            <div className="finance-alert-tags">
               {missingCameras.map(c => (
-                <span key={c.id} style={{ fontSize: '12px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px' }}>[{t('finance.tagCamera')}] {c.name}</span>
+                <span key={c.id} className="finance-alert-tag">[{t('finance.tagCamera')}] {c.name}</span>
               ))}
               {missingLenses.map(l => (
-                <span key={l.id} style={{ fontSize: '12px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px' }}>[{t('finance.tagLens')}] {l.name}</span>
+                <span key={l.id} className="finance-alert-tag">[{t('finance.tagLens')}] {l.name}</span>
               ))}
               {missingRollsFilm.map(r => (
-                <span key={`f-${r.id}`} style={{ fontSize: '12px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px' }}>[{t('finance.tagFilmCost')}] {r.name}</span>
+                <span key={`f-${r.id}`} className="finance-alert-tag">[{t('finance.tagFilmCost')}] {r.name}</span>
               ))}
               {missingRollsDev.map(r => (
-                <span key={`d-${r.id}`} style={{ fontSize: '12px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px' }}>[{t('finance.tagLabCost')}] {r.name}</span>
+                <span key={`d-${r.id}`} className="finance-alert-tag">[{t('finance.tagLabCost')}] {r.name}</span>
               ))}
             </div>
           </div>
@@ -236,24 +241,24 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
                   <th>{t('finance.category')}</th>
                   <th>{t('finance.entity')}</th>
                   <th>{t('finance.notes')}</th>
-                  <th style={{ textAlign: 'right' }}>{t('finance.amount')}</th>
-                  <th style={{ textAlign: 'right' }}>{t('finance.actions')}</th>
+                  <th className="ledger-align-end">{t('finance.amount')}</th>
+                  <th className="ledger-align-end">{t('finance.actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {transactions.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
-                      <Wallet size={48} style={{ opacity: 0.2, marginBottom: '16px' }} />
+                    <td colSpan={7} className="ledger-empty-cell">
+                      <Wallet size={48} />
                       <p>{t('finance.noRecords')}</p>
-                      <p style={{ fontSize: '13px' }}>{t('finance.noRecordsDesc')}</p>
+                      <p>{t('finance.noRecordsDesc')}</p>
                     </td>
                   </tr>
                 ) : (
                   transactions.map((tx: any) => (
                     <tr key={tx.id}>
-                      <td style={{ color: 'var(--text-secondary)' }}>
-                        {new Date(tx.date).toLocaleDateString()}
+                      <td className="ledger-date-cell">
+                        {formatTransactionDate(tx.date)}
                       </td>
                       <td>
                         {tx.type === 'expense' ? (
@@ -265,18 +270,18 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
                       <td>{catLabelMap[tx.category] || tx.category}</td>
                       <td>
                         {getEntityName(tx) ? (
-                          <span style={{ fontWeight: 500, color: '#38bdf8' }}>{getEntityName(tx)}</span>
+                          <span className="ledger-entity-name">{getEntityName(tx)}</span>
                         ) : (
-                          <span style={{ color: 'var(--text-muted)' }}>-</span>
+                          <span className="ledger-empty-value">-</span>
                         )}
                       </td>
-                      <td style={{ maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <td className="ledger-notes-cell">
                         {tx.notes || '-'}
                       </td>
-                      <td style={{ textAlign: 'right', fontWeight: 600, color: tx.type === 'expense' ? 'var(--text-color)' : '#34d399' }}>
+                      <td className={`ledger-align-end ledger-amount-cell ${tx.type === 'expense' ? 'is-expense' : 'is-income'}`}>
                         {tx.type === 'expense' ? '-' : '+'} {formatCurrency(Math.abs(tx.amount))}
                       </td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td className="ledger-align-end">
                         <button className="icon-btn danger" onClick={() => handleDeleteTx(tx.id!)}>
                           {t('finance.delete')}
                         </button>
@@ -287,6 +292,49 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
               </tbody>
             </table>
           </div>
+          <div className="ledger-mobile-list" aria-label={t('finance.ledgerTitle')}>
+            {transactions.length === 0 ? (
+              <div className="ledger-mobile-empty">
+                <Wallet size={32} aria-hidden="true" />
+                <p>{t('finance.noRecords')}</p>
+                <span>{t('finance.noRecordsDesc')}</span>
+              </div>
+            ) : (
+              transactions.map((tx: any) => {
+                const entityName = getEntityName(tx);
+                const isExpense = tx.type === 'expense';
+
+                return (
+                  <article className="ledger-mobile-card" key={tx.id}>
+                    <div className="ledger-mobile-card-header">
+                      <div>
+                        <span className={`tx-badge ${isExpense ? 'expense' : 'income'}`}>
+                          {isExpense ? t('finance.expense') : t('finance.incomeBadge')}
+                        </span>
+                        <time dateTime={new Date(tx.date).toISOString()}>{formatTransactionDate(tx.date)}</time>
+                      </div>
+                      <strong className={isExpense ? 'ledger-amount-expense' : 'ledger-amount-income'}>
+                        {isExpense ? '-' : '+'} {formatCurrency(Math.abs(tx.amount))}
+                      </strong>
+                    </div>
+                    <div className="ledger-mobile-card-summary">
+                      <strong>{catLabelMap[tx.category] || tx.category}</strong>
+                      {entityName && <span>{entityName}</span>}
+                    </div>
+                    {tx.notes && <p className="ledger-mobile-card-notes">{tx.notes}</p>}
+                    <button
+                      type="button"
+                      className="icon-btn danger ledger-mobile-delete"
+                      onClick={() => handleDeleteTx(tx.id!)}
+                      aria-label={`${t('finance.delete')} ${formatTransactionDate(tx.date)}`}
+                    >
+                      <Trash2 size={16} aria-hidden="true" />
+                    </button>
+                  </article>
+                );
+              })
+            )}
+          </div>
         </div>
       </div>
 
@@ -296,20 +344,18 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
             <form onSubmit={handleAddTx}>
               <div className="form-group">
                 <label>{t('finance.flowLabel')}</label>
-                <div className="toggle-group" style={{ display: 'flex', gap: '8px' }}>
+                <div className="toggle-group finance-flow-toggle">
                   <button 
                     type="button" 
-                    className={`toggle-btn ${newTx.type === 'expense' ? 'active' : ''}`}
+                    className={`toggle-btn finance-flow-option finance-flow-option--expense ${newTx.type === 'expense' ? 'active' : ''}`}
                     onClick={() => setNewTx({...newTx, type: 'expense'})}
-                    style={{ flex: 1, padding: '8px', border: '1px solid var(--border-color)', background: newTx.type === 'expense' ? 'rgba(255,255,255,0.1)' : 'transparent', color: newTx.type === 'expense' ? '#fff' : 'var(--text-secondary)', borderRadius: '6px' }}
                   >
                     {t('finance.expense')}
                   </button>
                   <button 
                     type="button" 
-                    className={`toggle-btn ${newTx.type === 'income' ? 'active' : ''}`}
+                    className={`toggle-btn finance-flow-option finance-flow-option--income ${newTx.type === 'income' ? 'active' : ''}`}
                     onClick={() => setNewTx({...newTx, type: 'income'})}
-                    style={{ flex: 1, padding: '8px', border: '1px solid var(--border-color)', background: newTx.type === 'income' ? 'rgba(52, 211, 153, 0.1)' : 'transparent', color: newTx.type === 'income' ? '#34d399' : 'var(--text-secondary)', borderRadius: '6px' }}
                   >
                     {t('finance.incomeOption')}
                   </button>

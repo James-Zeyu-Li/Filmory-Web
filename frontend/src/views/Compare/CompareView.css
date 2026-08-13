@@ -35,6 +35,7 @@
 
 .compare-workspace-body {
   height: calc(100vh - 80px);
+  height: calc(100dvh - 80px);
   padding: 24px !important;
 }
 
@@ -360,6 +361,11 @@
   cursor: ew-resize;
 }
 
+.image-slider-container:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
 .image-slider-bg {
   width: 100%;
   height: 100%;
@@ -446,6 +452,7 @@
   .compare-workspace-body {
     height: auto;
     min-height: calc(100vh - 80px);
+    min-height: calc(100dvh - 80px);
     padding: 16px !important;
   }
 

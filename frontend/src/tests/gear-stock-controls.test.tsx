@@ -139,4 +139,35 @@ describe('Gear film stock controls', () => {
     expect(screen.getByDisplayValue('Kodak')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Gold 200')).toBeInTheDocument();
   });
+
+  it('renders accessible stock stepper buttons and interactive sort dropdown with backdrop', async () => {
+    const user = userEvent.setup();
+    const { container } = renderGearView();
+
+    await screen.findByText('Kodak Gold 200');
+
+    // Stepper buttons touch & accessibility verification
+    const decBtn = screen.getByRole('button', { name: '减少库存' });
+    const incBtn = screen.getByRole('button', { name: '增加库存' });
+    expect(decBtn).toHaveClass('stock-stepper-btn');
+    expect(incBtn).toHaveClass('stock-stepper-btn');
+    expect(decBtn.closest('.stock-stepper-group')).toBeInTheDocument();
+
+    // Sort dropdown verification
+    const sortTrigger = screen.getByRole('button', { name: /按时间|按名称/i });
+    expect(sortTrigger).toHaveClass('sort-trigger-btn');
+    expect(sortTrigger).toHaveAttribute('aria-haspopup', 'listbox');
+    expect(sortTrigger).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(sortTrigger);
+    expect(sortTrigger).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+    // Backdrop dismiss check
+    const backdrop = container.querySelector('.sort-menu-backdrop');
+    expect(backdrop).toBeInTheDocument();
+    await user.click(backdrop!);
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(sortTrigger).toHaveAttribute('aria-expanded', 'false');
+  });
 });

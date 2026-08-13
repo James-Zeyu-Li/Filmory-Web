@@ -61,6 +61,22 @@ describe('Dashboard metrics', () => {
     expect(onNavigate).toHaveBeenCalledWith('gear?tab=filmStocks');
   });
 
+  it('makes every workspace metric card a direct route to its related work', () => {
+    mockUseRolls.mockReturnValue([]);
+    mockUseCameras.mockReturnValue([]);
+    mockUseFilmBacks.mockReturnValue([]);
+    mockUseLenses.mockReturnValue([]);
+    mockUseFilmStocks.mockReturnValue([]);
+
+    render(<DashboardView enableFilmMode={true} onNavigate={onNavigate} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /进行中/i }));
+    fireEvent.click(screen.getByRole('button', { name: /使用中机器/i }));
+
+    expect(onNavigate).toHaveBeenCalledWith('rolls');
+    expect(onNavigate).toHaveBeenCalledWith('gear?tab=cameras');
+  });
+
   it('hides loaded backs metric when the user has no 120 workflow', () => {
     mockUseRolls.mockReturnValue([]);
     mockUseCameras.mockReturnValue([
@@ -168,5 +184,19 @@ describe('Dashboard metrics', () => {
 
     expect(screen.queryByRole('heading', { name: '拍摄统计' })).not.toBeInTheDocument();
     expect(screen.queryByText('统计内容')).not.toBeInTheDocument();
+  });
+
+  it('offers a direct creation action when there are no active shooting records', () => {
+    mockUseRolls.mockReturnValue([]);
+    mockUseCameras.mockReturnValue([]);
+    mockUseFilmBacks.mockReturnValue([]);
+    mockUseLenses.mockReturnValue([]);
+    mockUseFilmStocks.mockReturnValue([]);
+    onNavigate.mockClear();
+
+    render(<DashboardView enableFilmMode={true} onNavigate={onNavigate} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '开始拍摄记录' }));
+    expect(onNavigate).toHaveBeenCalledWith('rolls?newRoll=1', { skipPageTransition: true });
   });
 });
