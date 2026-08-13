@@ -1,12 +1,12 @@
 import { memo } from 'react';
 import { Archive, Plus, Search, SlidersHorizontal, Trash2, Upload } from 'lucide-react';
-import type { Lens } from '../../../db/schema';
-import type { TranslationKey } from '../../../i18n/translations';
-import { EmptyState } from '../../../components/EmptyState';
-import { IconButton } from '../../../components/ui/IconButton';
-import { LensSvgAvatar } from '../../../components/LensSvgAvatar';
-import type { GearSort } from './gearListUtils';
-import { useFilteredGearItems } from './gearListUtils';
+import type { Lens } from '../../../../db/schema';
+import type { TranslationKey } from '../../../../i18n/translations';
+import { EmptyState } from '../../../../components/EmptyState';
+import { IconButton } from '../../../../components/ui/IconButton';
+import { LensSvgAvatar } from '../../../../components/LensSvgAvatar';
+import type { GearSort } from '../shared/gearListUtils';
+import { useFilteredGearItems } from '../shared/gearListUtils';
 
 type Translate = (key: TranslationKey, values?: Record<string, string | number>) => string;
 interface LensesTabProps {

@@ -1,12 +1,12 @@
 import { memo } from 'react';
 import { Film, Plus, Search, Trash2, Upload } from 'lucide-react';
-import type { FilmStock } from '../../../db/schema';
-import type { TranslationKey } from '../../../i18n/translations';
-import { EmptyState } from '../../../components/EmptyState';
-import { IconButton } from '../../../components/ui/IconButton';
-import { FilmSvgAvatar } from '../../../components/FilmSvgAvatar';
-import type { GearSort } from './gearListUtils';
-import { useFilteredGearItems } from './gearListUtils';
+import type { FilmStock } from '../../../../db/schema';
+import type { TranslationKey } from '../../../../i18n/translations';
+import { EmptyState } from '../../../../components/EmptyState';
+import { IconButton } from '../../../../components/ui/IconButton';
+import { FilmSvgAvatar } from '../../../../components/FilmSvgAvatar';
+import type { GearSort } from '../shared/gearListUtils';
+import { useFilteredGearItems } from '../shared/gearListUtils';
 
 type Translate = (key: TranslationKey, values?: Record<string, string | number>) => string;
 interface FilmStocksTabProps { filmStocks: readonly FilmStock[]; searchQuery: string; sortBy: GearSort; t: Translate; uploadingEntityId: string | null; onAdd: () => void; onEdit: (film: FilmStock) => void; onDelete: (id: string) => void; onUpload: (id: string) => void; onPreview: (url: string) => void; onAdjustStock: (id: string, delta: number) => void; }

@@ -1,11 +1,11 @@
 import { memo } from 'react';
 import { Archive, Camera as CameraIcon, Plus, Search, Trash2, Upload } from 'lucide-react';
-import type { Camera, FilmBack } from '../../../db/schema';
-import type { TranslationKey } from '../../../i18n/translations';
-import { EmptyState } from '../../../components/EmptyState';
-import { IconButton } from '../../../components/ui/IconButton';
-import type { GearSort } from './gearListUtils';
-import { useFilteredGearItems } from './gearListUtils';
+import type { Camera, FilmBack } from '../../../../db/schema';
+import type { TranslationKey } from '../../../../i18n/translations';
+import { EmptyState } from '../../../../components/EmptyState';
+import { IconButton } from '../../../../components/ui/IconButton';
+import type { GearSort } from '../shared/gearListUtils';
+import { useFilteredGearItems } from '../shared/gearListUtils';
 
 type Translate = (key: TranslationKey, values?: Record<string, string | number>) => string;
 

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import type { GearAvatarTableName } from '../../../services/gearAvatarService';
-import type { TranslationKey } from '../../../i18n/translations';
+import type { GearAvatarTableName } from '../../../../services/gearAvatarService';
+import type { TranslationKey } from '../../../../i18n/translations';
 
 type Translate = (key: TranslationKey, values?: Record<string, string | number>) => string;
 
