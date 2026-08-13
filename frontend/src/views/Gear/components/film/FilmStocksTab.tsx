@@ -60,21 +60,19 @@ export const FilmStocksTab = memo(({ filmStocks, searchQuery, sortBy, t, uploadi
                 <IconButton variant="danger" icon={<Trash2 size={16} />} title={t('gear.deletePermanently')} onClick={event => { event.stopPropagation(); onDelete(film.id!); }} />
               </div>
               <h3>{film.brand} {film.name}</h3>
-              <div className="film-stock-meta-row" aria-label={t('gear.filmStocksTitle')}>
-                <div className="film-stock-specs">
+              <div className="film-stock-specs" aria-label={t('gear.filmStocksTitle')}>
                 <span><strong>ISO</strong> {film.iso}</span>
                 <span><strong>{t('gear.format')}</strong> {film.format}</span>
-                </div>
-                <div className="film-stock-inventory-row">
-                  <div className="film-stock-count">
-                    <span>{t('gear.stockCount')}</span>
-                    <strong>{t('gear.rollsInStock', { count: film.stockCount || 0 })}</strong>
-                  </div>
-                <div className="stock-stepper-group">
-                  <button type="button" className="stock-stepper-btn" title={t('gear.decreaseStock')} aria-label={t('gear.decreaseStock')} onClick={event => { event.stopPropagation(); onAdjustStock(film.id!, -1); }}><Minus size={14} /></button>
-                  <button type="button" className="stock-stepper-btn" title={t('gear.increaseStock')} aria-label={t('gear.increaseStock')} onClick={event => { event.stopPropagation(); onAdjustStock(film.id!, 1); }}><Plus size={14} /></button>
-                </div>
-                </div>
+              </div>
+            </div>
+            <div className="film-stock-inventory-row">
+              <div className="film-stock-count">
+                <span>{t('gear.stockCount')}</span>
+                <strong>{t('gear.rollsInStock', { count: film.stockCount || 0 })}</strong>
+              </div>
+              <div className="stock-stepper-group">
+                <button type="button" className="stock-stepper-btn" title={t('gear.decreaseStock')} aria-label={t('gear.decreaseStock')} onClick={event => { event.stopPropagation(); onAdjustStock(film.id!, -1); }}><Minus size={14} /></button>
+                <button type="button" className="stock-stepper-btn" title={t('gear.increaseStock')} aria-label={t('gear.increaseStock')} onClick={event => { event.stopPropagation(); onAdjustStock(film.id!, 1); }}><Plus size={14} /></button>
               </div>
             </div>
           </article>

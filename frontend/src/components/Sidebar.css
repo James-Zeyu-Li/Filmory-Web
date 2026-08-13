@@ -306,13 +306,29 @@
 
 @media (max-width: 1024px) {
   .sidebar.collapsed {
-    /* Ignore collapse state on mobile */
     width: 280px;
     padding: 24px 16px;
   }
-  .sidebar.collapsed .brand-text,
+
+  /* A desktop-collapsed sidebar becomes a full labelled mobile drawer. */
+  .sidebar.collapsed .brand-logo-expanded,
   .sidebar.collapsed .nav-item span {
     display: flex;
+    max-width: none;
+    overflow: visible;
+    opacity: 1;
+    transform: none;
+    visibility: visible;
+    pointer-events: auto;
+  }
+  .sidebar.collapsed .brand-logo-collapsed {
+    width: 0;
+    margin-right: -12px;
+    overflow: hidden;
+    opacity: 0;
+    transform: scale(0.75);
+    visibility: hidden;
+    pointer-events: none;
   }
   .sidebar.collapsed .sidebar-brand {
     padding-left: 8px;

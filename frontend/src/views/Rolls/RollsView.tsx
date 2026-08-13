@@ -99,6 +99,10 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
 
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
   const activeCollection = useMemo(() => collections.find(c => c.id === activeCollectionId), [collections, activeCollectionId]);
+  const activeCollectionRolls = useMemo(
+    () => activeCollectionId ? rolls.filter(roll => roll.collectionId === activeCollectionId) : [],
+    [activeCollectionId, rolls],
+  );
   const [libraryView, setLibraryView] = useState<'collections' | 'all' | 'loose'>(() => {
     const saved = localStorage.getItem(ROLLS_LIBRARY_VIEW_KEY);
     return getDefaultLibraryView(saved, initialVisibleTabOrder, shouldOpenNewRoll || Boolean(initialOpenRollId));
@@ -1079,18 +1083,23 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
 
 
   const renderedRollCards = processedRolls.map(renderRollCard);
+  const openNewShoot = (collectionId?: string) => {
+    setSelectedCollectionId(collectionId ?? '');
+    setIsNewRollModalOpen(true);
+  };
+
   const renderNewRollEmptyAction = () => (
     <Button
       variant="primary"
       icon={<Plus size={16} />}
-      onClick={() => setIsNewRollModalOpen(true)}
+      onClick={() => openNewShoot()}
     >
       {t('rolls.newRoll')}
     </Button>
   );
 
   return (
-    <div className="main-content rolls-main-content">
+    <div className={`main-content rolls-main-content ${activeCollectionId ? 'has-active-collection' : ''}`}>
       <header className="view-header">
         <div className="view-header-title-container">
           <motion.div key={libraryView} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} className="rolls-view-header-title">
@@ -1132,13 +1141,18 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
              </button>
            </div>
            
-           {isCollectionsTabVisible && (
-             <button className="secondary" onClick={() => document.dispatchEvent(new CustomEvent('open-new-collection-modal'))}>
-               <Folder size={16} /> {t('rolls.newCollection')}
-             </button>
-           )}
-           <button className="primary" onClick={() => setIsNewRollModalOpen(true)}>
-             <Plus size={16} /> {t('rolls.newRoll')}
+           <button
+             className="primary"
+             onClick={() => {
+               if (libraryView === 'collections' && isCollectionsTabVisible) {
+                 document.dispatchEvent(new CustomEvent('open-new-collection-modal'));
+                 return;
+               }
+               openNewShoot();
+             }}
+           >
+             {libraryView === 'collections' && isCollectionsTabVisible ? <Folder size={16} /> : <Plus size={16} />}
+             {libraryView === 'collections' && isCollectionsTabVisible ? t('rolls.newCollection') : t('rolls.newRoll')}
            </button>
         </div>
       </header>
@@ -1157,14 +1171,16 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
               <IconButton variant="solid" onClick={() => setActiveCollectionId(null)} icon={<ArrowLeft size={20} />} />
               <div>
                 <h2>{activeCollection?.name || t('common.loading')}</h2>
-                <p>
-                  {activeCollection?.description || ''} · {activeCollection?.date ? new Date(activeCollection.date).toLocaleDateString() : ''}
-                </p>
+                <p>{[
+                  activeCollection?.description,
+                  activeCollection?.date ? new Date(activeCollection.date).toLocaleDateString() : '',
+                ].filter(Boolean).join(' · ')}</p>
               </div>
             </div>
             
-            <div className="rolls-collection-actions-row">
-              <h3>{t('rolls.all')} ({rolls.filter(r => r.collectionId === activeCollectionId).length})</h3>
+            {activeCollectionRolls.length > 0 && (
+              <div className="rolls-collection-actions-row">
+                <h3>{t('rolls.all')} ({activeCollectionRolls.length})</h3>
               <div className="rolls-collection-actions">
                 <button className="primary" onClick={() => {
                   setSelectedExistingRollIds([]);
@@ -1172,14 +1188,12 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                 }}>
                   <Folder size={16} /> {t('rolls.addExistingTitle')}
                 </button>
-                <button className="secondary" onClick={() => {
-                  setSelectedCollectionId(activeCollectionId);
-                  setIsNewRollModalOpen(true);
-                }}>
+                <button className="secondary" onClick={() => openNewShoot(activeCollectionId)}>
                   <Plus size={16} /> {t('rolls.newRoll')}
                 </button>
               </div>
-            </div>
+              </div>
+            )}
             
             
               <motion.div 
@@ -1189,12 +1203,37 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                 transition={{ duration: 0.2 }}
                 className={viewLayout === 'grid' ? 'rolls-grid' : 'rolls-list'}
               >
-                {rolls.filter(r => r.collectionId === activeCollectionId).length === 0 ? (
+                {activeCollectionRolls.length === 0 ? (
                    <div className="rolls-empty-grid-item">
-                      <EmptyState icon={Film} title={t('rolls.noRolls')} description={t('rolls.noRollsDesc')} />
+                      <EmptyState
+                        icon={Film}
+                        title={t('rolls.noRolls')}
+                        description={t('rolls.noRollsDesc')}
+                        action={
+                          <>
+                            <Button
+                              variant="primary"
+                              icon={<Folder size={16} />}
+                              onClick={() => {
+                                setSelectedExistingRollIds([]);
+                                setIsAddExistingModalOpen(true);
+                              }}
+                            >
+                              {t('rolls.addExistingTitle')}
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              icon={<Plus size={16} />}
+                              onClick={() => openNewShoot(activeCollectionId)}
+                            >
+                              {t('rolls.newRoll')}
+                            </Button>
+                          </>
+                        }
+                      />
                    </div>
                 ) : (
-                  rolls.filter(r => r.collectionId === activeCollectionId).map(renderRollCard)
+                  activeCollectionRolls.map(renderRollCard)
                 )}
               </motion.div>
             
@@ -1275,7 +1314,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                     onCollectionSelect={(id) => {
                       setActiveCollectionId(id);
                     }}
-                    onCreateRoll={() => setIsNewRollModalOpen(true)}
+                    onCreateRoll={() => openNewShoot()}
                   />
                 </motion.div>
               )}
@@ -1698,8 +1737,8 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
             <h3>{t('rolls.newRollModalTitle')}</h3>
             <form className="new-roll-form" onSubmit={handleCreateRoll}>
               <div className="form-group new-roll-intro-section">
-                <label>{t('rolls.rollName')}</label>
-                <input type="text" className="form-control" placeholder={t('rolls.rollNamePlaceholder')} value={rollTitle} onChange={e => setRollTitle(e.target.value)} required />
+                <label htmlFor="new-roll-name">{t('rolls.rollName')}</label>
+                <input id="new-roll-name" type="text" className="form-control" placeholder={t('rolls.rollNamePlaceholder')} value={rollTitle} onChange={e => setRollTitle(e.target.value)} required />
               </div>
 
               <div className="new-roll-section new-roll-field-grid new-roll-field-grid--equipment">

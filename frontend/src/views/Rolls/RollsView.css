@@ -894,18 +894,30 @@
 .drawer-section {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
 .drawer-section h3 {
+  position: relative;
   font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-weight: 700;
+  color: var(--text-primary);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 10px;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-focus) 55%, var(--border-color));
+  padding-bottom: 12px;
   margin: 0;
+}
+
+.drawer-section h3::after {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 28px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--accent);
+  content: '';
 }
 
 .roll-drawer-header-actions {
@@ -1008,8 +1020,8 @@
 }
 
 .roll-drawer-choice-field + .roll-drawer-choice-field {
-  border-top: 1px solid var(--border-color);
-  padding-top: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--border-focus) 40%, var(--border-color));
+  padding-top: 18px;
 }
 
 .roll-drawer-field-label {
@@ -1030,7 +1042,7 @@
 }
 
 .roll-drawer-lab-section h3 {
-  color: var(--accent);
+  color: var(--text-primary);
 }
 
 /* Cover Upload in Drawer */
@@ -1428,13 +1440,35 @@
 }
 
 .rolls-view-header-title {
+  flex: 1 1 auto;
+  min-width: 0;
   gap: 16px;
+}
+
+.rolls-view-header-title .view-header-text-group {
+  min-width: 0;
+}
+
+.rolls-view-header-title .view-header-subtitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .rolls-view-header-actions,
 .rolls-collection-actions,
 .roll-drawer-header-actions {
   gap: 8px;
+}
+
+.rolls-view-header-actions {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+}
+
+.rolls-view-header-actions .view-toggle-group,
+.rolls-view-header-actions > button {
+  flex: 0 0 auto;
 }
 
 .rolls-collection-details,
@@ -1605,6 +1639,72 @@
 /* === MOBILE RESPONSIVE LAYOUT (Max width: 768px) === */
 
 @media (max-width: 768px) {
+  /* The collection detail already supplies its own title and back action. */
+  .rolls-main-content.has-active-collection > .view-header {
+    display: none;
+  }
+
+  .rolls-main-content:not(.has-active-collection) > .view-header {
+    flex-direction: row;
+    align-items: center !important;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+
+  .rolls-main-content:not(.has-active-collection) .view-header-icon,
+  .rolls-main-content:not(.has-active-collection) .view-header-subtitle,
+  .rolls-main-content:not(.has-active-collection) .rolls-view-header-actions .view-toggle-group {
+    display: none;
+  }
+
+  .rolls-main-content:not(.has-active-collection) .rolls-view-header-title,
+  .rolls-main-content:not(.has-active-collection) .rolls-view-header-actions {
+    width: auto;
+    flex: 0 1 auto;
+  }
+
+  .rolls-main-content:not(.has-active-collection) .rolls-view-header-actions > button {
+    flex: 0 0 auto;
+    min-height: 40px;
+  }
+
+  .rolls-collection-details {
+    margin-top: 0;
+    padding: 16px;
+  }
+
+  .rolls-collection-heading {
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .rolls-collection-heading p:empty {
+    display: none;
+  }
+
+  .rolls-collection-actions-row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .rolls-collection-actions-row h3 {
+    margin: 0;
+  }
+
+  .rolls-collection-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    width: 100%;
+  }
+
+  .rolls-collection-actions button {
+    min-width: 0;
+    padding-inline: 12px;
+    white-space: nowrap;
+  }
+
   .roll-drawer-header {
     padding: 14px 16px;
   }

@@ -718,10 +718,19 @@ button.edit-avatar-preview:focus-visible .edit-avatar-preview-label {
 
 /* Film cards share the camera-card hierarchy while keeping stock adjustment quiet. */
 .film-stock-card {
-  gap: 16px;
+  container-type: inline-size;
+  display: grid;
+  grid-template-areas:
+    'avatar content'
+    'inventory inventory';
+  grid-template-columns: 80px minmax(0, 1fr);
+  align-items: start;
+  column-gap: 16px;
+  row-gap: 14px;
 }
 
 .film-stock-avatar {
+  grid-area: avatar;
   width: 80px;
   height: 80px;
 }
@@ -735,6 +744,7 @@ button.edit-avatar-preview:focus-visible .edit-avatar-preview-label {
 }
 
 .film-stock-card-content {
+  grid-area: content;
   gap: 6px;
   min-width: 0;
 }
@@ -751,6 +761,10 @@ button.edit-avatar-preview:focus-visible .edit-avatar-preview-label {
   font-size: 13px;
 }
 
+.film-stock-specs span {
+  white-space: nowrap;
+}
+
 .film-stock-specs strong {
   color: var(--text-muted);
   font-size: 11px;
@@ -758,19 +772,15 @@ button.edit-avatar-preview:focus-visible .edit-avatar-preview-label {
   margin-right: 4px;
 }
 
-.film-stock-meta-row {
+.film-stock-inventory-row {
+  grid-area: inventory;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  min-width: 0;
-}
-
-.film-stock-inventory-row {
-  display: inline-flex;
-  align-items: center;
   gap: 8px;
-  flex-shrink: 0;
+  width: 100%;
+  border-top: 1px solid color-mix(in srgb, var(--border-focus) 40%, var(--border-color));
+  padding-top: 12px;
 }
 
 .film-stock-count {
@@ -790,34 +800,45 @@ button.edit-avatar-preview:focus-visible .edit-avatar-preview-label {
   font-size: 14px;
 }
 
+.film-stock-card .stock-stepper-btn {
+  width: 26px;
+  height: 26px;
+}
+
+/* Adapt to the card's real width, not only the browser viewport. */
+@container (max-width: 420px) {
+  .film-stock-card {
+    grid-template-columns: 72px minmax(0, 1fr);
+    column-gap: 14px;
+    row-gap: 14px;
+    padding: 16px;
+  }
+
+  .film-stock-avatar {
+    width: 72px;
+    height: 72px;
+  }
+
+  .film-stock-specs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .film-stock-inventory-row {
+    gap: 12px;
+  }
+}
+
 @media (hover: none) and (pointer: coarse) {
   .stock-stepper-btn {
     width: 40px;
     height: 40px;
   }
-}
 
-@media (max-width: 480px) {
-  .film-stock-card {
-    align-items: flex-start;
-    gap: 14px;
-    padding: 14px;
-  }
-
-  .film-stock-avatar {
-    width: 68px;
-    height: 68px;
-  }
-
-  .film-stock-meta-row {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 7px;
-  }
-
-  .film-stock-inventory-row {
-    width: 100%;
-    justify-content: space-between;
+  .film-stock-card .stock-stepper-btn {
+    width: 40px;
+    height: 40px;
   }
 }
 

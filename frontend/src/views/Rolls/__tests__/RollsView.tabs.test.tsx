@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
@@ -58,7 +58,7 @@ describe('RollsView tabs and empty states', () => {
 
     const tabButtons = screen.getAllByRole('button', { name: /^(全部拍摄记录|项目集|独立记录)$/ });
     expect(tabButtons.map(button => button.textContent)).toEqual(['全部拍摄记录', '项目集', '独立记录']);
-    expect(screen.getByText('查看全部拍摄记录；项目集仅用于整理相关记录，不归入项目也能正常管理。')).toBeInTheDocument();
+    expect(screen.getByText('所有拍摄记录都在这里。')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: '新建拍摄记录' }).length).toBeGreaterThan(1);
   });
 
@@ -86,7 +86,7 @@ describe('RollsView tabs and empty states', () => {
     expect(screen.getAllByRole('button', { name: '新建拍摄记录' }).length).toBeGreaterThan(1);
   });
 
-  it('shows both New collection and New roll CTAs in empty Collections', async () => {
+  it('shows a New collection header action and a New record empty-state action in empty Collections', async () => {
     renderRollsView();
 
     fireEvent.click(screen.getByRole('button', { name: '项目集' }));
@@ -96,7 +96,102 @@ describe('RollsView tabs and empty states', () => {
     });
 
     expect(screen.getAllByRole('button', { name: '新建项目集' }).length).toBeGreaterThan(1);
-    expect(screen.getAllByRole('button', { name: '新建拍摄记录' }).length).toBeGreaterThan(1);
+    expect(screen.getByRole('button', { name: '新建拍摄记录' })).toBeInTheDocument();
+  });
+
+  it('switches the header primary action from a new shooting record to a new collection', async () => {
+    const user = userEvent.setup();
+
+    renderRollsView();
+    const headerNewShoot = screen.getAllByRole('button', { name: '新建拍摄记录' })
+      .find(button => button.closest('.rolls-view-header-actions'));
+    expect(headerNewShoot).toHaveClass('primary');
+
+    await user.click(screen.getByRole('button', { name: '项目集' }));
+    const headerNewCollection = screen.getAllByRole('button', { name: '新建项目集' })
+      .find(button => button.closest('.rolls-view-header-actions'));
+    expect(headerNewCollection).toHaveClass('primary');
+
+    await user.click(headerNewCollection!);
+    expect(await screen.findByRole('heading', { name: '新建项目集' })).toBeInTheDocument();
+  });
+
+  it('shows both record actions in an empty collection and opens their existing flows', async () => {
+    const user = userEvent.setup();
+
+    await db.collections.add({
+      id: 'collection-empty', userId: 'mock-user-id', name: '东京散步', date: Date.now(), addedAt: Date.now(),
+    });
+
+    renderRollsView();
+    await user.click(screen.getByRole('button', { name: '项目集' }));
+    await user.click(await screen.findByRole('button', { name: '东京散步 (0 卷)' }));
+
+    const emptyState = await screen.findByText('暂无拍摄记录');
+    const emptyStateActions = within(emptyState.closest('.premium-empty-state')!);
+
+    await user.click(emptyStateActions.getByRole('button', { name: '从已有记录中添加' }));
+    expect(await screen.findByRole('heading', { name: '从已有记录中添加' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '取消' }));
+    await user.click(emptyStateActions.getByRole('button', { name: '新建拍摄记录' }));
+    expect(await screen.findByRole('heading', { name: '新建拍摄记录' })).toBeInTheDocument();
+  });
+
+  it('assigns a new shooting record from a collection detail to that collection', async () => {
+    const user = userEvent.setup();
+    const now = Date.now();
+
+    await db.collections.add({
+      id: 'collection-context', userId: 'mock-user-id', name: '海边周末', date: now, addedAt: now,
+    });
+    await db.cameras.add({
+      id: 'collection-camera', userId: 'mock-user-id', name: 'Nikon F3', type: 'film', format: '135', addedAt: now,
+    });
+    await db.userProfiles.add({
+      id: 'mock-user-id', userId: 'mock-user-id', tier: 'regular', highResQuotaUsed: 0,
+    });
+
+    renderRollsView(false);
+    await user.click(screen.getByRole('button', { name: '项目集' }));
+    await user.click(await screen.findByRole('button', { name: '海边周末 (0 卷)' }));
+
+    const emptyState = await screen.findByText('暂无拍摄记录');
+    await user.click(within(emptyState.closest('.premium-empty-state')!).getByRole('button', { name: '新建拍摄记录' }));
+    await user.type(screen.getByLabelText('记录名称'), '海边第一卷');
+    await user.click(screen.getByRole('button', { name: 'Nikon F3' }));
+    const startLogging = await screen.findByRole('button', { name: '开始记录' });
+    expect(startLogging).toBeEnabled();
+    await user.click(startLogging);
+
+    await waitFor(async () => {
+      const roll = await db.rolls.where('name').equals('海边第一卷').first();
+      expect(roll?.collectionId).toBe('collection-context');
+    });
+  });
+
+  it('creates a standalone shooting record from the Collections overview', async () => {
+    const user = userEvent.setup();
+    const now = Date.now();
+
+    await db.cameras.add({
+      id: 'overview-camera', userId: 'mock-user-id', name: 'Leica M6', type: 'film', format: '135', addedAt: now,
+    });
+    await db.userProfiles.add({
+      id: 'mock-user-id', userId: 'mock-user-id', tier: 'regular', highResQuotaUsed: 0,
+    });
+
+    renderRollsView(false);
+    await user.click(screen.getByRole('button', { name: '项目集' }));
+    await user.click(await screen.findByRole('button', { name: '新建拍摄记录' }));
+    await user.type(screen.getByLabelText('记录名称'), '独立记录');
+    await user.click(screen.getByRole('button', { name: 'Leica M6' }));
+    await user.click(await screen.findByRole('button', { name: '开始记录' }));
+
+    await waitFor(async () => {
+      const roll = await db.rolls.where('name').equals('独立记录').first();
+      expect(roll?.collectionId).toBeUndefined();
+    });
   });
 
   it('hides Collections and Independent records when Collections is turned off', async () => {
