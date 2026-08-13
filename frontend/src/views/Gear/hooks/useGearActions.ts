@@ -42,7 +42,7 @@ export interface SaveFilmStockInput {
 export interface SaveOtherEquipmentInput {
   draft: Partial<OtherEquipment>;
   editingId: string | null;
-  existingEquipment: OtherEquipment[];
+  existingEquipment: readonly OtherEquipment[];
 }
 
 export interface ArchiveGearInput {

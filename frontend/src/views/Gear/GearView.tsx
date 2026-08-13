@@ -25,7 +25,7 @@ import { LensFormModal } from './components/lens/LensFormModal';
 import { FilmStocksTab } from './components/film/FilmStocksTab';
 import { FilmStockFormModal } from './components/film/FilmStockFormModal';
 import { OtherEquipmentTab } from './components/equipment/OtherEquipmentTab';
-import { GearAvatarEditor } from './components/shared/GearAvatarEditor';
+import { OtherEquipmentFormModal } from './components/equipment/OtherEquipmentFormModal';
 import { useGearActions } from './hooks/useGearActions';
 interface GearViewProps {
   enableFilmMode: boolean;
@@ -73,9 +73,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
   const [editingFilmId, setEditingFilmId] = useState<string | null>(null);
   const [filmFormSession, setFilmFormSession] = useState(0);
   const [editingEquipmentId, setEditingEquipmentId] = useState<string | null>(null);
-
-  // Forms state
-  const [newEquipment, setNewEquipment] = useState<Partial<OtherEquipment>>({ name: '', type: 'chemical', notes: '', purchaseDate: undefined, expiryDate: undefined });
+  const [equipmentFormSession, setEquipmentFormSession] = useState(0);
   const [nowTimestamp] = useState(Date.now);
 
   // Upload and Lightbox states
@@ -139,16 +137,6 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     }
   };
 
-  const updateEditingAvatarState = (
-    id: string,
-    type: GearAvatarTableName,
-    avatarUrl: string | null
-  ) => {
-    if (type === 'otherEquipments' && editingEquipmentId === id) {
-      setNewEquipment(prev => ({ ...prev, avatarUrl }));
-    }
-  };
-
   const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !activeUploadEntity) return;
@@ -164,7 +152,6 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
       await updateGearAvatar(activeUploadEntity.type, activeUploadEntity.id, base64DataUrl);
       requestImmediateSync('gear-cover-upload');
-      updateEditingAvatarState(activeUploadEntity.id, activeUploadEntity.type, base64DataUrl);
 
     } catch (err) {
       console.error(err);
@@ -194,7 +181,6 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     try {
       await removeGearAvatar(type, id);
       requestImmediateSync('gear-cover-remove');
-      updateEditingAvatarState(id, type, null);
       notify({
         type: 'success',
         title: t('gear.coverRemovedTitle'),
@@ -219,26 +205,6 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
   const otherEquipments = useOtherEquipments();
 
   // Actions
-
-  const handleSaveEquipment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newEquipment.name) return;
-
-    const result = await gearActions.saveOtherEquipment({
-      draft: newEquipment,
-      editingId: editingEquipmentId,
-      existingEquipment: otherEquipments,
-    });
-    if (result === 'trial-blocked') {
-      setIsEquipmentModalOpen(false);
-      return;
-    }
-    if (result !== 'saved') return;
-
-    setNewEquipment({ name: '', type: 'chemical', notes: '', purchaseDate: undefined, expiryDate: undefined, purchasePrice: undefined });
-    setEditingEquipmentId(null);
-    if (!keepModalOpen) setIsEquipmentModalOpen(false);
-  };
 
   const handleDeleteCamera = gearActions.deleteCamera;
 
@@ -287,17 +253,9 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
   const openEditEquipment = (eq: OtherEquipment) => {
     setEditingEquipmentId(eq.id!);
-    setNewEquipment(eq);
+    setEquipmentFormSession(previous => previous + 1);
     setIsEquipmentModalOpen(true);
   };
-
-  const renderAvatarEditor = (
-    id: string | null,
-    type: GearAvatarTableName,
-    avatarUrl: string | null | undefined,
-    label: string,
-    placeholder: React.ReactNode
-  ) => <GearAvatarEditor id={id} type={type} avatarUrl={avatarUrl} label={label} placeholder={placeholder} uploading={uploadingEntityId === id} t={t} onPreview={openAvatarPreview} onUpload={triggerAvatarUpload} onRemove={(avatarId, avatarType, avatarLabel) => { void handleRemoveAvatar(avatarId, avatarType, avatarLabel); }} />;
 
   const openNewCamera = () => {
     setEditingCameraId(null);
@@ -319,7 +277,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
   const openNewEquipment = () => {
     setEditingEquipmentId(null);
-    setNewEquipment({ name: '', type: 'chemical', notes: '', purchaseDate: undefined, expiryDate: undefined });
+    setEquipmentFormSession(previous => previous + 1);
     setIsEquipmentModalOpen(true);
   };
 
@@ -371,11 +329,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
             </button>
           )}
           {subTab === 'otherEquipments' && (
-            <button className="primary" onClick={() => {
-              setEditingEquipmentId(null);
-              setNewEquipment({ name: '', type: 'chemical', notes: '', purchaseDate: undefined, expiryDate: undefined });
-              setIsEquipmentModalOpen(true);
-            }}>
+            <button className="primary" onClick={openNewEquipment}>
               <Plus size={16} /> <span>{t('gear.addGear')}</span>
             </button>
           )}
@@ -514,97 +468,19 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
         onUpload={triggerAvatarUpload}
         onRemoveAvatar={(id, type, label) => { void handleRemoveAvatar(id, type, label); }}
       />
-      <Modal isOpen={isEquipmentModalOpen} onClose={() => setIsEquipmentModalOpen(false)}>
-        <h3>{editingEquipmentId ? t('gear.editGear') : t('gear.otherModalTitle')}</h3>
-        <form onSubmit={handleSaveEquipment}>
-          <div className="gear-context-note">
-            {t('gear.otherModalNote')}
-          </div>
-          {renderAvatarEditor(
-            editingEquipmentId,
-            'otherEquipments',
-            newEquipment.avatarUrl,
-            newEquipment.name || t('gear.addGear'),
-            <Package size={34} />
-          )}
-          <div className="form-group">
-            <label>{t('gear.gearName')}</label>
-            <input
-              type="text"
-              className="form-control"
-              placeholder={t('gear.gearNamePlaceholder')}
-              value={newEquipment.name}
-              onChange={e => setNewEquipment({...newEquipment, name: e.target.value})}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>{t('gear.gearType')}</label>
-            <select
-              className="form-control"
-              value={newEquipment.type}
-              onChange={e => setNewEquipment({...newEquipment, type: e.target.value as any})}
-              required
-            >
-              <option value="chemical">{t('gear.chemical')}</option>
-              <option value="tripod">{t('gear.tripod')}</option>
-              <option value="cleaner">{t('gear.cleaner')}</option>
-              <option value="other">{t('gear.otherType')}</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label>{t('gear.purchaseDate')}</label>
-            <input
-              type="date"
-              className="form-control"
-              value={newEquipment.purchaseDate ? new Date(newEquipment.purchaseDate).toISOString().substring(0, 10) : ''}
-              onChange={e => setNewEquipment({...newEquipment, purchaseDate: e.target.value ? new Date(e.target.value).getTime() : undefined})}
-            />
-          </div>
-          {newEquipment.type === 'chemical' && (
-            <div className="form-group">
-              <label>{t('gear.chemicalExpiryDate')}</label>
-              <input
-                type="date"
-                className="form-control"
-                value={newEquipment.expiryDate ? new Date(newEquipment.expiryDate).toISOString().substring(0, 10) : ''}
-                onChange={e => setNewEquipment({...newEquipment, expiryDate: e.target.value ? new Date(e.target.value).getTime() : undefined})}
-                required
-              />
-            </div>
-          )}
-          <div className="form-group">
-            <label>{t('gear.purchasePrice', { symbol: currencySymbol })}</label>
-            <input
-              type="number"
-              className="form-control"
-              placeholder={t('gear.purchasePriceGearPlaceholder')}
-              value={newEquipment.purchasePrice || ''}
-              onChange={e => setNewEquipment({...newEquipment, purchasePrice: e.target.value ? Number(e.target.value) : undefined})}
-            />
-          </div>
-          <div className="form-group">
-            <label>{t('gear.notesLabel')}</label>
-            <textarea
-              className="form-control"
-              rows={2}
-              placeholder={t('gear.notesPlaceholder')}
-              value={newEquipment.notes}
-              onChange={e => setNewEquipment({...newEquipment, notes: e.target.value})}
-            />
-          </div>
-          <div className="modal-actions" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)' }}>
-              <input type="checkbox" checked={keepModalOpen} onChange={e => setKeepModalOpen(e.target.checked)} />
-              {t('gear.saveAndAddNext')}
-            </label>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button type="button" onClick={() => setIsEquipmentModalOpen(false)}>{t('common.cancel')}</button>
-              <button type="submit" className="primary">{editingEquipmentId ? t('gear.saveChanges') : t('gear.add')}</button>
-            </div>
-          </div>
-        </form>
-      </Modal>
+      <OtherEquipmentFormModal
+        key={`equipment-form-${equipmentFormSession}`}
+        isOpen={isEquipmentModalOpen}
+        editingEquipment={editingEquipmentId ? otherEquipments.find(item => item.id === editingEquipmentId) || null : null}
+        equipment={otherEquipments}
+        keepModalOpen={keepModalOpen}
+        uploadingEntityId={uploadingEntityId}
+        onKeepModalOpenChange={setKeepModalOpen}
+        onClose={() => setIsEquipmentModalOpen(false)}
+        onPreview={openAvatarPreview}
+        onUpload={triggerAvatarUpload}
+        onRemoveAvatar={(id, type, label) => { void handleRemoveAvatar(id, type, label); }}
+      />
 
       <input
         type="file"
