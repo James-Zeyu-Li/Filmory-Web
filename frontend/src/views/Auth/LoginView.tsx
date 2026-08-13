@@ -207,7 +207,7 @@ export const LoginView: React.FC = () => {
         )}
 
         {errorMsg && (
-          <div className="alert-box error">
+          <div className="alert-box error" role="alert" aria-live="assertive">
             <AlertCircle size={16} />
             <span>{errorMsg}</span>
           </div>

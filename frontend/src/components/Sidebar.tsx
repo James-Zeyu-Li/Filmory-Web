@@ -5,7 +5,6 @@ import {
   Film,
   LayoutDashboard,
   BarChart2,
-  ChartNoAxesCombined,
   Columns,
   ChevronLeft,
   ChevronRight,
@@ -28,6 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenAccountC
   const { t } = useLanguage();
   const [isCollapsed, setIsCollapsed] = useState(window.innerWidth < 1250 && window.innerWidth > 1024);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
+  const [isResizing, setIsResizing] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   
   const handleClose = () => {
@@ -43,8 +43,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenAccountC
 
   React.useEffect(() => {
     let lastWidth = window.innerWidth;
+    let resizeTimer: number;
     
     const handleResize = () => {
+      setIsResizing(true);
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(() => {
+        setIsResizing(false);
+      }, 150);
+
       const currentWidth = window.innerWidth;
       
       // Auto-collapse when crossing down the 1250px threshold
@@ -66,7 +73,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenAccountC
     };
     
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.clearTimeout(resizeTimer);
+    };
   }, []);
 
   return (
@@ -75,16 +85,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenAccountC
       {isOpen && <div className="sidebar-overlay" onClick={handleClose} />}
       
       <aside 
-        className={`sidebar ${isOpen ? 'mobile-open' : ''} ${isCollapsed ? 'collapsed' : ''}`}
+        className={`sidebar ${isOpen ? 'mobile-open' : ''} ${isCollapsed ? 'collapsed' : ''} ${isResizing ? 'is-resizing' : ''}`}
         style={{
-          transition: (!isOpen && !isClosing && isMobile) ? 'none' : undefined
+          transition: isResizing || (!isOpen && !isClosing && isMobile) ? 'none' : undefined
         }}
       >
       <div className="sidebar-brand">
-        <img src="/logo.png" alt="Grainfolio Logo" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
-        <div className="brand-text">
-          <h2>Grainfolio</h2>
-          <span>{t('nav.tagline')}</span>
+        {/* Collapsed State: GF Icon in White Card */}
+        <div className="brand-logo-wrapper brand-logo-collapsed">
+          <img src="/compact-logo.webp" alt="GF Logo" className="brand-logo-img" />
+        </div>
+        {/* Expanded State: Full Grainfolio Logo */}
+        <div className="brand-logo-expanded">
+          <img src="/word-logo.webp" alt="Grainfolio" className="brand-wordmark-img" />
         </div>
       </div>
 
@@ -135,17 +148,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenAccountC
           </NavLink>
 
           <NavLink
-            to="/film-insights"
-            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-            onClick={onClose}
-            aria-label={t('nav.filmInsights')}
-            title={t('nav.filmInsights')}
-          >
-            <ChartNoAxesCombined size={20} />
-            <span>{t('nav.filmInsights')}</span>
-          </NavLink>
-
-          <NavLink
             to="/compare"
             className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
             onClick={onClose}
@@ -160,39 +162,37 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenAccountC
       </nav>
 
       <div className="sidebar-footer">
-        <button 
-          className="nav-item collapse-btn"
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          style={{ background: 'transparent', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', outline: 'none' }}
-          title={isCollapsed ? t('nav.expandTitle') : t('nav.collapseTitle')}
-          aria-label={isCollapsed ? t('nav.expandTitle') : t('nav.collapseTitle')}
-        >
-          {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-          <span>{t('nav.collapse')}</span>
-        </button>
-        <div className="nav-spacer" style={{ height: '8px' }} />
-
         <button
           className="nav-item"
           onClick={handleOpenAccountCenter}
-          style={{ background: 'transparent', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', outline: 'none' }}
           aria-label={t('nav.account')}
           title={t('nav.account')}
         >
           <UserRound size={20} />
           <span>{t('nav.account')}</span>
         </button>
-        <div className="nav-spacer" style={{ height: '8px' }} />
+        <div className="nav-spacer" />
 
-        <button 
+        <button
           className="nav-item"
           onClick={onOpenSettings}
-          style={{ background: 'transparent', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', outline: 'none' }}
           aria-label={t('nav.preferences')}
           title={t('nav.preferences')}
         >
           <Settings size={20} />
           <span>{t('nav.preferences')}</span>
+        </button>
+
+        <div className="sidebar-collapse-divider" />
+
+        <button
+          className="nav-item collapse-btn"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          title={isCollapsed ? t('nav.expandTitle') : t('nav.collapseTitle')}
+          aria-label={isCollapsed ? t('nav.expandTitle') : t('nav.collapseTitle')}
+        >
+          {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+          <span>{t('nav.collapse')}</span>
         </button>
       </div>
     </aside>

@@ -149,6 +149,7 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
             className="roll-card collection-card"
             onClick={() => onCollectionSelect(collection.id!)}
           >
+            <button type="button" className="record-card-open-action" onClick={(event) => { event.stopPropagation(); onCollectionSelect(collection.id!); }} aria-label={`${collection.name} (${t('collections.rollCount', { count: linkedRolls.length })})`} />
             <div className="roll-card-cover">
               {collection.coverUrl ? (
                 <div style={{ backgroundImage: `url(${collection.coverUrl})`, width: '100%', height: '100%', backgroundSize: 'cover', backgroundPosition: 'center' }} />
@@ -207,6 +208,7 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
           className="collection-card-row"
           onClick={() => onCollectionSelect(collection.id!)}
         >
+          <button type="button" className="record-card-open-action" onClick={(event) => { event.stopPropagation(); onCollectionSelect(collection.id!); }} aria-label={`${collection.name} (${t('collections.rollCount', { count: linkedRolls.length })})`} />
           {/* Square thumbnail: mosaic if photos exist, name initials if not */}
           <div className="collection-card-thumb-wrapper">
             {collection.coverUrl ? (

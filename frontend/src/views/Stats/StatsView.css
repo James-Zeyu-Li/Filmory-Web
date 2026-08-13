@@ -6,6 +6,10 @@
   gap: 24px;
 }
 
+.stats-workspace-body.embedded-mode {
+  padding: 0;
+}
+
 /* KPI Cards Grid */
 .stats-kpi-grid {
   display: grid;
@@ -43,11 +47,10 @@
 }
 
 .stats-kpi-sky {
-  border-left: 4px solid #38bdf8;
+  border-left: 4px solid var(--chart-series-blue);
 }
 .stats-kpi-sky:hover {
-  border-color: #38bdf8;
-  box-shadow: 0 8px 30px rgba(56, 189, 248, 0.05);
+  border-color: var(--chart-series-blue);
 }
 
 .stats-kpi-emerald {
@@ -76,8 +79,8 @@
 }
 
 .stats-kpi-sky .kpi-icon {
-  color: #38bdf8;
-  background-color: rgba(56, 189, 248, 0.05);
+  color: var(--chart-series-blue);
+  background-color: var(--chart-surface-subtle);
 }
 
 .stats-kpi-emerald .kpi-icon {
@@ -119,6 +122,43 @@
   gap: 24px;
 }
 
+.stats-chart-priority {
+  order: 1;
+}
+
+.stats-more-insights-toggle {
+  display: flex;
+  order: 2;
+  grid-column: 1 / -1;
+  justify-content: center;
+}
+
+.stats-more-insights-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stats-more-insights-button svg {
+  transition: transform var(--transition-fast);
+}
+
+.stats-more-insights-button svg.is-open {
+  transform: rotate(180deg);
+}
+
+.stats-more-insights-marker {
+  display: contents;
+}
+
+.stats-chart-advanced {
+  order: 3;
+}
+
+.stats-chart-wide {
+  grid-column: 1 / -1;
+}
+
 .chart-card {
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-color);
@@ -157,6 +197,129 @@
   flex-direction: column;
   justify-content: center;
   min-height: 200px;
+}
+
+.stats-top-rolls-content {
+  padding: 0 16px 16px;
+}
+
+.stats-camera-efficiency-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  padding: 10px 0;
+  overflow-y: auto;
+}
+
+.stats-camera-efficiency-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--chart-surface-subtle);
+}
+
+.stats-camera-efficiency-name,
+.stats-camera-efficiency-value {
+  display: flex;
+  flex-direction: column;
+}
+
+.stats-camera-efficiency-name span:first-child,
+.stats-camera-efficiency-value div:first-child {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.stats-camera-efficiency-name span:last-child,
+.stats-camera-efficiency-value div:last-child {
+  font-size: 11px;
+}
+
+.stats-camera-efficiency-name span:last-child {
+  color: var(--chart-axis);
+}
+
+.stats-camera-efficiency-value {
+  text-align: right;
+}
+
+.stats-camera-efficiency-value div:first-child {
+  color: var(--chart-series-gold);
+}
+
+.stats-camera-efficiency-value div:last-child {
+  color: var(--chart-series-gray);
+}
+
+.stats-top-rolls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.stats-top-roll-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 140px;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--chart-image-fallback);
+}
+
+.stats-top-roll-cover {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-size: cover;
+  opacity: 0.5;
+}
+
+.stats-top-roll-overlay {
+  position: relative;
+  z-index: 1;
+  padding: 12px;
+  background: linear-gradient(to top, var(--chart-image-overlay) 0%, transparent 100%);
+}
+
+.stats-top-roll-details {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.stats-top-roll-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--chart-series-gold);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.stats-top-roll-name {
+  max-width: 120px;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stats-top-roll-samples {
+  color: var(--chart-axis);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .no-data {
@@ -211,7 +374,7 @@
 }
 
 .swatch-bw {
-  background-color: #6b7280;
+  background-color: var(--chart-series-gray);
 }
 
 /* Text styles inside Pie SVG chart */

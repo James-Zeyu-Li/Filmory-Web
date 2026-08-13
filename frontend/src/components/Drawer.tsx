@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface DrawerProps {
@@ -9,11 +9,23 @@ interface DrawerProps {
 }
 
 export const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose, children, width = 500 }) => {
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   return (
     <AnimatePresence>
       {isOpen && (
         <motion.div 
           className="drawer-overlay" 
+          role="presentation"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -33,6 +45,8 @@ export const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose, children, width
         >
           <motion.div 
             className="drawer-panel" 
+            role="dialog"
+            aria-modal="true"
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}

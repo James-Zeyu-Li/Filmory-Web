@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Columns, Split, UploadCloud, X, Image as ImageIcon } from 'lucide-react';
+import { Columns, Split, UploadCloud, X, Image as ImageIcon, MoveHorizontal } from 'lucide-react';
 import { useLanguage } from '../../contexts/useLanguage';
 import './CompareView.css';
 
@@ -155,7 +155,7 @@ export const CompareView: React.FC = () => {
             </div>
           ) : (
             <>
-              {viewMode === 'split' && <ImageSlider imgA={urlA} imgB={urlB} altA={t('compare.imageAlt', { target: 'A' })} altB={t('compare.imageAlt', { target: 'B' })} />}
+              {viewMode === 'split' && <ImageSlider imgA={urlA} imgB={urlB} altA={t('compare.imageAlt', { target: 'A' })} altB={t('compare.imageAlt', { target: 'B' })} label={t('compare.splitPosition')} />}
               {viewMode === 'sideBySide' && (
                 <div style={{ display: 'flex', width: '100%', height: '100%', gap: '4px' }}>
                   <div style={{ flex: 1, position: 'relative', height: '100%' }}>
@@ -182,9 +182,10 @@ interface ImageSliderProps {
   imgB: string;
   altA: string;
   altB: string;
+  label: string;
 }
 
-const ImageSlider: React.FC<ImageSliderProps> = ({ imgA, imgB, altA, altB }) => {
+const ImageSlider: React.FC<ImageSliderProps> = ({ imgA, imgB, altA, altB, label }) => {
   const [sliderPosition, setSliderPosition] = useState(50);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -212,6 +213,34 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ imgA, imgB, altA, altB }) => 
     }
   };
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const step = event.shiftKey ? 10 : 5;
+    const nextPosition = (delta: number) => {
+      setSliderPosition(current => Math.max(0, Math.min(100, current + delta)));
+    };
+
+    switch (event.key) {
+      case 'ArrowLeft':
+      case 'ArrowDown':
+        event.preventDefault();
+        nextPosition(-step);
+        break;
+      case 'ArrowRight':
+      case 'ArrowUp':
+        event.preventDefault();
+        nextPosition(step);
+        break;
+      case 'Home':
+        event.preventDefault();
+        setSliderPosition(0);
+        break;
+      case 'End':
+        event.preventDefault();
+        setSliderPosition(100);
+        break;
+    }
+  };
+
   return (
     <div 
       className="image-slider-container" 
@@ -219,6 +248,14 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ imgA, imgB, altA, altB }) => 
       onMouseMove={handleMouseMove}
       onMouseDown={handleMouseDown}
       onTouchMove={handleTouchMove}
+      onKeyDown={handleKeyDown}
+      role="slider"
+      tabIndex={0}
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(sliderPosition)}
+      aria-valuetext={`Photo A ${Math.round(sliderPosition)}%, Photo B ${Math.round(100 - sliderPosition)}%`}
       style={{ height: '100%', width: '100%', position: 'relative', cursor: 'ew-resize', touchAction: 'none' }}
     >
       <img src={imgB} className="image-slider-bg" alt={altB} draggable={false} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -243,7 +280,9 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ imgA, imgB, altA, altB }) => 
         className="image-slider-handle" 
         style={{ position: 'absolute', top: 0, bottom: 0, left: `${sliderPosition}%`, width: '2px', background: 'var(--accent)', transform: 'translateX(-50%)', transition: 'none' }}
       >
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent)', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>↔</div>
+        <div className="handle-button">
+          <MoveHorizontal size={16} aria-hidden="true" />
+        </div>
       </div>
     </div>
   );

@@ -162,14 +162,11 @@ describe('AccountCenterModal', () => {
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/login'));
   });
 
-  it('keeps account deletion as a compact entry and opens a separate confirmation dialog', () => {
+  it('does not render account deletion inside AccountCenterModal', () => {
     renderAccountCenter();
 
     expect(screen.queryByText('永久注销账号')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: '注销我的账号' }));
-
-    expect(screen.getByRole('heading', { name: '确认永久注销' })).toBeInTheDocument();
-    expect(screen.getByLabelText('输入 DELETE 确认注销')).toBeInTheDocument();
+    expect(screen.queryByText('注销我的账号')).not.toBeInTheDocument();
   });
 
   it('saves display name to local profile and Supabase metadata for a real account', async () => {

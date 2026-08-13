@@ -1,6 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { type Camera, type Lens, type FilmStock, type OtherEquipment } from '../../db/schema';
-import { Camera as CameraIcon, Plus, X, Search, Aperture, Film, Package } from 'lucide-react';
+import { db, type Camera, type Lens, type FilmStock, type OtherEquipment } from '../../db/schema';
+import { Camera as CameraIcon, Plus, Trash2, SlidersHorizontal, Upload, X, Archive, Search, Aperture, Film, Package } from 'lucide-react';
+import {
+  COMMON_CAMERAS,
+  COMMON_FILM_STOCKS,
+  COMMON_LENSES,
+  type CommonCameraPreset,
+  type CommonFilmStockPreset,
+  type CommonLensPreset,
+} from '../../catalog/gear';
+import { LensSvgAvatar } from '../../components/LensSvgAvatar';
+import { FilmSvgAvatar } from '../../components/FilmSvgAvatar';
 import './GearView.css';
 import { useConfirm } from '../../contexts/useConfirm';
 import { useFeedback } from '../../contexts/useFeedback';
@@ -397,20 +407,46 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
               />
             </div>
 
-            <div ref={sortRef} style={{ position: 'relative' }}>
+            <div ref={sortRef} className="sort-dropdown-container">
               <button
-                className="tab-btn"
+                type="button"
+                className="sort-trigger-btn"
                 onClick={() => setIsSortOpen(!isSortOpen)}
-                style={{ height: '36px', padding: '0 12px', display: 'flex', gap: '6px', alignItems: 'center', backgroundColor: 'transparent', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)' }}
+                aria-haspopup="listbox"
+                aria-expanded={isSortOpen}
+                aria-controls="gear-sort-options"
               >
-                {sortBy === 'date' ? t('gear.sortDate') : t('gear.sortName')}
+                <span>{sortBy === 'date' ? t('gear.sortDate') : t('gear.sortName')}</span>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}><polyline points="6 9 12 15 18 9"></polyline></svg>
               </button>
               {isSortOpen && (
-                <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: '140px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '8px', zIndex: 100, boxShadow: '0 4px 20px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <div onClick={() => { setSortBy('date'); setIsSortOpen(false); }} style={{ padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', backgroundColor: sortBy === 'date' ? 'var(--accent-bg)' : 'transparent', color: sortBy === 'date' ? 'var(--accent)' : 'var(--text-primary)', fontSize: '13px' }}>{t('gear.sortDate')}</div>
-                  <div onClick={() => { setSortBy('name'); setIsSortOpen(false); }} style={{ padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', backgroundColor: sortBy === 'name' ? 'var(--accent-bg)' : 'transparent', color: sortBy === 'name' ? 'var(--accent)' : 'var(--text-primary)', fontSize: '13px' }}>{t('gear.sortName')}</div>
-                </div>
+                <>
+                  <div className="sort-menu-backdrop" onClick={() => setIsSortOpen(false)} />
+                  <div id="gear-sort-options" className="sort-dropdown-menu" role="listbox">
+                    <div className="sort-sheet-handle" />
+                    <div className="sort-sheet-title">{t('common.sortBy') || '排序方式'}</div>
+                    <button
+                      type="button"
+                      className={`sort-option ${sortBy === 'date' ? 'active' : ''}`}
+                      role="option"
+                      aria-selected={sortBy === 'date'}
+                      onClick={() => { setSortBy('date'); setIsSortOpen(false); }}
+                    >
+                      <span>{t('gear.sortDate')}</span>
+                      {sortBy === 'date' && <Check size={14} className="sort-option-check" />}
+                    </button>
+                    <button
+                      type="button"
+                      className={`sort-option ${sortBy === 'name' ? 'active' : ''}`}
+                      role="option"
+                      aria-selected={sortBy === 'name'}
+                      onClick={() => { setSortBy('name'); setIsSortOpen(false); }}
+                    >
+                      <span>{t('gear.sortName')}</span>
+                      {sortBy === 'name' && <Check size={14} className="sort-option-check" />}
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -423,7 +459,393 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2 }}
           >
-            {renderActiveTab()}
+            {/* 1. CAMERAS TAB */}
+            {subTab === 'cameras' && (
+              <div className="cameras-grid-layout">
+            {cameras.length === 0 ? (
+              <div style={{ height: '50vh', gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
+                <EmptyState
+                  icon={CameraIcon}
+                  title={t('gear.noCameraTitle')}
+                  description={t('gear.noCameraDesc')}
+                  action={<button className="primary" onClick={() => {
+                    setEditingCameraId(null);
+                    setNewCamera({ name: '', type: 'film', format: '135', purchasePrice: undefined });
+                    setCameraSystemMode('new');
+                    setSelectedExistingCameraSystemId('');
+                    setCameraSystemName('');
+                    setCameraBackNames(['Back 1']);
+                    setNewFilmBackName('');
+                    setSelectedCameraBrand('');
+                    setSelectedCameraModel('');
+                    setCameraBrandSearch('');
+                    setCameraModelSearch('');
+                    setIsCameraModalOpen(true);
+                  }}><Plus size={16} /> {t('gear.addCamera')}</button>}
+                />
+              </div>
+            ) : displayCameras.length === 0 ? (
+              <div style={{ height: '50vh', gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
+                <EmptyState
+                  icon={CameraIcon}
+                  title={t('gear.noCameraMatch')}
+                  description={t('gear.noMatchDesc')}
+                />
+              </div>
+            ) : (
+              displayCameras.map(camera => {
+                const avatarFullUrl = getAvatarFullUrl(camera.avatarUrl);
+
+                return (
+                  <div key={camera.id} className="gear-card camera-card-with-avatar" onClick={(e) => { e.stopPropagation(); openEditCamera(camera); }} style={{ cursor: "pointer" }}>
+                    <div className="camera-avatar-container">
+                      {avatarFullUrl ? (
+                        <img
+                          src={avatarFullUrl}
+                          alt={camera.name}
+                          className="camera-avatar-img"
+                          onClick={(e) => { e.stopPropagation(); setPreviewAvatarUrl(avatarFullUrl); }}
+                          title={t('gear.previewCover')}
+                        />
+                      ) : (
+                        <div className="camera-avatar-placeholder">
+                          {getPlaceholderText(camera.name)}
+                        </div>
+                      )}
+
+                      {/* Upload overlay */}
+                      <button
+                        type="button"
+                        className="camera-avatar-upload-overlay"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (avatarFullUrl) {
+                            openAvatarPreview(avatarFullUrl);
+                            return;
+                          }
+                          triggerAvatarUpload(camera.id!, 'cameras');
+                        }}
+                        disabled={uploadingEntityId === camera.id}
+                        title={avatarFullUrl ? t('gear.previewCover') : getAvatarUploadTitle('cameras')}
+                      >
+                        {uploadingEntityId === camera.id ? (
+                          <span className="avatar-loading-spinner" />
+                        ) : (
+                          avatarFullUrl ? <Search size={14} /> : <Upload size={14} />
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="camera-card-content">
+                      <div className="gear-card-header">
+                        <span className={`tag ${camera.type}`}>{camera.type === 'film' ? t('gear.film') : t('gear.digital')}</span>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <IconButton variant="success" icon={<Archive size={16} />} title={t('gear.sellArchive')} onClick={(e) => { e.stopPropagation(); setArchiveTarget({ id: camera.id!, type: 'camera', name: camera.name }); }} />
+                          <IconButton variant="danger" icon={<Trash2 size={16} />} title={t('gear.deletePermanently')} onClick={(e) => { e.stopPropagation(); handleDeleteCamera(camera.id!); }} />
+                        </div>
+                      </div>
+                      <h3>{camera.name}</h3>
+                      <div className="gear-details">
+                        <div><strong>{t('gear.format')}:</strong> {camera.format}</div>
+                        {camera.format === '120' && (
+                          <div><strong>{t('gear.back')}:</strong> {camera.backType === 'interchangeable' ? `${getFilmBacksForCamera(camera).length} ${t('common.backUnit')} · ${getCameraSystemName(camera.cameraSystemId)}` : t('gear.fixedBack')}</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
+        {/* 2. LENSES TAB */}
+        {subTab === 'lenses' && (
+          <div className="lenses-grid-layout">
+            {lenses.length === 0 ? (
+              <div style={{ height: '50vh', gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
+                <EmptyState
+                  icon={SlidersHorizontal}
+                  title={t('gear.noLensTitle')}
+                  description={t('gear.noLensDesc')}
+                  action={<button className="primary" onClick={() => {
+                    setEditingLensId(null);
+                    setNewLens({ name: '', focalLength: 50, maxAperture: 'f/1.8', type: 'prime' });
+                    setLensDictSearch('');
+                    setIsLensDictDropdownOpen(false);
+                    setLensTypeFilter('prime');
+                    setLensMountFilter('all');
+                    setLensMountSearch('');
+                    setSelectedLensBrand('');
+                    setSelectedLensModel('');
+                    setLensBrandSearch('');
+                    setLensModelSearch('');
+                    setIsLensModalOpen(true);
+                  }}><Plus size={16} /> {t('gear.addLens')}</button>}
+                />
+              </div>
+            ) : displayLenses.length === 0 ? (
+              <div style={{ height: '50vh', gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
+                <EmptyState
+                  icon={SlidersHorizontal}
+                  title={t('gear.noLensMatch')}
+                  description={t('gear.noMatchDesc')}
+                />
+              </div>
+            ) : (
+              displayLenses.map(lens => {
+                const avatarFullUrl = getAvatarFullUrl(lens.avatarUrl);
+
+                return (
+                <div key={lens.id} className="gear-card lens-card-horizontal" onClick={(e) => { e.stopPropagation(); openEditLens(lens); }} style={{ cursor: "pointer" }}>
+                  <div className="camera-avatar-container" style={{ width: '80px', height: '80px' }}>
+                    {avatarFullUrl ? (
+                      <img
+                        src={avatarFullUrl}
+                        alt={lens.name}
+                        className="camera-avatar-img"
+                        onClick={(e) => { e.stopPropagation(); setPreviewAvatarUrl(avatarFullUrl); }}
+                        title={t('gear.previewCover')}
+                        style={{ objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <div className="lens-card-avatar" style={{ margin: 0 }}>
+                        <LensSvgAvatar focalLength={lens.focalLength} type={lens.type || 'prime'} size={72} />
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      className="camera-avatar-upload-overlay"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (avatarFullUrl) {
+                          openAvatarPreview(avatarFullUrl);
+                          return;
+                        }
+                        triggerAvatarUpload(lens.id!, 'lenses');
+                      }}
+                      disabled={uploadingEntityId === lens.id}
+                      title={avatarFullUrl ? t('gear.previewCover') : getAvatarUploadTitle('lenses')}
+                    >
+                      {uploadingEntityId === lens.id ? (
+                        <span className="avatar-loading-spinner" />
+                      ) : (
+                        avatarFullUrl ? <Search size={14} /> : <Upload size={14} />
+                      )}
+                    </button>
+                  </div>
+                  <div className="lens-card-content">
+                    <div className="gear-card-header">
+                      <span className={`tag lens-${lens.type || 'prime'}`}>
+                        {lens.type === 'prime' ? t('gear.prime') : t('gear.zoom')}
+                      </span>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <IconButton variant="success" icon={<Archive size={16} />} title={t('gear.sellArchive')} onClick={(e) => { e.stopPropagation(); setArchiveTarget({ id: lens.id!, type: 'lens', name: lens.name }); }} />
+                        <IconButton variant="danger" icon={<Trash2 size={16} />} title={t('gear.deletePermanently')} onClick={(e) => { e.stopPropagation(); handleDeleteLens(lens.id!); }} />
+                      </div>
+                    </div>
+                    <h3>{lens.name}</h3>
+                    <div className="gear-details">
+                      <div><strong>{t('gear.focalLength')}:</strong> {lens.focalLength}mm</div>
+                      <div><strong>{t('gear.maxAperture')}:</strong> {lens.maxAperture}</div>
+                    </div>
+                  </div>
+                </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
+        {/* 3. FILM STOCKS TAB */}
+        {subTab === 'filmStocks' && enableFilmMode && (
+          <div className="lenses-grid-layout">
+            {displayFilms.length === 0 ? (
+              <div style={{ height: '50vh', gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
+                <EmptyState
+                  icon={Film}
+                  title={t('gear.noFilmTitle')}
+                  description={t('gear.noFilmDesc')}
+                  action={<button className="primary" onClick={() => {
+                    setEditingFilmId(null);
+                    setNewFilm(createDefaultNewFilmDraft());
+                    setFilmDictSearch('');
+                    setIsDictDropdownOpen(false);
+                    setFilmFormatFilter('135');
+                    setSelectedFilmBrand('');
+                    setFilmBrandSearch('');
+                    setFilmModelSearch('');
+                    setShowManualFilmForm(false);
+                    setIsFilmModalOpen(true);
+                  }}><Plus size={16} /> {t('gear.addFilmStock')}</button>}
+                />
+              </div>
+            ) : displayFilms.length === 0 ? (
+              <div style={{ height: '50vh', gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
+                <EmptyState
+                  icon={Film}
+                  title={t('gear.noFilmMatch')}
+                  description={t('gear.noMatchDesc')}
+                />
+              </div>
+            ) : (
+              displayFilms.map(film => {
+                const avatarFullUrl = getAvatarFullUrl(film.avatarUrl);
+
+                return (
+                <div key={film.id} className="gear-card lens-card-horizontal" onClick={() => openEditFilm(film)} style={{ cursor: "pointer" }}>
+                  <div className="camera-avatar-container" style={{ width: '80px', height: '80px' }}>
+                    {avatarFullUrl ? (
+                      <img
+                        src={avatarFullUrl}
+                        alt={film.name}
+                        className="camera-avatar-img"
+                        onClick={(e) => { e.stopPropagation(); setPreviewAvatarUrl(avatarFullUrl); }}
+                        title={t('gear.previewCover')}
+                        style={{ objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <div className="lens-card-avatar" style={{ padding: '4px', width: '100%', height: '100%', overflow: 'hidden', margin: 0 }}>
+                        <FilmSvgAvatar brand={film.brand} name={film.name} format={film.format} size={72} />
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      className="camera-avatar-upload-overlay"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (avatarFullUrl) {
+                          openAvatarPreview(avatarFullUrl);
+                          return;
+                        }
+                        triggerAvatarUpload(film.id!, 'filmStocks');
+                      }}
+                      disabled={uploadingEntityId === film.id}
+                      title={avatarFullUrl ? t('gear.previewCover') : getAvatarUploadTitle('filmStocks')}
+                    >
+                      {uploadingEntityId === film.id ? (
+                        <span className="avatar-loading-spinner" />
+                      ) : (
+                        avatarFullUrl ? <Search size={14} /> : <Upload size={14} />
+                      )}
+                    </button>
+                  </div>
+                  <div className="lens-card-content">
+                    <div className="gear-card-header">
+                      <span className={`tag ${film.colorType === 'color' ? 'color' : 'bw'}`}>
+                        {film.colorType === 'color' ? t('gear.color') : t('gear.bw')}
+                      </span>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <IconButton variant="danger" icon={<Trash2 size={16} />} title={t('gear.deletePermanently')} onClick={(e) => { e.stopPropagation(); handleDeleteFilm(film.id!); }} />
+                      </div>
+                    </div>
+                    <h3 style={{ margin: '4px 0' }}>{film.brand} {film.name}</h3>
+                    <div className="gear-details" style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderTop: 'none', paddingTop: '0', marginTop: '0' }}>
+                      <div style={{ display: 'flex', gap: '16px', fontSize: '12px' }}>
+                        <div><strong>ISO：</strong>{film.iso}</div>
+                        <div><strong>{t('gear.format')}:</strong> {film.format}</div>
+                      </div>
+                      <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                          <strong>{t('gear.stockCount')}:</strong> {t('gear.rollsInStock', { count: film.stockCount || 0 })}
+                        </span>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            type="button"
+                            className="secondary"
+                            style={{ padding: '2px 8px', fontSize: '11px', minWidth: '22px', height: '22px', width: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            title={t('gear.decreaseStock')}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleUpdateStock(film.id!, -1);
+                            }}
+                          >
+                            -
+                          </button>
+                          <button
+                            type="button"
+                            className="secondary"
+                            style={{ padding: '2px 8px', fontSize: '11px', minWidth: '22px', height: '22px', width: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            title={t('gear.increaseStock')}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleUpdateStock(film.id!, 1);
+                            }}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
+        {/* 4. OTHER EQUIPMENTS TAB */}
+        {subTab === 'otherEquipments' && (
+          <>
+            <div className="gear-context-note">
+              {t('gear.otherContextNote')}
+            </div>
+            <div className="grid-layout">
+              {otherEquipments.length === 0 ? (
+                <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
+                  <EmptyState
+                    icon={SlidersHorizontal}
+                    title={t('gear.noOtherTitle')}
+                    description={t('gear.noOtherDesc')}
+                    action={<button className="primary" onClick={() => { setEditingEquipmentId(null); setIsEquipmentModalOpen(true); }}><Plus size={16} /> {t('gear.registerAccessory')}</button>}
+                  />
+                </div>
+              ) : displayEquipments.length === 0 ? (
+                <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
+                  <EmptyState
+                    icon={SlidersHorizontal}
+                    title={t('gear.noOtherMatch')}
+                    description={t('gear.noMatchDesc')}
+                  />
+                </div>
+              ) : (
+                displayEquipments.map(eq => {
+                  const isExpired = eq.type === 'chemical' && eq.expiryDate && eq.expiryDate < nowTimestamp;
+                  return (
+                    <div key={eq.id} className={`gear-card equipment-card ${isExpired ? 'expired-alert' : ''}`} onClick={() => openEditEquipment(eq)} style={{ cursor: 'pointer' }}>
+                      <div className="gear-card-header">
+                        <span className={`tag eq-${eq.type}`}>
+                          {eq.type === 'chemical' ? t('gear.chemical') :
+                           eq.type === 'tripod' ? t('gear.tripod') :
+                           eq.type === 'cleaner' ? t('gear.cleaner') : t('gear.otherType')}
+                        </span>
+                        {isExpired && <span className="tag expired-tag">{t('gear.expired')}</span>}
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <IconButton variant="danger" icon={<Trash2 size={16} />} title={t('gear.deletePermanently')} onClick={(e) => { e.stopPropagation(); handleDeleteEquipment(eq.id!); }} />
+                        </div>
+                      </div>
+                      <h3>{eq.name}</h3>
+                      <div className="gear-details">
+                        {eq.purchaseDate && (
+                          <div><strong>{t('gear.purchaseDate')}:</strong> {new Date(eq.purchaseDate).toLocaleDateString()}</div>
+                        )}
+                        {eq.type === 'chemical' && eq.expiryDate && (
+                          <div className={isExpired ? 'expired-text' : ''}>
+                            <strong>{t('gear.expiryDate')}:</strong> {new Date(eq.expiryDate).toLocaleDateString()}
+                          </div>
+                        )}
+                        {eq.notes && <div><strong>{t('gear.notes')}:</strong> {eq.notes}</div>}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </>
+        )}
           </motion.div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -14,6 +14,21 @@ interface ModalProps {
 export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, style, overlayStyle, portal = false }) => {
   const pointerStartedInsideRef = useRef(false);
   const suppressBackdropClickRef = useRef(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   const handleOverlayPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     pointerStartedInsideRef.current = event.target !== event.currentTarget;
@@ -45,6 +60,8 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, style, 
         <motion.div 
           className="modal-overlay" 
           style={overlayStyle}
+          role="dialog"
+          aria-modal="true"
           onPointerDown={handleOverlayPointerDown}
           onPointerUp={handleOverlayPointerUp}
           onPointerCancel={handleOverlayPointerCancel}

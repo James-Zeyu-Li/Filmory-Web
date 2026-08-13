@@ -18,7 +18,11 @@ const formatDate = (value: number | undefined, language: string, fallback: strin
   return new Intl.DateTimeFormat(language, { year: 'numeric', month: 'short', day: 'numeric' }).format(value);
 };
 
-export const FilmInsightsView: React.FC = () => {
+interface FilmInsightsViewProps {
+  isEmbedded?: boolean;
+}
+
+export const FilmInsightsView: React.FC<FilmInsightsViewProps> = ({ isEmbedded = false }) => {
   const { language, t } = useLanguage();
   const filmStocks = useFilmStocks();
   const rolls = useRolls();
@@ -34,8 +38,8 @@ export const FilmInsightsView: React.FC = () => {
   const getRollDate = (roll: FilmUsageSummary['activeRolls'][number]) => roll.endDate ?? roll.startDate;
 
   return (
-    <div className="main-content film-insights-view">
-      <header className="view-header">
+    <div className={isEmbedded ? 'film-insights-view' : 'main-content film-insights-view'}>
+      {!isEmbedded && <header className="view-header">
         <div className="view-header-title-container">
           <div className="view-header-icon"><Film size={20} /></div>
           <div className="view-header-text-group">
@@ -43,9 +47,9 @@ export const FilmInsightsView: React.FC = () => {
             <p className="view-header-subtitle">{t('filmInsights.subtitle')}</p>
           </div>
         </div>
-      </header>
+      </header>}
 
-      <div className="view-body film-insights-body">
+      <div className={`film-insights-body ${isEmbedded ? 'film-insights-body-embedded' : 'view-body'}`}>
         <section className="film-insights-overview" aria-label={t('filmInsights.overviewLabel')}>
           <article className="film-insights-metric film-insights-metric-accent">
             <Package size={18} aria-hidden="true" />

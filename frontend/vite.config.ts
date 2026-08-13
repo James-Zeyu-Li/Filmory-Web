@@ -9,7 +9,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt',
-      includeAssets: ['favicon.svg', 'logo.png'],
+      includeAssets: ['favicon.ico', 'favicon.png', 'apple-touch-icon.png', 'compact-logo.webp', 'word-logo.webp'],
       manifest: {
         name: 'Grainfolio Web',
         short_name: 'Grainfolio',
@@ -19,7 +19,13 @@ export default defineConfig({
         display: 'standalone',
         icons: [
           {
-            src: 'logo.png',
+            src: 'pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any maskable'
+          },
+          {
+            src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'

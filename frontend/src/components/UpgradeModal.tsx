@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Check, Zap, Lock, RefreshCw, Infinity as InfinityIcon, Crown } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import { db } from '../db/schema';
@@ -74,6 +74,19 @@ const UpgradeModalContent: React.FC<UpgradeModalContentProps> = ({
   const [contactEmail, setContactEmail] = useState(userProfile?.membershipContactEmail || user?.email || '');
   const [requestNote, setRequestNote] = useState(userProfile?.membershipRequestNote || '');
   const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
 
   const isRequestPending = userProfile?.membershipRequestStatus === 'pending';
   const requestTimestampLabel = formatMembershipRequestTime(userProfile?.membershipRequestedAt, language);
@@ -253,7 +266,7 @@ const UpgradeModalContent: React.FC<UpgradeModalContentProps> = ({
   };
 
   return (
-    <div className="upgrade-overlay" onClick={onClose}>
+    <div className="upgrade-overlay" onClick={onClose} role="dialog" aria-modal="true">
       <div className="upgrade-modal" onClick={e => e.stopPropagation()}>
 
         {/* Close */}

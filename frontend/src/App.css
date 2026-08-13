@@ -5,6 +5,7 @@
   align-items: center;
   justify-content: center;
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
   background-color: var(--bg-primary);
   color: var(--text-primary);
@@ -62,8 +63,8 @@
 
 .global-sync-status {
   position: fixed;
-  right: 24px;
-  bottom: 24px;
+  right: max(24px, env(safe-area-inset-right));
+  bottom: max(24px, env(safe-area-inset-bottom));
   z-index: 70;
   pointer-events: none;
 }
@@ -104,11 +105,8 @@
 }
 
 @media (max-width: 420px) {
-  .global-sync-status .sync-status-badge span:last-child {
-    display: none;
-  }
-
   .global-sync-status .sync-status-badge {
     padding-inline: 8px;
+    white-space: nowrap;
   }
 }

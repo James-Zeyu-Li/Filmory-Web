@@ -39,4 +39,19 @@ describe('Modal backdrop dismissal', () => {
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('closes when pressing the Escape key', () => {
+    const onClose = vi.fn();
+    render(
+      <Modal isOpen={true} onClose={onClose}>
+        <div>Modal Content</div>
+      </Modal>
+    );
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+
+    fireEvent.keyDown(window, { key: 'Escape', code: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });
