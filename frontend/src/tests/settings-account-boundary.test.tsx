@@ -1,6 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SettingsView } from '../views/Settings/SettingsView';
+import { repairPendingPhotoUploads } from '../services/photoUploadRecoveryService';
+import { requestImmediateSync } from '../services/syncEvents';
 import { deleteCurrentAccount } from '../services/accountService';
 
 const mockSetTheme = vi.fn();
@@ -8,6 +10,7 @@ const mockSetCurrency = vi.fn();
 const mockSetLanguage = vi.fn();
 const mockConfirm = vi.fn();
 const mockSetEnableFilmMode = vi.fn();
+let photoAssets: Array<{ id?: string; blob?: Blob; storageKey?: string }> = [];
 let currentLanguage: 'zh-CN' | 'en-US' = 'zh-CN';
 
 const mockAuthState = {
@@ -45,7 +48,10 @@ vi.mock('../contexts/useLanguage', async () => {
     useLanguage: () => ({
       language: currentLanguage,
       setLanguage: mockSetLanguage,
-      t: (key: string) => mod.translations[currentLanguage][key as keyof typeof mod.translations[typeof currentLanguage]] || key,
+      t: (key: string, values?: Record<string, unknown>) => (
+        (mod.translations[currentLanguage][key as keyof typeof mod.translations[typeof currentLanguage]] || key)
+          .replace(/\{\{(\w+)\}\}/g, (_, name) => String(values?.[name] ?? ''))
+      ),
     }),
   };
 });
@@ -62,6 +68,24 @@ vi.mock('../contexts/useFeedback', () => ({
   }),
 }));
 
+vi.mock('../hooks/useData', () => ({
+  usePhotoAssets: () => photoAssets,
+}));
+
+vi.mock('../services/photoUploadRecoveryService', () => ({
+  repairPendingPhotoUploads: vi.fn(),
+}));
+
+vi.mock('../services/syncEvents', () => ({
+  requestImmediateSync: vi.fn(),
+}));
+
+vi.mock('../services/syncService', () => ({
+  SyncService: {
+    isAutoSyncEnabled: () => true,
+  },
+}));
+
 vi.mock('../services/accountService', () => ({
   deleteCurrentAccount: vi.fn(),
 }));
@@ -74,6 +98,9 @@ describe('SettingsView account boundary', () => {
     mockSetLanguage.mockReset();
     mockConfirm.mockReset();
     mockSetEnableFilmMode.mockReset();
+    photoAssets = [];
+    vi.mocked(repairPendingPhotoUploads).mockResolvedValue({ found: 0, uploaded: 0, failed: 0 });
+    vi.mocked(requestImmediateSync).mockReset();
     mockAuthState.logout.mockReset();
     mockAuthState.clearLocalAuthState.mockReset();
     mockAuthState.completeSignedOutTransition.mockReset();
@@ -130,5 +157,27 @@ describe('SettingsView account boundary', () => {
     expect(screen.getByText('Export metadata as Excel')).toBeInTheDocument();
     expect(screen.getByText('Export cameras, lenses, film stock, roll records, and ledger entries. Original images are not bundled.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Export records now' })).toBeInTheDocument();
+  });
+
+  it('offers to repair only local photos and immediately syncs confirmed uploads', async () => {
+    currentLanguage = 'en-US';
+    photoAssets = [
+      { id: 'local-photo', blob: new Blob(['photo']), storageKey: undefined },
+      { id: 'cloud-photo', storageKey: 'user-1/roll/photo.webp' },
+    ];
+    vi.mocked(repairPendingPhotoUploads).mockResolvedValue({ found: 1, uploaded: 1, failed: 0 });
+
+    render(
+      <SettingsView
+        enableFilmMode={true}
+        setEnableFilmMode={mockSetEnableFilmMode}
+        onClose={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Upload 1 images' }));
+
+    await waitFor(() => expect(repairPendingPhotoUploads).toHaveBeenCalledWith('user-1'));
+    expect(requestImmediateSync).toHaveBeenCalledWith('photo-upload-recovery');
   });
 });

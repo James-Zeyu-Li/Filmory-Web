@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BackupService } from '../../services/backupService';
-import { Shield, Download, X, Sun, Moon, Monitor, Coins, Film, ArrowUp, ArrowDown, Folder, Languages, ChevronDown } from 'lucide-react';
+import { Shield, Download, X, Sun, Moon, Monitor, Coins, Film, ArrowUp, ArrowDown, Folder, Languages, ChevronDown, CloudUpload } from 'lucide-react';
 import { useAuth } from '../../contexts/useAuth';
 import { useTheme } from '../../contexts/useTheme';
 import { Modal } from '../../components/Modal';
@@ -11,6 +11,10 @@ import { CURRENCY_OPTIONS, type CurrencyCode } from '../../contexts/currencyCont
 import { useLanguage } from '../../contexts/useLanguage';
 import { LANGUAGE_OPTIONS, type LanguageCode } from '../../i18n/translations';
 import { convertCurrentUserMoney } from '../../services/currencyConversionService';
+import { repairPendingPhotoUploads } from '../../services/photoUploadRecoveryService';
+import { SyncService } from '../../services/syncService';
+import { requestImmediateSync } from '../../services/syncEvents';
+import { usePhotoAssets } from '../../hooks/useData';
 import {
   readRollsCollectionsTabEnabled,
   readRollsTabOrder,
@@ -33,6 +37,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
   const { language, setLanguage, t } = useLanguage();
   const { confirm } = useConfirm();
   const { notify } = useFeedback();
+  const photoAssets = usePhotoAssets();
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [processMessage, setProcessMessage] = useState('');
@@ -44,6 +49,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
   const [rollsTabOrder, setRollsTabOrder] = useState<RollsTabId[]>(() => readRollsTabOrder());
   const [rollsCollectionsEnabled, setRollsCollectionsEnabled] = useState<boolean>(() => readRollsCollectionsTabEnabled());
   const [isRollTabLayoutExpanded, setIsRollTabLayoutExpanded] = useState(false);
+  const pendingPhotoUploadCount = user && SyncService.isAutoSyncEnabled()
+    ? photoAssets.filter(photo => Boolean(photo.id && photo.blob && !photo.storageKey)).length
+    : 0;
 
   const rollsTabLabels: Record<RollsTabId, string> = {
     collections: t('settings.rollTabCollections'),
@@ -87,6 +95,47 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
         type: 'error',
         title: t('settings.exportFailedTitle'),
         message
+      });
+    } finally {
+      setIsProcessing(false);
+      setProcessMessage('');
+    }
+  };
+
+  const handleRepairPendingPhotos = async () => {
+    if (!user || pendingPhotoUploadCount === 0) return;
+
+    try {
+      setIsProcessing(true);
+      setProcessMessage(t('settings.repairingPhotos'));
+      const result = await repairPendingPhotoUploads(user.id);
+
+      if (result.uploaded > 0) {
+        requestImmediateSync('photo-upload-recovery');
+      }
+
+      if (result.failed > 0) {
+        notify({
+          type: result.uploaded > 0 ? 'info' : 'error',
+          title: t(result.uploaded > 0 ? 'settings.repairPhotosPartialTitle' : 'settings.repairPhotosFailedTitle'),
+          message: result.uploaded > 0
+            ? t('settings.repairPhotosPartialMessage', { uploaded: result.uploaded, failed: result.failed })
+            : t('settings.repairPhotosFailedMessage'),
+        });
+        return;
+      }
+
+      notify({
+        type: 'success',
+        title: t('settings.repairPhotosDoneTitle'),
+        message: t('settings.repairPhotosDoneMessage', { uploaded: result.uploaded }),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t('settings.unknownError');
+      notify({
+        type: 'error',
+        title: t('settings.repairPhotosFailedTitle'),
+        message,
       });
     } finally {
       setIsProcessing(false);
@@ -380,6 +429,27 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
                 </button>
               </div>
             </div>
+            {pendingPhotoUploadCount > 0 && (
+              <div className="settings-list-item">
+                <div className="settings-item-content">
+                  <div className="settings-item-icon safe"><CloudUpload size={18} /></div>
+                  <div className="settings-item-text">
+                    <h4>{t('settings.repairPhotosTitle')}</h4>
+                    <p>{t('settings.repairPhotosDesc', { count: pendingPhotoUploadCount })}</p>
+                  </div>
+                </div>
+                <div className="settings-item-action">
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={handleRepairPendingPhotos}
+                    disabled={isProcessing}
+                  >
+                    {t('settings.repairPhotosAction', { count: pendingPhotoUploadCount })}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

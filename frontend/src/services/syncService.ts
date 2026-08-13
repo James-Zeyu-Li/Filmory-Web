@@ -35,7 +35,7 @@ const hasAutoSyncFlag = () => import.meta.env.VITE_ENABLE_SUPABASE_SYNC === 'tru
 const camelToSnake = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
 const snakeToCamel = (str: string) => str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
 
-const localOnlyFields = new Set(['blob', 'updatedAt', 'deletedAt']);
+const localOnlyFields = new Set(['blob', 'cloudUploadPending', 'cloudUploadError', 'updatedAt', 'deletedAt']);
 type SyncRecord = Record<string, unknown>;
 type SyncRow = SyncRecord & {
   id?: string;

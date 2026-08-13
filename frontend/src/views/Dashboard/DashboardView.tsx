@@ -40,11 +40,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
     .reduce((acc, f) => acc + (f.stockCount || 0), 0);
 
   const activeCameraIds = Array.from(new Set(
-    activeRolls.flatMap(r => r.cameraIds || []).filter((id): id is string => Boolean(id))
+    activeRolls.map(r => r.currentCameraId || r.cameraIds?.[0]).filter((id): id is string => Boolean(id))
   ));
   const activeCameraSummaries = activeCameraIds.map(id => {
     const camera = cameras.find(c => c.id === id);
-    const loadedRolls = activeRolls.filter(r => (r.cameraIds || []).includes(id));
+    const loadedRolls = activeRolls.filter(r => (r.currentCameraId || r.cameraIds?.[0]) === id);
     return {
       id,
       name: camera?.name || t('common.unknownCamera'),
@@ -80,7 +80,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
   };
 
   const getLoadedSetupLabel = (roll: typeof activeRolls[number]) => {
-    const cameraLabel = (roll.cameraIds || []).map(getCameraName).join(' / ') || t('dashboard.unboundCamera');
+    const cameraLabel = getCameraName(roll.currentCameraId || roll.cameraIds?.[0]);
     const backLabel = roll.filmBackId ? getFilmBackName(roll.filmBackId) : '';
     const filmLabel = enableFilmMode && roll.filmStockId !== 'digital-placeholder'
       ? getFilmName(roll.filmStockId)
@@ -110,13 +110,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
         <div className="dash-section">
           <h2 className="dash-section-title">{t('dashboard.workspace')}</h2>
           <div className="metrics-grid">
-            <div className="metric-card">
+            <button
+              type="button"
+              className="metric-card metric-card-button"
+              onClick={() => onNavigate('rolls')}
+            >
               <div className="metric-icon active"><Play size={18} /></div>
               <div className="metric-data">
                 <span>{t('dashboard.active')}</span>
                 <strong>{activeRolls.length} {t('common.rollUnit')}</strong>
               </div>
-            </div>
+            </button>
             <button
               type="button"
               className="metric-card metric-card-button"
@@ -128,21 +132,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
                 <strong>{totalFilmStock} {t('common.rollUnit')}</strong>
               </div>
             </button>
-            <div className="metric-card">
+            <button
+              type="button"
+              className="metric-card metric-card-button"
+              onClick={() => onNavigate('gear?tab=cameras')}
+            >
               <div className="metric-icon camera"><Camera size={18} /></div>
               <div className="metric-data">
                 <span>{t('dashboard.activeCameras')}</span>
                 <strong>{activeCameraSummaries.length} {t('common.cameraUnit')}</strong>
               </div>
-            </div>
+            </button>
             {showLoadedBackMetric && (
-              <div className="metric-card">
+              <button
+                type="button"
+                className="metric-card metric-card-button"
+                onClick={() => onNavigate('gear?tab=cameras')}
+              >
                 <div className="metric-icon back"><Package size={18} /></div>
                 <div className="metric-data">
                   <span>{t('dashboard.loadedBacks')}</span>
                   <strong>{activeFilmBackIds.length} {t('common.backUnit')}</strong>
                 </div>
-              </div>
+              </button>
             )}
           </div>
         </div>
@@ -185,6 +197,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
               <div className="active-rolls-empty">
                 <Play size={24} style={{ color: 'var(--text-muted)' }} />
                 <p>{t('dashboard.noActiveRolls')}</p>
+                <button
+                  type="button"
+                  className="primary btn-sm active-rolls-empty-cta"
+                  onClick={() => onNavigate('rolls?newRoll=1', { skipPageTransition: true })}
+                >
+                  <Film size={16} />
+                  {t('dashboard.startShootingRecord')}
+                </button>
               </div>
             ) : (
               activeRollsPreview.map((roll, i) => (

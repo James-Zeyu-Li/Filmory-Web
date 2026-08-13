@@ -84,7 +84,8 @@ export const PhotosView: React.FC<PhotosViewProps> = ({ enableFilmMode }) => {
   const getPhotoMetadata = (photo: PhotoAsset) => {
     const roll = archivedRolls.find(r => r.id === photo.rollId);
     if (!roll) return null;
-    const camera = cameras.find(c => (roll.cameraIds || []).includes(c.id!));
+    const currentCameraId = roll.currentCameraId || roll.cameraIds?.[0];
+    const camera = cameras.find(c => c.id === currentCameraId);
     const film = filmStocks.find(f => f.id === roll.filmStockId);
     return {
       rollName: roll.name,
