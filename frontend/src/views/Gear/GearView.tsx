@@ -35,6 +35,7 @@ import { CamerasTab } from './components/CamerasTab';
 import { LensesTab } from './components/LensesTab';
 import { FilmStocksTab } from './components/FilmStocksTab';
 import { OtherEquipmentTab } from './components/OtherEquipmentTab';
+import { GearAvatarEditor } from './components/GearAvatarEditor';
 interface GearViewProps {
   enableFilmMode: boolean;
 }
@@ -1177,57 +1178,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     avatarUrl: string | null | undefined,
     label: string,
     placeholder: React.ReactNode
-  ) => {
-    if (!id) return null;
-    const avatarFullUrl = getAvatarFullUrl(avatarUrl);
-
-    return (
-      <div className="edit-avatar-panel">
-        <div className="edit-avatar-preview" onClick={() => avatarFullUrl && setPreviewAvatarUrl(avatarFullUrl)}>
-          {avatarFullUrl ? (
-            <img src={avatarFullUrl} alt={label} />
-          ) : (
-            <div className="edit-avatar-placeholder">{placeholder}</div>
-          )}
-        </div>
-        <div className="edit-avatar-content">
-          <div>
-            <h4>{t('gear.coverTitle')}</h4>
-            <p>{avatarFullUrl ? t('gear.coverCustom') : t('gear.coverDefault')}</p>
-          </div>
-          <div className="edit-avatar-actions">
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => avatarFullUrl ? openAvatarPreview(avatarFullUrl) : triggerAvatarUpload(id, type)}
-              disabled={uploadingEntityId === id}
-            >
-              {uploadingEntityId === id ? t('common.loading') : avatarFullUrl ? t('gear.viewCover') : t('gear.uploadCover')}
-            </button>
-            {avatarFullUrl && (
-              <>
-                <button
-                  type="button"
-                  className="secondary"
-                  onClick={() => triggerAvatarUpload(id, type)}
-                  disabled={uploadingEntityId === id}
-                >
-                  {t('gear.changeCover')}
-                </button>
-                <button
-                  type="button"
-                  className="danger"
-                  onClick={() => handleRemoveAvatar(id, type, label)}
-                >
-                  {t('gear.removeCover')}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
+  ) => <GearAvatarEditor id={id} type={type} avatarUrl={avatarUrl} label={label} placeholder={placeholder} uploading={uploadingEntityId === id} t={t} onPreview={openAvatarPreview} onUpload={triggerAvatarUpload} onRemove={(avatarId, avatarType, avatarLabel) => { void handleRemoveAvatar(avatarId, avatarType, avatarLabel); }} />;
 
   const openNewCamera = () => {
     setEditingCameraId(null);
