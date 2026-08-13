@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { db, type Camera, type Lens, type FilmStock, type OtherEquipment } from '../../db/schema';
-import { Camera as CameraIcon, Plus, Trash2, SlidersHorizontal, Upload, X, Archive, Search, Aperture, Film, Package } from 'lucide-react';
+import { Camera as CameraIcon, Plus, X, Search, Aperture, Film, Package } from 'lucide-react';
 import {
   COMMON_CAMERAS,
   COMMON_FILM_STOCKS,
@@ -19,9 +19,7 @@ import { useCurrency } from '../../contexts/useCurrency';
 import { useTrialGate } from '../../contexts/useTrialGate';
 import { useLanguage } from '../../contexts/useLanguage';
 import { useCameraSystems, useCameras, useFilmBacks, useLenses, useFilmStocks, useOtherEquipments } from '../../hooks/useData';
-import { EmptyState } from '../../components/EmptyState';
 import { Modal } from '../../components/Modal';
-import { IconButton } from '../../components/ui/IconButton';
 import { motion } from 'framer-motion';
 import {
   GEAR_AVATAR_MAX_EDGE,
@@ -33,6 +31,10 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { GEAR_SUB_TAB_KEY } from '../../services/workspacePreferences';
 import { requestImmediateSync } from '../../services/syncEvents';
 import { adjustFilmStock } from '../../services/inventoryOperationService';
+import { CamerasTab } from './components/CamerasTab';
+import { LensesTab } from './components/LensesTab';
+import { FilmStocksTab } from './components/FilmStocksTab';
+import { OtherEquipmentTab } from './components/OtherEquipmentTab';
 interface GearViewProps {
   enableFilmMode: boolean;
 }
@@ -210,13 +212,6 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     }
   };
 
-  const getAvatarUploadTitle = (type: AvatarActionEntity) => {
-    if (type === 'cameras') return t('gear.uploadCameraCover');
-    if (type === 'lenses') return t('gear.uploadLensCover');
-    if (type === 'filmStocks') return t('gear.uploadFilmCover');
-    return t('gear.uploadCover');
-  };
-
   const updateEditingAvatarState = (
     id: string,
     type: GearAvatarTableName,
@@ -305,6 +300,8 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
   const filmStocks = useFilmStocks();
   const otherEquipments = useOtherEquipments();
 
+  const getCameraSystemName = (systemId?: string) => cameraSystems.find(system => system.id === systemId)?.name || t('gear.unknownSystem');
+
   // Enter key mobile-like navigation
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>) => {
     if (e.key === 'Enter') {
@@ -330,42 +327,6 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
   };
 
   // Actions
-
-  // Filter and Sort logic
-  const filterAndSort = (items: any[]) => {
-    let filtered = items;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      filtered = items.filter(i =>
-        (i.name && i.name.toLowerCase().includes(q)) ||
-        (i.brand && i.brand.toLowerCase().includes(q)) ||
-        (i.type && i.type.toLowerCase().includes(q))
-      );
-    }
-    return filtered.sort((a, b) => {
-      if (sortBy === 'date') {
-        return (b.addedAt || 0) - (a.addedAt || 0);
-      } else {
-        const nameA = a.name || a.brand || '';
-        const nameB = b.name || b.brand || '';
-        return nameA.localeCompare(nameB);
-      }
-    });
-  };
-
-  const displayCameras = filterAndSort(cameras);
-  const displayLenses = filterAndSort(lenses);
-  const displayFilms = filterAndSort(filmStocks);
-  const displayEquipments = filterAndSort(otherEquipments);
-
-  const getCameraSystemName = (systemId?: string) => {
-    return cameraSystems.find(system => system.id === systemId)?.name || t('gear.unknownSystem');
-  };
-
-  const getFilmBacksForCamera = (camera: Camera) => {
-    if (!camera.cameraSystemId) return [];
-    return filmBacks.filter(back => back.cameraSystemId === camera.cameraSystemId && back.status !== 'archived');
-  };
 
   const activeCameraSystemId = editingCameraId
     ? newCamera.cameraSystemId
@@ -1268,6 +1229,68 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     );
   };
 
+  const openNewCamera = () => {
+    setEditingCameraId(null);
+    setNewCamera({ name: '', type: 'film', format: '135', purchasePrice: undefined });
+    setCameraSystemMode('new');
+    setSelectedExistingCameraSystemId('');
+    setCameraSystemName('');
+    setCameraBackNames(['Back 1']);
+    setNewFilmBackName('');
+    setSelectedCameraBrand('');
+    setSelectedCameraModel('');
+    setCameraBrandSearch('');
+    setCameraModelSearch('');
+    setIsCameraModalOpen(true);
+  };
+
+  const openNewLens = () => {
+    setEditingLensId(null);
+    setNewLens({ name: '', focalLength: 50, maxAperture: 'f/1.8', type: 'prime' });
+    setLensDictSearch('');
+    setIsLensDictDropdownOpen(false);
+    setLensTypeFilter('prime');
+    setLensMountFilter('all');
+    setLensMountSearch('');
+    setSelectedLensBrand('');
+    setSelectedLensModel('');
+    setLensBrandSearch('');
+    setLensModelSearch('');
+    setIsLensModalOpen(true);
+  };
+
+  const openNewFilm = () => {
+    setEditingFilmId(null);
+    setNewFilm(createDefaultNewFilmDraft());
+    setFilmDictSearch('');
+    setIsDictDropdownOpen(false);
+    setFilmFormatFilter('135');
+    setSelectedFilmBrand('');
+    setFilmBrandSearch('');
+    setFilmModelSearch('');
+    setShowManualFilmForm(false);
+    setIsFilmModalOpen(true);
+  };
+
+  const openNewEquipment = () => {
+    setEditingEquipmentId(null);
+    setNewEquipment({ name: '', type: 'chemical', notes: '', purchaseDate: undefined, expiryDate: undefined });
+    setIsEquipmentModalOpen(true);
+  };
+
+  const renderActiveTab = () => {
+    if (subTab === 'cameras') {
+      return <CamerasTab cameras={allCameras} cameraSystems={cameraSystems} filmBacks={filmBacks} searchQuery={searchQuery} sortBy={sortBy} t={t} uploadingEntityId={uploadingEntityId} onAdd={openNewCamera} onEdit={openEditCamera} onDelete={handleDeleteCamera} onArchive={camera => setArchiveTarget({ id: camera.id!, type: 'camera', name: camera.name })} onUpload={id => triggerAvatarUpload(id, 'cameras')} onPreview={openAvatarPreview} />;
+    }
+    if (subTab === 'lenses') {
+      return <LensesTab lenses={allLenses} searchQuery={searchQuery} sortBy={sortBy} t={t} uploadingEntityId={uploadingEntityId} onAdd={openNewLens} onEdit={openEditLens} onDelete={handleDeleteLens} onArchive={lens => setArchiveTarget({ id: lens.id!, type: 'lens', name: lens.name })} onUpload={id => triggerAvatarUpload(id, 'lenses')} onPreview={openAvatarPreview} />;
+    }
+    if (subTab === 'filmStocks' && enableFilmMode) {
+      return <FilmStocksTab filmStocks={filmStocks} searchQuery={searchQuery} sortBy={sortBy} t={t} uploadingEntityId={uploadingEntityId} onAdd={openNewFilm} onEdit={openEditFilm} onDelete={handleDeleteFilm} onUpload={id => triggerAvatarUpload(id, 'filmStocks')} onPreview={openAvatarPreview} onAdjustStock={(id, delta) => { void handleUpdateStock(id, delta); }} />;
+    }
+    return <OtherEquipmentTab equipment={otherEquipments} searchQuery={searchQuery} sortBy={sortBy} nowTimestamp={nowTimestamp} t={t} onAdd={openNewEquipment} onEdit={openEditEquipment} onDelete={handleDeleteEquipment} />;
+  };
+
   return (
     <div className="main-content" style={{ width: '100%', maxWidth: 'none', flex: 1 }}>
       <header className="view-header">
@@ -1439,393 +1462,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2 }}
           >
-            {/* 1. CAMERAS TAB */}
-            {subTab === 'cameras' && (
-              <div className="cameras-grid-layout">
-            {cameras.length === 0 ? (
-              <div style={{ height: '50vh', gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
-                <EmptyState
-                  icon={CameraIcon}
-                  title={t('gear.noCameraTitle')}
-                  description={t('gear.noCameraDesc')}
-                  action={<button className="primary" onClick={() => {
-                    setEditingCameraId(null);
-                    setNewCamera({ name: '', type: 'film', format: '135', purchasePrice: undefined });
-                    setCameraSystemMode('new');
-                    setSelectedExistingCameraSystemId('');
-                    setCameraSystemName('');
-                    setCameraBackNames(['Back 1']);
-                    setNewFilmBackName('');
-                    setSelectedCameraBrand('');
-                    setSelectedCameraModel('');
-                    setCameraBrandSearch('');
-                    setCameraModelSearch('');
-                    setIsCameraModalOpen(true);
-                  }}><Plus size={16} /> {t('gear.addCamera')}</button>}
-                />
-              </div>
-            ) : displayCameras.length === 0 ? (
-              <div style={{ height: '50vh', gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
-                <EmptyState
-                  icon={CameraIcon}
-                  title={t('gear.noCameraMatch')}
-                  description={t('gear.noMatchDesc')}
-                />
-              </div>
-            ) : (
-              displayCameras.map(camera => {
-                const avatarFullUrl = getAvatarFullUrl(camera.avatarUrl);
-
-                return (
-                  <div key={camera.id} className="gear-card camera-card-with-avatar" onClick={(e) => { e.stopPropagation(); openEditCamera(camera); }} style={{ cursor: "pointer" }}>
-                    <div className="camera-avatar-container">
-                      {avatarFullUrl ? (
-                        <img
-                          src={avatarFullUrl}
-                          alt={camera.name}
-                          className="camera-avatar-img"
-                          onClick={(e) => { e.stopPropagation(); setPreviewAvatarUrl(avatarFullUrl); }}
-                          title={t('gear.previewCover')}
-                        />
-                      ) : (
-                        <div className="camera-avatar-placeholder">
-                          {getPlaceholderText(camera.name)}
-                        </div>
-                      )}
-
-                      {/* Upload overlay */}
-                      <button
-                        type="button"
-                        className="camera-avatar-upload-overlay"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (avatarFullUrl) {
-                            openAvatarPreview(avatarFullUrl);
-                            return;
-                          }
-                          triggerAvatarUpload(camera.id!, 'cameras');
-                        }}
-                        disabled={uploadingEntityId === camera.id}
-                        title={avatarFullUrl ? t('gear.previewCover') : getAvatarUploadTitle('cameras')}
-                      >
-                        {uploadingEntityId === camera.id ? (
-                          <span className="avatar-loading-spinner" />
-                        ) : (
-                          avatarFullUrl ? <Search size={14} /> : <Upload size={14} />
-                        )}
-                      </button>
-                    </div>
-
-                    <div className="camera-card-content">
-                      <div className="gear-card-header">
-                        <span className={`tag ${camera.type}`}>{camera.type === 'film' ? t('gear.film') : t('gear.digital')}</span>
-                        <div style={{ display: 'flex', gap: '4px' }}>
-                          <IconButton variant="success" icon={<Archive size={16} />} title={t('gear.sellArchive')} onClick={(e) => { e.stopPropagation(); setArchiveTarget({ id: camera.id!, type: 'camera', name: camera.name }); }} />
-                          <IconButton variant="danger" icon={<Trash2 size={16} />} title={t('gear.deletePermanently')} onClick={(e) => { e.stopPropagation(); handleDeleteCamera(camera.id!); }} />
-                        </div>
-                      </div>
-                      <h3>{camera.name}</h3>
-                      <div className="gear-details">
-                        <div><strong>{t('gear.format')}:</strong> {camera.format}</div>
-                        {camera.format === '120' && (
-                          <div><strong>{t('gear.back')}:</strong> {camera.backType === 'interchangeable' ? `${getFilmBacksForCamera(camera).length} ${t('common.backUnit')} · ${getCameraSystemName(camera.cameraSystemId)}` : t('gear.fixedBack')}</div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        )}
-
-        {/* 2. LENSES TAB */}
-        {subTab === 'lenses' && (
-          <div className="lenses-grid-layout">
-            {lenses.length === 0 ? (
-              <div style={{ height: '50vh', gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
-                <EmptyState
-                  icon={SlidersHorizontal}
-                  title={t('gear.noLensTitle')}
-                  description={t('gear.noLensDesc')}
-                  action={<button className="primary" onClick={() => {
-                    setEditingLensId(null);
-                    setNewLens({ name: '', focalLength: 50, maxAperture: 'f/1.8', type: 'prime' });
-                    setLensDictSearch('');
-                    setIsLensDictDropdownOpen(false);
-                    setLensTypeFilter('prime');
-                    setLensMountFilter('all');
-                    setLensMountSearch('');
-                    setSelectedLensBrand('');
-                    setSelectedLensModel('');
-                    setLensBrandSearch('');
-                    setLensModelSearch('');
-                    setIsLensModalOpen(true);
-                  }}><Plus size={16} /> {t('gear.addLens')}</button>}
-                />
-              </div>
-            ) : displayLenses.length === 0 ? (
-              <div style={{ height: '50vh', gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
-                <EmptyState
-                  icon={SlidersHorizontal}
-                  title={t('gear.noLensMatch')}
-                  description={t('gear.noMatchDesc')}
-                />
-              </div>
-            ) : (
-              displayLenses.map(lens => {
-                const avatarFullUrl = getAvatarFullUrl(lens.avatarUrl);
-
-                return (
-                <div key={lens.id} className="gear-card lens-card-horizontal" onClick={(e) => { e.stopPropagation(); openEditLens(lens); }} style={{ cursor: "pointer" }}>
-                  <div className="camera-avatar-container" style={{ width: '80px', height: '80px' }}>
-                    {avatarFullUrl ? (
-                      <img
-                        src={avatarFullUrl}
-                        alt={lens.name}
-                        className="camera-avatar-img"
-                        onClick={(e) => { e.stopPropagation(); setPreviewAvatarUrl(avatarFullUrl); }}
-                        title={t('gear.previewCover')}
-                        style={{ objectFit: 'cover' }}
-                      />
-                    ) : (
-                      <div className="lens-card-avatar" style={{ margin: 0 }}>
-                        <LensSvgAvatar focalLength={lens.focalLength} type={lens.type || 'prime'} size={72} />
-                      </div>
-                    )}
-
-                    <button
-                      type="button"
-                      className="camera-avatar-upload-overlay"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (avatarFullUrl) {
-                          openAvatarPreview(avatarFullUrl);
-                          return;
-                        }
-                        triggerAvatarUpload(lens.id!, 'lenses');
-                      }}
-                      disabled={uploadingEntityId === lens.id}
-                      title={avatarFullUrl ? t('gear.previewCover') : getAvatarUploadTitle('lenses')}
-                    >
-                      {uploadingEntityId === lens.id ? (
-                        <span className="avatar-loading-spinner" />
-                      ) : (
-                        avatarFullUrl ? <Search size={14} /> : <Upload size={14} />
-                      )}
-                    </button>
-                  </div>
-                  <div className="lens-card-content">
-                    <div className="gear-card-header">
-                      <span className={`tag lens-${lens.type || 'prime'}`}>
-                        {lens.type === 'prime' ? t('gear.prime') : t('gear.zoom')}
-                      </span>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <IconButton variant="success" icon={<Archive size={16} />} title={t('gear.sellArchive')} onClick={(e) => { e.stopPropagation(); setArchiveTarget({ id: lens.id!, type: 'lens', name: lens.name }); }} />
-                        <IconButton variant="danger" icon={<Trash2 size={16} />} title={t('gear.deletePermanently')} onClick={(e) => { e.stopPropagation(); handleDeleteLens(lens.id!); }} />
-                      </div>
-                    </div>
-                    <h3>{lens.name}</h3>
-                    <div className="gear-details">
-                      <div><strong>{t('gear.focalLength')}:</strong> {lens.focalLength}mm</div>
-                      <div><strong>{t('gear.maxAperture')}:</strong> {lens.maxAperture}</div>
-                    </div>
-                  </div>
-                </div>
-                );
-              })
-            )}
-          </div>
-        )}
-
-        {/* 3. FILM STOCKS TAB */}
-        {subTab === 'filmStocks' && enableFilmMode && (
-          <div className="lenses-grid-layout">
-            {displayFilms.length === 0 ? (
-              <div style={{ height: '50vh', gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
-                <EmptyState
-                  icon={Film}
-                  title={t('gear.noFilmTitle')}
-                  description={t('gear.noFilmDesc')}
-                  action={<button className="primary" onClick={() => {
-                    setEditingFilmId(null);
-                    setNewFilm(createDefaultNewFilmDraft());
-                    setFilmDictSearch('');
-                    setIsDictDropdownOpen(false);
-                    setFilmFormatFilter('135');
-                    setSelectedFilmBrand('');
-                    setFilmBrandSearch('');
-                    setFilmModelSearch('');
-                    setShowManualFilmForm(false);
-                    setIsFilmModalOpen(true);
-                  }}><Plus size={16} /> {t('gear.addFilmStock')}</button>}
-                />
-              </div>
-            ) : displayFilms.length === 0 ? (
-              <div style={{ height: '50vh', gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
-                <EmptyState
-                  icon={Film}
-                  title={t('gear.noFilmMatch')}
-                  description={t('gear.noMatchDesc')}
-                />
-              </div>
-            ) : (
-              displayFilms.map(film => {
-                const avatarFullUrl = getAvatarFullUrl(film.avatarUrl);
-
-                return (
-                <div key={film.id} className="gear-card lens-card-horizontal" onClick={() => openEditFilm(film)} style={{ cursor: "pointer" }}>
-                  <div className="camera-avatar-container" style={{ width: '80px', height: '80px' }}>
-                    {avatarFullUrl ? (
-                      <img
-                        src={avatarFullUrl}
-                        alt={film.name}
-                        className="camera-avatar-img"
-                        onClick={(e) => { e.stopPropagation(); setPreviewAvatarUrl(avatarFullUrl); }}
-                        title={t('gear.previewCover')}
-                        style={{ objectFit: 'cover' }}
-                      />
-                    ) : (
-                      <div className="lens-card-avatar" style={{ padding: '4px', width: '100%', height: '100%', overflow: 'hidden', margin: 0 }}>
-                        <FilmSvgAvatar brand={film.brand} name={film.name} format={film.format} size={72} />
-                      </div>
-                    )}
-
-                    <button
-                      type="button"
-                      className="camera-avatar-upload-overlay"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (avatarFullUrl) {
-                          openAvatarPreview(avatarFullUrl);
-                          return;
-                        }
-                        triggerAvatarUpload(film.id!, 'filmStocks');
-                      }}
-                      disabled={uploadingEntityId === film.id}
-                      title={avatarFullUrl ? t('gear.previewCover') : getAvatarUploadTitle('filmStocks')}
-                    >
-                      {uploadingEntityId === film.id ? (
-                        <span className="avatar-loading-spinner" />
-                      ) : (
-                        avatarFullUrl ? <Search size={14} /> : <Upload size={14} />
-                      )}
-                    </button>
-                  </div>
-                  <div className="lens-card-content">
-                    <div className="gear-card-header">
-                      <span className={`tag ${film.colorType === 'color' ? 'color' : 'bw'}`}>
-                        {film.colorType === 'color' ? t('gear.color') : t('gear.bw')}
-                      </span>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <IconButton variant="danger" icon={<Trash2 size={16} />} title={t('gear.deletePermanently')} onClick={(e) => { e.stopPropagation(); handleDeleteFilm(film.id!); }} />
-                      </div>
-                    </div>
-                    <h3 style={{ margin: '4px 0' }}>{film.brand} {film.name}</h3>
-                    <div className="gear-details" style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderTop: 'none', paddingTop: '0', marginTop: '0' }}>
-                      <div style={{ display: 'flex', gap: '16px', fontSize: '12px' }}>
-                        <div><strong>ISO：</strong>{film.iso}</div>
-                        <div><strong>{t('gear.format')}:</strong> {film.format}</div>
-                      </div>
-                      <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                          <strong>{t('gear.stockCount')}:</strong> {t('gear.rollsInStock', { count: film.stockCount || 0 })}
-                        </span>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <button
-                            type="button"
-                            className="secondary"
-                            style={{ padding: '2px 8px', fontSize: '11px', minWidth: '22px', height: '22px', width: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            title={t('gear.decreaseStock')}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              void handleUpdateStock(film.id!, -1);
-                            }}
-                          >
-                            -
-                          </button>
-                          <button
-                            type="button"
-                            className="secondary"
-                            style={{ padding: '2px 8px', fontSize: '11px', minWidth: '22px', height: '22px', width: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            title={t('gear.increaseStock')}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              void handleUpdateStock(film.id!, 1);
-                            }}
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                );
-              })
-            )}
-          </div>
-        )}
-
-        {/* 4. OTHER EQUIPMENTS TAB */}
-        {subTab === 'otherEquipments' && (
-          <>
-            <div className="gear-context-note">
-              {t('gear.otherContextNote')}
-            </div>
-            <div className="grid-layout">
-              {otherEquipments.length === 0 ? (
-                <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
-                  <EmptyState
-                    icon={SlidersHorizontal}
-                    title={t('gear.noOtherTitle')}
-                    description={t('gear.noOtherDesc')}
-                    action={<button className="primary" onClick={() => { setEditingEquipmentId(null); setIsEquipmentModalOpen(true); }}><Plus size={16} /> {t('gear.registerAccessory')}</button>}
-                  />
-                </div>
-              ) : displayEquipments.length === 0 ? (
-                <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
-                  <EmptyState
-                    icon={SlidersHorizontal}
-                    title={t('gear.noOtherMatch')}
-                    description={t('gear.noMatchDesc')}
-                  />
-                </div>
-              ) : (
-                displayEquipments.map(eq => {
-                  const isExpired = eq.type === 'chemical' && eq.expiryDate && eq.expiryDate < nowTimestamp;
-                  return (
-                    <div key={eq.id} className={`gear-card equipment-card ${isExpired ? 'expired-alert' : ''}`} onClick={() => openEditEquipment(eq)} style={{ cursor: 'pointer' }}>
-                      <div className="gear-card-header">
-                        <span className={`tag eq-${eq.type}`}>
-                          {eq.type === 'chemical' ? t('gear.chemical') :
-                           eq.type === 'tripod' ? t('gear.tripod') :
-                           eq.type === 'cleaner' ? t('gear.cleaner') : t('gear.otherType')}
-                        </span>
-                        {isExpired && <span className="tag expired-tag">{t('gear.expired')}</span>}
-                        <div style={{ display: 'flex', gap: '4px' }}>
-                          <IconButton variant="danger" icon={<Trash2 size={16} />} title={t('gear.deletePermanently')} onClick={(e) => { e.stopPropagation(); handleDeleteEquipment(eq.id!); }} />
-                        </div>
-                      </div>
-                      <h3>{eq.name}</h3>
-                      <div className="gear-details">
-                        {eq.purchaseDate && (
-                          <div><strong>{t('gear.purchaseDate')}:</strong> {new Date(eq.purchaseDate).toLocaleDateString()}</div>
-                        )}
-                        {eq.type === 'chemical' && eq.expiryDate && (
-                          <div className={isExpired ? 'expired-text' : ''}>
-                            <strong>{t('gear.expiryDate')}:</strong> {new Date(eq.expiryDate).toLocaleDateString()}
-                          </div>
-                        )}
-                        {eq.notes && <div><strong>{t('gear.notes')}:</strong> {eq.notes}</div>}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </>
-        )}
+            {renderActiveTab()}
           </motion.div>
         </div>
       </div>
