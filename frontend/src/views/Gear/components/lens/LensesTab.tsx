@@ -22,6 +22,7 @@ export const LensesTab = memo(({ lenses, searchQuery, sortBy, t, uploadingEntity
   return <div className="lenses-grid-layout">{displayLenses.map(lens => {
     const avatarUrl = getAvatarUrl(lens.avatarUrl);
     return <div key={lens.id} className="gear-card lens-card-horizontal" onClick={() => onEdit(lens)} style={{ cursor: 'pointer' }}>
+      <button type="button" className="gear-card-open-action" onClick={event => { event.stopPropagation(); onEdit(lens); }} aria-label={`${t('gear.editLens')}: ${lens.name}`} />
       <div className="camera-avatar-container" style={{ width: '80px', height: '80px' }}>
         {avatarUrl ? <img src={avatarUrl} alt={lens.name} className="camera-avatar-img" onClick={event => { event.stopPropagation(); onPreview(avatarUrl); }} title={t('gear.previewCover')} style={{ objectFit: 'cover' }} /> : <div className="lens-card-avatar" style={{ margin: 0 }}><LensSvgAvatar focalLength={lens.focalLength} type={lens.type || 'prime'} size={72} /></div>}
         <button type="button" className="camera-avatar-upload-overlay" onClick={event => { event.stopPropagation(); if (avatarUrl) onPreview(avatarUrl); else onUpload(lens.id!); }} disabled={uploadingEntityId === lens.id} title={avatarUrl ? t('gear.previewCover') : t('gear.uploadLensCover')}>{uploadingEntityId === lens.id ? <span className="avatar-loading-spinner" /> : avatarUrl ? <Search size={14} /> : <Upload size={14} />}</button>

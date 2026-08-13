@@ -80,6 +80,7 @@ export const CamerasTab = memo(({
         const avatarUrl = getAvatarFullUrl(camera.avatarUrl);
         return (
           <div key={camera.id} className="gear-card camera-card-with-avatar" onClick={() => onEdit(camera)} style={{ cursor: 'pointer' }}>
+            <button type="button" className="gear-card-open-action" onClick={event => { event.stopPropagation(); onEdit(camera); }} aria-label={`${t('gear.editCamera')}: ${camera.name}`} />
             <div className="camera-avatar-container">
               {avatarUrl ? <img src={avatarUrl} alt={camera.name} className="camera-avatar-img" onClick={event => { event.stopPropagation(); onPreview(avatarUrl); }} title={t('gear.previewCover')} /> : <div className="camera-avatar-placeholder">{getPlaceholderText(camera.name)}</div>}
               <button type="button" className="camera-avatar-upload-overlay" onClick={event => { event.stopPropagation(); if (avatarUrl) onPreview(avatarUrl); else onUpload(camera.id!); }} disabled={uploadingEntityId === camera.id} title={avatarUrl ? t('gear.previewCover') : t('gear.uploadCameraCover')}>
