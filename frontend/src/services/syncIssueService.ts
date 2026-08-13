@@ -5,10 +5,12 @@ import {
   type LedgerTransaction,
   type Roll,
   type SyncOperationQueueItem,
+  type SyncQueueItem,
 } from '../db/schema';
 import { requestImmediateSync } from './syncEvents';
 
 type FailedInventoryOperation = SyncOperationQueueItem & { id: number };
+type FailedSyncQueueItem = SyncQueueItem & { id: number };
 
 type CreateRollOperationPayload = {
   roll: Roll;
@@ -27,6 +29,14 @@ const getFailedOperation = async (queueItemId: number, userId: string): Promise<
   }
 
   return item as FailedInventoryOperation;
+};
+
+const getFailedQueueItem = async (queueItemId: number, userId: string): Promise<FailedSyncQueueItem> => {
+  const item = await db.syncQueue.get(queueItemId);
+  if (!item || item.id === undefined || item.userId !== userId || item.failureKind !== 'needs_attention') {
+    throw new Error('This sync issue is no longer available.');
+  }
+  return item as FailedSyncQueueItem;
 };
 
 const getCreateRollPayload = (operation: FailedInventoryOperation): CreateRollOperationPayload => {
@@ -48,7 +58,7 @@ const isMissingFilmStockFailure = (operation: FailedInventoryOperation): boolean
   || operation.lastErrorMessage?.includes('FILM_STOCK_NOT_FOUND') === true
 );
 
-const clearFailureState = (operation: FailedInventoryOperation): SyncOperationQueueItem => {
+const clearFailureState = <T extends SyncQueueItem>(operation: T): T => {
   const retryableOperation = { ...operation };
   Reflect.deleteProperty(retryableOperation, 'id');
   delete retryableOperation.attemptCount;
@@ -64,7 +74,7 @@ const clearFailureState = (operation: FailedInventoryOperation): SyncOperationQu
 /** Re-open the exact failed operation without creating a second operation id. */
 export const retrySyncIssue = async (queueItemId: number, userId: string): Promise<void> => {
   await db.transaction('rw', db.syncQueue, async () => {
-    const operation = await getFailedOperation(queueItemId, userId);
+    const operation = await getFailedQueueItem(queueItemId, userId);
     await db.syncQueue.put({
       ...clearFailureState(operation),
       id: operation.id,

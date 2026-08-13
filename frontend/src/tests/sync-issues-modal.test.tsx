@@ -7,6 +7,7 @@ import { LanguageProvider } from '../contexts/LanguageContext';
 import { db } from '../db/schema';
 
 const syncIssueServiceMock = vi.hoisted(() => ({
+  retrySyncIssue: vi.fn(),
   undoSyncIssue: vi.fn(),
   keepRollWithoutInventory: vi.fn(),
   canKeepRollWithoutInventory: vi.fn(),
@@ -36,9 +37,11 @@ describe('SyncIssuesModal', () => {
     confirm.mockReset();
     notify.mockReset();
     syncIssueServiceMock.undoSyncIssue.mockReset();
+    syncIssueServiceMock.retrySyncIssue.mockReset();
     syncIssueServiceMock.keepRollWithoutInventory.mockReset();
     syncIssueServiceMock.canKeepRollWithoutInventory.mockReset();
     syncIssueServiceMock.undoSyncIssue.mockResolvedValue(undefined);
+    syncIssueServiceMock.retrySyncIssue.mockResolvedValue(undefined);
     syncIssueServiceMock.keepRollWithoutInventory.mockResolvedValue(undefined);
     syncIssueServiceMock.canKeepRollWithoutInventory.mockResolvedValue(false);
   });
@@ -58,7 +61,7 @@ describe('SyncIssuesModal', () => {
 
     expect(await screen.findByText('Kodak Gold 200')).toBeInTheDocument();
     expect(screen.getByText('关联的胶卷库存已不可用。请撤销本机更改，或调整记录方式。')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '重试' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '重试同步' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '撤销本机更改' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '改为未登记库存' })).not.toBeInTheDocument();
   });
@@ -97,5 +100,26 @@ describe('SyncIssuesModal', () => {
 
     expect(await screen.findByText('Sunday walk')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '改为未登记库存' })).toBeInTheDocument();
+  });
+
+  it('shows failed record changes instead of rendering an empty inventory-only state', async () => {
+    const queueItemId = await db.syncQueue.add({
+      userId,
+      tableName: 'rolls',
+      action: 'upsert',
+      recordId: 'roll-1',
+      payload: { id: 'roll-1', userId, name: 'Weekend walk' },
+      timestamp: Date.now(),
+      failureKind: 'needs_attention',
+      lastErrorCode: 'PGRST204',
+    });
+    renderModal();
+
+    expect(await screen.findByText('Weekend walk')).toBeInTheDocument();
+    expect(screen.getByText('云端数据库尚未具备此记录需要的字段或操作。应用最新 migration 后重试同步。')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '撤销本机更改' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '重试同步' }));
+    await waitFor(() => expect(syncIssueServiceMock.retrySyncIssue).toHaveBeenCalledWith(queueItemId, userId));
   });
 });

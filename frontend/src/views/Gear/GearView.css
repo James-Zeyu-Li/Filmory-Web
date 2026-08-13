@@ -39,6 +39,12 @@
   outline-offset: -3px;
 }
 
+.gear-card-open-action:hover {
+  background: transparent;
+  border-color: transparent;
+  filter: none;
+}
+
 .gear-card .camera-avatar-container,
 .gear-card .gear-card-header {
   position: relative;
@@ -90,7 +96,7 @@
   border: 1px solid var(--text-primary);
 }
 
-/* Film Stock Stepper Controls (Apple HIG & Material 44x44px touch target) */
+/* Film stock controls remain secondary to the stock count. */
 .stock-stepper-group {
   display: inline-flex;
   align-items: center;
@@ -98,7 +104,9 @@
   background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 2px;
+  padding: 1px;
+  position: relative;
+  z-index: 2;
 }
 
 .stock-stepper-btn {
@@ -107,8 +115,9 @@
   color: var(--text-primary);
   font-size: 13px;
   font-weight: 600;
-  min-width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -117,18 +126,7 @@
   position: relative;
   transition: background var(--transition-fast), color var(--transition-fast), transform 0.1s ease;
   user-select: none;
-}
-
-.stock-stepper-btn::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  min-width: 44px;
-  min-height: 44px;
-  width: 100%;
-  height: 100%;
+  z-index: 1;
 }
 
 .stock-stepper-btn:hover {
@@ -229,6 +227,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  position: relative;
+  cursor: default;
 }
 
 .edit-avatar-preview img {
@@ -236,6 +237,30 @@
   height: 100%;
   object-fit: cover;
   cursor: zoom-in;
+}
+
+button.edit-avatar-preview {
+  cursor: zoom-in;
+}
+
+.edit-avatar-preview-label {
+  position: absolute;
+  inset: auto 6px 6px;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0;
+  transform: translateY(3px);
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+button.edit-avatar-preview:hover .edit-avatar-preview-label,
+button.edit-avatar-preview:focus-visible .edit-avatar-preview-label {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .edit-avatar-placeholder {
@@ -691,6 +716,111 @@
   font-size: 12px;
 }
 
+/* Film cards share the camera-card hierarchy while keeping stock adjustment quiet. */
+.film-stock-card {
+  gap: 16px;
+}
+
+.film-stock-avatar {
+  width: 80px;
+  height: 80px;
+}
+
+.film-stock-placeholder {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 4px;
+  overflow: hidden;
+}
+
+.film-stock-card-content {
+  gap: 6px;
+  min-width: 0;
+}
+
+.film-stock-card .gear-card-header {
+  min-height: 28px;
+}
+
+.film-stock-specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.film-stock-specs strong {
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  margin-right: 4px;
+}
+
+.film-stock-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.film-stock-inventory-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.film-stock-count {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  min-width: 0;
+}
+
+.film-stock-count span {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.film-stock-count strong {
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .stock-stepper-btn {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .film-stock-card {
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px;
+  }
+
+  .film-stock-avatar {
+    width: 68px;
+    height: 68px;
+  }
+
+  .film-stock-meta-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .film-stock-inventory-row {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
 /* Other Equipment Styles */
 .tag.eq-chemical {
   background-color: rgba(245, 158, 11, 0.1);
@@ -814,7 +944,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(10, 12, 16, 0.76);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -823,8 +953,21 @@
   border-radius: inherit;
   opacity: 0;
   cursor: pointer;
-  transition: opacity var(--transition-fast);
+  transition: opacity var(--transition-fast), background var(--transition-fast);
   z-index: 2;
+}
+
+.camera-avatar-upload-overlay:hover,
+.camera-avatar-upload-overlay:focus-visible {
+  background: rgba(10, 12, 16, 0.86) !important;
+  border-color: transparent;
+}
+
+.camera-avatar-action-label {
+  margin-left: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .camera-avatar-container:hover .camera-avatar-upload-overlay {

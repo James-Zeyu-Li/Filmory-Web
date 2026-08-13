@@ -73,6 +73,38 @@
   gap: 10px;
 }
 
+.roll-drawer-section-heading {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.roll-advanced-toggle {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.roll-advanced-toggle svg {
+  transition: transform 0.18s ease;
+}
+
+.roll-advanced-toggle[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+
+.roll-advanced-options {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
 .roll-camera-transfer-history {
   width: 100%;
   display: grid;
@@ -367,11 +399,78 @@
   outline-offset: -3px;
 }
 
+.record-card-open-action:hover {
+  background: transparent;
+  border-color: transparent;
+  filter: none;
+}
+
 .roll-card-actions,
 .roll-card-row-actions,
 .collection-card-actions {
   position: relative;
   z-index: 2;
+}
+
+.roll-card-cover,
+.roll-card-row-thumb-wrapper {
+  z-index: 2;
+}
+
+.roll-card-cover-action {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  min-height: 100%;
+  border: 0;
+  border-radius: inherit;
+  background: rgba(10, 10, 9, 0.68);
+  color: #fff;
+  opacity: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.roll-card-cover-action:hover,
+.roll-card-cover-action:focus-visible {
+  background: rgba(10, 10, 9, 0.68);
+  border-color: transparent;
+  filter: none;
+  opacity: 1;
+}
+
+.roll-card-cover-action:disabled {
+  cursor: wait;
+}
+
+@media (hover: none) {
+  .roll-card-cover-action {
+    inset: auto 8px 8px auto;
+    width: 40px;
+    min-height: 40px;
+    border-radius: var(--radius-md);
+    opacity: 1;
+  }
+
+  .roll-card-cover-action span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
 }
 
 .roll-card-row:hover,
@@ -868,6 +967,13 @@
   white-space: nowrap;
 }
 
+.roll-cover-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .roll-cover-uploading {
   width: 100%;
   height: 100%;
@@ -949,6 +1055,32 @@
   background-size: cover;
   background-position: center;
   position: relative;
+}
+
+.roll-cover-preview-button {
+  display: block;
+  border: 0;
+  padding: 0;
+  cursor: zoom-in;
+}
+
+.roll-cover-preview-button:hover,
+.roll-cover-preview-button:focus-visible {
+  filter: brightness(0.88);
+}
+
+.roll-cover-preview-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -3px;
+}
+
+.roll-cover-preview-modal img {
+  display: block;
+  width: 100%;
+  max-height: min(72dvh, 680px);
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
 }
 
 .cover-upload-btn {
@@ -1498,6 +1630,10 @@
   .roll-cover-editor-content {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .roll-cover-actions {
+    justify-content: flex-start;
   }
 
   .roll-drawer-date-row {

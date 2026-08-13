@@ -14,9 +14,13 @@ describe('photo comparison slider', () => {
   });
 
   it('exposes the split position to keyboard users and supports fine adjustment', () => {
+    const createObjectURL = vi.fn()
+      .mockReturnValueOnce('blob:photo-a')
+      .mockReturnValueOnce('blob:photo-b');
+    const revokeObjectURL = vi.fn();
     vi.stubGlobal('URL', {
-      createObjectURL: vi.fn(() => 'blob:preview'),
-      revokeObjectURL: vi.fn(),
+      createObjectURL,
+      revokeObjectURL,
     });
 
     const { container } = render(<CompareView />);
@@ -26,6 +30,10 @@ describe('photo comparison slider', () => {
     fireEvent.change(inputs[0], { target: { files: [image] } });
     fireEvent.change(inputs[1], { target: { files: [image] } });
 
+    expect(screen.getByAltText('compare.imageAlt A')).toHaveAttribute('src', 'blob:photo-a');
+    expect(screen.getByAltText('compare.imageAlt B')).toHaveAttribute('src', 'blob:photo-b');
+    expect(revokeObjectURL).not.toHaveBeenCalled();
+
     const slider = screen.getByRole('slider', { name: 'compare.splitPosition' });
     expect(slider).toHaveAttribute('aria-valuenow', '50');
 
@@ -34,5 +42,12 @@ describe('photo comparison slider', () => {
 
     fireEvent.keyDown(slider, { key: 'End' });
     expect(slider).toHaveAttribute('aria-valuenow', '100');
+
+    fireEvent.click(screen.getByRole('button', { name: 'compare.sideBySide' }));
+    expect(document.querySelector('.compare-side-by-side')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTitle('compare.clearPhoto A'));
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:photo-a');
+    expect(screen.getByAltText('compare.previewAlt B')).toHaveAttribute('src', 'blob:photo-b');
   });
 });

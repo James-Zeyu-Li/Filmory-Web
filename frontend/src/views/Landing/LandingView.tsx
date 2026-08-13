@@ -74,7 +74,7 @@ export const LandingView: React.FC = () => {
           </motion.div>
           <motion.h1 variants={itemVariants}>
             {t('landing.titleLine1')}<br />
-            <span className="text-gradient">{t('landing.titleHighlight')}</span>
+            <span className="hero-title-accent">{t('landing.titleHighlight')}</span>
           </motion.h1>
           <motion.p variants={itemVariants} className="hero-subtitle">
             {t('landing.subtitleLine1')}<br/>
@@ -90,9 +90,6 @@ export const LandingView: React.FC = () => {
           </motion.div>
         </motion.div>
         
-        {/* Abstract Background Elements */}
-        <div className="hero-glow shape-1"></div>
-        <div className="hero-glow shape-2"></div>
       </section>
 
       {/* Features Grid */}
@@ -106,7 +103,7 @@ export const LandingView: React.FC = () => {
         >
           {/* Feature 1 */}
           <motion.div className="feature-card" variants={itemVariants}>
-            <div className="feature-icon bg-emerald">
+            <div className="feature-icon">
               <Camera size={24} />
             </div>
             <h3>{t('landing.featureGearTitle')}</h3>
@@ -115,7 +112,7 @@ export const LandingView: React.FC = () => {
 
           {/* Feature 2 */}
           <motion.div className="feature-card" variants={itemVariants}>
-            <div className="feature-icon bg-blue">
+            <div className="feature-icon">
               <Image size={24} />
             </div>
             <h3>{t('landing.featureArchiveTitle')}</h3>
@@ -124,7 +121,7 @@ export const LandingView: React.FC = () => {
 
           {/* Feature 3 */}
           <motion.div className="feature-card" variants={itemVariants}>
-            <div className="feature-icon bg-purple">
+            <div className="feature-icon">
               <Layers size={24} />
             </div>
             <h3>{t('landing.featureStockTitle')}</h3>
@@ -133,7 +130,7 @@ export const LandingView: React.FC = () => {
 
           {/* Feature 4 */}
           <motion.div className="feature-card" variants={itemVariants}>
-            <div className="feature-icon bg-amber">
+            <div className="feature-icon">
               <Wallet size={24} />
             </div>
             <h3>{t('landing.featureFinanceTitle')}</h3>

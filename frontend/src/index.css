@@ -8,6 +8,9 @@
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 
+  --brand-lightbox-start: #fffef8;
+  --brand-lightbox-end: #f4efe2;
+
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
@@ -44,6 +47,12 @@
   --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.5), 0 2px 4px -1px rgba(0,0,0,0.5);
   --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.7), 0 4px 6px -2px rgba(0,0,0,0.5);
   --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.6);
+
+  --brand-lightbox-border: rgba(255, 248, 225, 0.72);
+  --brand-lightbox-inset: rgba(255, 255, 255, 0.92);
+  --brand-lightbox-glow: rgba(255, 239, 190, 0.12);
+  --brand-lightbox-shadow: rgba(0, 0, 0, 0.16);
+  --brand-lightbox-drop-shadow: rgba(0, 0, 0, 0.38);
 
   --chart-axis: #9ca3af;
   --chart-tooltip-bg: #20222a;
@@ -95,6 +104,12 @@
   --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
   --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
 
+  --brand-lightbox-border: rgba(120, 103, 70, 0.16);
+  --brand-lightbox-inset: rgba(255, 255, 255, 0.72);
+  --brand-lightbox-glow: transparent;
+  --brand-lightbox-shadow: rgba(69, 56, 33, 0.12);
+  --brand-lightbox-drop-shadow: rgba(69, 56, 33, 0.2);
+
   --chart-axis: #4b5563;
   --chart-tooltip-bg: #ffffff;
   --chart-tooltip-border: #d1d5db;
@@ -127,6 +142,17 @@ body {
   box-sizing: border-box;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Only theme changes animate globally. This avoids abrupt dark/light switches
+   without adding delay to data updates or critical actions. */
+html.theme-transitioning,
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow, outline-color !important;
+  transition-duration: 220ms !important;
+  transition-timing-function: ease !important;
 }
 
 /* Custom Web Scrollbar */
@@ -279,6 +305,20 @@ button {
   justify-content: center;
   gap: 8px;
   transition: all var(--transition-fast);
+}
+
+button:not(:disabled):active,
+[role='button']:not([aria-disabled='true']):active {
+  transform: translateY(1px);
+}
+
+a,
+summary,
+select,
+input,
+textarea,
+[role='button'] {
+  transition: color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), opacity var(--transition-fast), transform var(--transition-fast);
 }
 
 button:hover {
@@ -807,6 +847,13 @@ select.form-control {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+
+  html.theme-transitioning,
+  html.theme-transitioning *,
+  html.theme-transitioning *::before,
+  html.theme-transitioning *::after {
+    transition-duration: 0.01ms !important;
   }
 }
 

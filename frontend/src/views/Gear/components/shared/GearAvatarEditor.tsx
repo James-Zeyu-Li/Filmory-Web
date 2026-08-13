@@ -39,9 +39,12 @@ export const GearAvatarEditor = ({
 
   return (
     <div className="edit-avatar-panel">
-      <div className="edit-avatar-preview" onClick={() => resolvedAvatarUrl && onPreview(resolvedAvatarUrl)}>
-        {resolvedAvatarUrl ? <img src={resolvedAvatarUrl} alt={label} /> : <div className="edit-avatar-placeholder">{placeholder}</div>}
-      </div>
+      {resolvedAvatarUrl ? (
+        <button type="button" className="edit-avatar-preview" onClick={() => onPreview(resolvedAvatarUrl)} aria-label={t('gear.previewCover')}>
+          <img src={resolvedAvatarUrl} alt={label} />
+          <span className="edit-avatar-preview-label">{t('gear.viewCover')}</span>
+        </button>
+      ) : <div className="edit-avatar-preview">{placeholder}</div>}
       <div className="edit-avatar-content">
         <div>
           <h4>{t('gear.coverTitle')}</h4>

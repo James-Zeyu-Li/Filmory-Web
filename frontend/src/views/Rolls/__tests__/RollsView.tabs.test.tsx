@@ -150,6 +150,48 @@ describe('RollsView tabs and empty states', () => {
     });
   });
 
+  it('keeps cover upload separate from the shooting record details action', async () => {
+    const user = userEvent.setup();
+    const now = Date.now();
+
+    await db.cameras.add({
+      id: 'camera-cover', userId: 'mock-user-id', name: 'Nikon F3', type: 'film', format: '135', addedAt: now,
+    });
+    await db.rolls.add({
+      id: 'roll-cover', userId: 'mock-user-id', name: 'Cover test',
+      currentCameraId: 'camera-cover', cameraIds: ['camera-cover'], status: 'active', startDate: now,
+    });
+
+    renderRollsView(false);
+
+    const coverAction = await screen.findByRole('button', { name: '上传封面: Cover test' });
+    expect(coverAction).toHaveClass('roll-card-cover-action');
+    expect(screen.getByRole('button', { name: '打开拍摄记录：Cover test' })).toHaveClass('record-card-open-action');
+
+    await user.click(coverAction);
+    expect(screen.queryByRole('heading', { name: 'Cover test', level: 2 })).not.toBeInTheDocument();
+  });
+
+  it('opens a full cover preview from the shooting record drawer', async () => {
+    const user = userEvent.setup();
+    const now = Date.now();
+
+    await db.rolls.add({
+      id: 'roll-cover-preview', userId: 'mock-user-id', name: 'Rainy afternoon',
+      cameraIds: [], coverPhotoId: 'cover-photo-1', status: 'active', startDate: now,
+    });
+    await db.photoAssets.add({
+      id: 'cover-photo-1', rollId: 'roll-cover-preview', originalFileName: 'rain.jpg', fileSize: 1,
+      previewUrl: 'https://example.test/rain.jpg', addedAt: now, isPinned: 1, userId: 'mock-user-id',
+    });
+
+    renderRollsView(false);
+    await user.click(await screen.findByText('Rainy afternoon'));
+    await user.click(await screen.findByText('查看封面'));
+
+    expect(await screen.findByRole('img', { name: 'Rainy afternoon' })).toHaveAttribute('src', 'https://example.test/rain.jpg');
+  });
+
   it('records a confirmed camera transfer and updates the current camera', async () => {
     const user = userEvent.setup();
     const now = Date.now();
@@ -165,6 +207,8 @@ describe('RollsView tabs and empty states', () => {
 
     renderRollsView(false);
     await user.click(await screen.findByText('Weekend walk'));
+    expect(screen.queryByRole('button', { name: '更换拍摄机身' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '展开' }));
     await user.click(screen.getByRole('button', { name: '更换拍摄机身' }));
     await user.selectOptions(screen.getByLabelText('接手机身'), 'camera-b');
 

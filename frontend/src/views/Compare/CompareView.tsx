@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Columns, Split, UploadCloud, X, Image as ImageIcon, MoveHorizontal } from 'lucide-react';
 import { useLanguage } from '../../contexts/useLanguage';
 import './CompareView.css';
@@ -52,20 +52,32 @@ const FileDropzone: React.FC<FileDropzoneProps> = ({ target, file, url, onDropFi
 
 export const CompareView: React.FC = () => {
   const { t } = useLanguage();
-  const [fileA, setFileA] = useState<File | null>(null);
-  const [fileB, setFileB] = useState<File | null>(null);
+  const [sourceA, setSourceA] = useState<{ file: File; url: string } | null>(null);
+  const [sourceB, setSourceB] = useState<{ file: File; url: string } | null>(null);
+  const sourceAUrlRef = useRef<string | null>(null);
+  const sourceBUrlRef = useRef<string | null>(null);
 
   const [viewMode, setViewMode] = useState<'split' | 'sideBySide'>('split');
 
-  const urlA = useMemo(() => fileA ? URL.createObjectURL(fileA) : null, [fileA]);
-  const urlB = useMemo(() => fileB ? URL.createObjectURL(fileB) : null, [fileB]);
+  useEffect(() => () => {
+    if (sourceAUrlRef.current) URL.revokeObjectURL(sourceAUrlRef.current);
+    if (sourceBUrlRef.current) URL.revokeObjectURL(sourceBUrlRef.current);
+  }, []);
 
-  useEffect(() => {
-    return () => {
-      if (urlA) URL.revokeObjectURL(urlA);
-      if (urlB) URL.revokeObjectURL(urlB);
-    };
-  }, [urlA, urlB]);
+  const replaceSource = (target: 'A' | 'B', file: File | null) => {
+    const nextUrl = file ? URL.createObjectURL(file) : null;
+    const urlRef = target === 'A' ? sourceAUrlRef : sourceBUrlRef;
+    if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+    urlRef.current = nextUrl;
+    const source = file && nextUrl ? { file, url: nextUrl } : null;
+    if (target === 'A') setSourceA(source);
+    else setSourceB(source);
+  };
+
+  const fileA = sourceA?.file ?? null;
+  const fileB = sourceB?.file ?? null;
+  const urlA = sourceA?.url ?? null;
+  const urlB = sourceB?.url ?? null;
 
   const handleFileDrop = (e: React.DragEvent<HTMLDivElement>, target: 'A' | 'B') => {
     e.preventDefault();
@@ -73,9 +85,9 @@ export const CompareView: React.FC = () => {
       const file = e.dataTransfer.files[0];
       if (file.type.startsWith('image/')) {
         if (target === 'A') {
-          setFileA(file);
+          replaceSource('A', file);
         } else {
-          setFileB(file);
+          replaceSource('B', file);
         }
       }
     }
@@ -85,18 +97,18 @@ export const CompareView: React.FC = () => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
       if (target === 'A') {
-        setFileA(file);
+        replaceSource('A', file);
       } else {
-        setFileB(file);
+        replaceSource('B', file);
       }
     }
   };
 
   const handleClearFile = (target: 'A' | 'B') => {
     if (target === 'A') {
-      setFileA(null);
+      replaceSource('A', null);
     } else {
-      setFileB(null);
+      replaceSource('B', null);
     }
   };
 
@@ -157,14 +169,14 @@ export const CompareView: React.FC = () => {
             <>
               {viewMode === 'split' && <ImageSlider imgA={urlA} imgB={urlB} altA={t('compare.imageAlt', { target: 'A' })} altB={t('compare.imageAlt', { target: 'B' })} label={t('compare.splitPosition')} />}
               {viewMode === 'sideBySide' && (
-                <div style={{ display: 'flex', width: '100%', height: '100%', gap: '4px' }}>
-                  <div style={{ flex: 1, position: 'relative', height: '100%' }}>
-                    <img src={urlA} alt={t('compare.imageAlt', { target: 'A' })} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                    <span style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: 600 }}>{t('compare.laneA')}</span>
+                <div className="compare-side-by-side">
+                  <div className="compare-side-by-side-pane">
+                    <img src={urlA} alt={t('compare.imageAlt', { target: 'A' })} />
+                    <span className="compare-lane-label">{t('compare.laneA')}</span>
                   </div>
-                  <div style={{ flex: 1, position: 'relative', height: '100%' }}>
-                    <img src={urlB} alt={t('compare.imageAlt', { target: 'B' })} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                    <span style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: 600 }}>{t('compare.laneB')}</span>
+                  <div className="compare-side-by-side-pane">
+                    <img src={urlB} alt={t('compare.imageAlt', { target: 'B' })} />
+                    <span className="compare-lane-label">{t('compare.laneB')}</span>
                   </div>
                 </div>
               )}

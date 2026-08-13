@@ -1,21 +1,22 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { AlertTriangle, CircleHelp, Undo2, X } from 'lucide-react';
+import { AlertTriangle, CircleHelp, RefreshCw, Undo2, X } from 'lucide-react';
 import { Modal } from './Modal';
 import { Button } from './ui/Button';
 import { useConfirm } from '../contexts/useConfirm';
 import { useFeedback } from '../contexts/useFeedback';
 import { useLanguage } from '../contexts/useLanguage';
-import { db, isSyncOperationQueueItem, type SyncOperationQueueItem } from '../db/schema';
+import { db, isSyncOperationQueueItem, isSyncRecordQueueItem, type SyncQueueItem } from '../db/schema';
 import {
   canKeepRollWithoutInventory,
   keepRollWithoutInventory,
+  retrySyncIssue,
   undoSyncIssue,
 } from '../services/syncIssueService';
 import './SyncIssuesModal.css';
 
 type SyncIssue = {
-  operation: SyncOperationQueueItem & { id: number };
+  queueItem: SyncQueueItem & { id: number };
   targetName: string;
   canKeepWithoutInventory: boolean;
 };
@@ -31,12 +32,21 @@ const getIssueMessageKey = (code?: string) => {
       return 'syncIssues.errorConflict';
     case '22P02':
       return 'syncIssues.errorInvalid';
+    case 'PGRST202':
+    case 'PGRST204':
+      return 'syncIssues.errorSchema';
     default:
       return 'syncIssues.errorGeneric';
   }
 };
 
-const getIssueTargetName = async (operation: SyncOperationQueueItem, userId: string): Promise<string> => {
+const getIssueTargetName = async (operation: SyncQueueItem, userId: string): Promise<string> => {
+  if (isSyncRecordQueueItem(operation)) {
+    const payload = operation.payload;
+    if (payload && typeof payload.name === 'string') return payload.name;
+    return operation.recordId;
+  }
+
   if (operation.operationType === 'adjust_film_stock') {
     const filmStockId = operation.operationPayload.filmStockId;
     if (typeof filmStockId === 'string') {
@@ -58,17 +68,16 @@ const useSyncIssues = (isOpen: boolean) => useLiveQuery(async (): Promise<SyncIs
   const userId = localStorage.getItem('grainfolio_user_id');
   if (!userId) return [];
   const queue = await db.syncQueue.orderBy('timestamp').toArray();
-  const operations = queue.filter((item): item is SyncOperationQueueItem & { id: number } => (
-    isSyncOperationQueueItem(item)
-    && item.id !== undefined
+  const items = queue.filter((item): item is SyncQueueItem & { id: number } => (
+    item.id !== undefined
     && item.userId === userId
     && item.failureKind === 'needs_attention'
   ));
 
-  return Promise.all(operations.map(async operation => ({
-    operation,
-    targetName: await getIssueTargetName(operation, userId),
-    canKeepWithoutInventory: await canKeepRollWithoutInventory(operation, userId),
+  return Promise.all(items.map(async queueItem => ({
+    queueItem,
+    targetName: await getIssueTargetName(queueItem, userId),
+    canKeepWithoutInventory: isSyncOperationQueueItem(queueItem) && await canKeepRollWithoutInventory(queueItem, userId),
   })));
 }, [isOpen], []);
 
@@ -89,7 +98,7 @@ export const SyncIssuesModal: React.FC<SyncIssuesModalProps> = ({ isOpen, onClos
     if (!userId) return;
 
     try {
-      setProcessingId(issue.operation.id);
+      setProcessingId(issue.queueItem.id);
       await action();
       notify({ type: 'success', title: t('syncIssues.updatedTitle'), message: successMessage });
     } catch (error) {
@@ -114,7 +123,8 @@ export const SyncIssuesModal: React.FC<SyncIssuesModalProps> = ({ isOpen, onClos
       isDanger: true,
     });
     if (!accepted) return;
-    await runAction(issue, () => undoSyncIssue(issue.operation.id, userId), t('syncIssues.undoSuccess'));
+    if (!isSyncOperationQueueItem(issue.queueItem)) return;
+    await runAction(issue, () => undoSyncIssue(issue.queueItem.id, userId), t('syncIssues.undoSuccess'));
   };
 
   const handleKeepWithoutInventory = async (issue: SyncIssue) => {
@@ -129,9 +139,15 @@ export const SyncIssuesModal: React.FC<SyncIssuesModalProps> = ({ isOpen, onClos
     if (!accepted) return;
     await runAction(
       issue,
-      () => keepRollWithoutInventory(issue.operation.id, userId),
+      () => keepRollWithoutInventory(issue.queueItem.id, userId),
       t('syncIssues.keepWithoutInventorySuccess'),
     );
+  };
+
+  const handleRetry = async (issue: SyncIssue) => {
+    const userId = localStorage.getItem('grainfolio_user_id');
+    if (!userId) return;
+    await runAction(issue, () => retrySyncIssue(issue.queueItem.id, userId), t('syncIssues.retrySuccess'));
   };
 
   return (
@@ -159,18 +175,23 @@ export const SyncIssuesModal: React.FC<SyncIssuesModalProps> = ({ isOpen, onClos
           ) : (
             <ul className="sync-issues-list" aria-label={t('syncIssues.listLabel')}>
               {issues.map(issue => {
-                const isProcessing = processingId === issue.operation.id;
-                const operationLabel = issue.operation.operationType === 'adjust_film_stock'
-                  ? t('syncIssues.adjustment')
-                  : t('syncIssues.rollCreation');
+                const isProcessing = processingId === issue.queueItem.id;
+                const operationLabel = isSyncOperationQueueItem(issue.queueItem)
+                  ? issue.queueItem.operationType === 'adjust_film_stock'
+                    ? t('syncIssues.adjustment')
+                    : t('syncIssues.rollCreation')
+                  : t('syncIssues.recordChange');
                 return (
-                  <li key={issue.operation.id} className="sync-issue-card">
+                  <li key={issue.queueItem.id} className="sync-issue-card">
                     <div className="sync-issue-copy">
                       <span className="sync-issue-type">{operationLabel}</span>
                       <h3>{issue.targetName || t('syncIssues.unknownTarget')}</h3>
-                      <p>{t(getIssueMessageKey(issue.operation.lastErrorCode))}</p>
+                      <p>{t(getIssueMessageKey(issue.queueItem.lastErrorCode))}</p>
                     </div>
                     <div className="sync-issue-actions">
+                      <Button type="button" variant="secondary" onClick={() => void handleRetry(issue)} disabled={isProcessing} icon={<RefreshCw size={16} />}>
+                        {t('syncIssues.retry')}
+                      </Button>
                       {issue.canKeepWithoutInventory && (
                         <Button
                           type="button"
@@ -181,7 +202,7 @@ export const SyncIssuesModal: React.FC<SyncIssuesModalProps> = ({ isOpen, onClos
                           {t('syncIssues.keepWithoutInventory')}
                         </Button>
                       )}
-                      <Button
+                      {isSyncOperationQueueItem(issue.queueItem) && <Button
                         type="button"
                         variant="danger"
                         onClick={() => void handleUndo(issue)}
@@ -189,7 +210,7 @@ export const SyncIssuesModal: React.FC<SyncIssuesModalProps> = ({ isOpen, onClos
                         icon={<Undo2 size={16} />}
                       >
                         {t('syncIssues.undo')}
-                      </Button>
+                      </Button>}
                     </div>
                   </li>
                 );

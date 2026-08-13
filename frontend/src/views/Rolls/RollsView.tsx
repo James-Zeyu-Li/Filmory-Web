@@ -9,7 +9,7 @@ import { useLanguage } from '../../contexts/useLanguage';
 import { uploadPhotoToCloud } from '../../services/storageService';
 import { SyncService } from '../../services/syncService';
 import { saveDeferredPhotoUpload } from '../../services/photoUploadRecoveryService';
-import { Folder, Search, LayoutGrid, List, Trash2, Film, Plus, Camera, ArrowLeft, CheckCircle, X, Upload, Star, Sparkles, Package, Aperture } from 'lucide-react';
+import { Folder, Search, LayoutGrid, List, Trash2, Film, Plus, Camera, ArrowLeft, CheckCircle, X, Upload, Star, Sparkles, Package, Aperture, ChevronDown, Eye } from 'lucide-react';
 import { IconButton } from '../../components/ui/IconButton';
 import { motion } from 'framer-motion';
 import {
@@ -76,6 +76,8 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const navigate = useNavigate();
   const coverFileInputRef = useRef<HTMLInputElement>(null);
+  const quickCoverFileInputRef = useRef<HTMLInputElement>(null);
+  const quickCoverTargetRef = useRef<Roll | null>(null);
   
   // Live queries
   const cameras = useCameras();
@@ -144,6 +146,8 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   const [quickAddCameraOpen, setQuickAddCameraOpen] = useState(false);
   const [quickAddFilmOpen, setQuickAddFilmOpen] = useState(false);
   const [isCameraTransferOpen, setIsCameraTransferOpen] = useState(false);
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
   const [transferCameraId, setTransferCameraId] = useState('');
   const [transferDate, setTransferDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [transferNote, setTransferNote] = useState('');
@@ -178,6 +182,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   // Upload States
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadingCoverRollId, setUploadingCoverRollId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const hydratedDrawerRollIdRef = useRef<string | null>(null);
 
@@ -230,6 +235,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     setRollNotes(roll.notes || '');
     setDevelopNotes(roll.developNotes || '');
     setDevelopPrice(roll.developPrice || '');
+    setIsAdvancedOpen(false);
     setIsDrawerOpen(true);
   };
 
@@ -685,14 +691,16 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     await db.rolls.update(selectedRollId, { rating });
   };
   
-  const handleCoverUpload = async (file: File) => {
-    if (!selectedRollId) return;
+  const handleCoverUpload = async (file: File, targetRoll: Roll | null = selectedRoll) => {
+    const targetRollId = targetRoll?.id;
+    if (!targetRollId) return;
     if (authMode === 'trial') {
       requireRegistration('photos');
       return;
     }
 
     setIsUploading(true);
+    setUploadingCoverRollId(targetRollId);
     setUploadProgress(0);
     
     try {
@@ -709,7 +717,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
         let isDeferredCloudUpload = false;
         if (user) {
           try {
-            uploadResult = await uploadPhotoToCloud(webpFile, user.id, selectedRollId, (pct) => setUploadProgress(pct));
+            uploadResult = await uploadPhotoToCloud(webpFile, user.id, targetRollId, (pct) => setUploadProgress(pct));
           } catch (err) {
             isDeferredCloudUpload = cloudUploadPending;
             if (isDeferredCloudUpload) {
@@ -726,7 +734,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
         const photoAsset = {
           id: photoId,
           userId: currentUserId,
-          rollId: selectedRollId,
+          rollId: targetRollId,
           originalFileName: file.name,
           fileSize: webpFile.size,
           blob: uploadResult ? undefined : webpFile,
@@ -745,15 +753,15 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
         } else {
           await db.transaction('rw', db.photoAssets, db.rolls, async () => {
             await db.photoAssets.add(photoAsset);
-            await db.rolls.update(selectedRollId, { coverPhotoId: photoId });
+            await db.rolls.update(targetRollId, { coverPhotoId: photoId });
           });
         }
 
         if (uploadResult) {
           await db.transaction('rw', db.photoAssets, async () => {
             // Do not remove the previous cloud cover until the replacement uploaded.
-            if (selectedRoll?.coverPhotoId) {
-              const oldPhotos = await db.photoAssets.where('rollId').equals(selectedRollId).toArray();
+            if (targetRoll.coverPhotoId) {
+              const oldPhotos = await db.photoAssets.where('rollId').equals(targetRollId).toArray();
               for (const p of oldPhotos) {
                 if (p.id !== photoId && p.id) await db.photoAssets.delete(p.id);
               }
@@ -763,9 +771,10 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
         }
     } catch(e) {
         console.error(e);
+    } finally {
+      setIsUploading(false);
+      setUploadingCoverRollId(null);
     }
-    
-    setIsUploading(false);
   };
 
   const handleDrop = async (e: React.DragEvent) => {
@@ -780,6 +789,26 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     if (!selectedRollId || !e.target.files) return;
     const files = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
     if (files.length > 0) await handleCoverUpload(files[0]);
+    e.target.value = '';
+  };
+
+  const openQuickCoverPicker = (event: React.MouseEvent, roll: Roll) => {
+    event.stopPropagation();
+    if (isUploading) return;
+    if (authMode === 'trial') {
+      requireRegistration('photos');
+      return;
+    }
+    quickCoverTargetRef.current = roll;
+    quickCoverFileInputRef.current?.click();
+  };
+
+  const handleQuickCoverFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const targetRoll = quickCoverTargetRef.current;
+    const file = Array.from(event.target.files || []).find(candidate => candidate.type.startsWith('image/'));
+    event.target.value = '';
+    quickCoverTargetRef.current = null;
+    if (targetRoll && file) await handleCoverUpload(file, targetRoll);
   };
 
   const getCameraName = (id: string) => cameras.find(c => c.id === id)?.name || t('common.unknownCamera');
@@ -850,6 +879,8 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
       return p.id ? photoUrlMap[p.id] : undefined;
   };
 
+  const selectedRollCoverUrl = selectedRoll ? getCoverUrl(selectedRoll) : undefined;
+
 
 
   const renderRollCard = (roll: Roll) => {
@@ -894,6 +925,16 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                 ? <span className="status-badge active">{t('rolls.active')}</span>
                 : <span className="status-badge archived">{t('rolls.archived')}</span>}
             </div>
+            <button
+              type="button"
+              className="roll-card-cover-action"
+              onClick={event => openQuickCoverPicker(event, roll)}
+              disabled={isUploading}
+              aria-label={`${coverUrl ? t('rolls.changeCover') : t('rolls.uploadCover')}: ${roll.name}`}
+            >
+              <Upload size={16} />
+              <span>{uploadingCoverRollId === roll.id ? t('rolls.uploadingCover') : coverUrl ? t('rolls.changeCover') : t('rolls.uploadCover')}</span>
+            </button>
           </div>
 
           <div className="roll-card-row-info">
@@ -974,6 +1015,16 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
               <Folder size={10} /> {collectionName}
             </div>
           )}
+          <button
+            type="button"
+            className="roll-card-cover-action"
+            onClick={event => openQuickCoverPicker(event, roll)}
+            disabled={isUploading}
+            aria-label={`${coverUrl ? t('rolls.changeCover') : t('rolls.uploadCover')}: ${roll.name}`}
+          >
+            <Upload size={18} />
+            <span>{uploadingCoverRollId === roll.id ? t('rolls.uploadingCover') : coverUrl ? t('rolls.changeCover') : t('rolls.uploadCover')}</span>
+          </button>
         </div>
 
         {/* Info Panel (separate from image, no overlay) */}
@@ -1115,15 +1166,15 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
             <div className="rolls-collection-actions-row">
               <h3>{t('rolls.all')} ({rolls.filter(r => r.collectionId === activeCollectionId).length})</h3>
               <div className="rolls-collection-actions">
-                <button className="secondary" onClick={() => {
+                <button className="primary" onClick={() => {
                   setSelectedExistingRollIds([]);
                   setIsAddExistingModalOpen(true);
                 }}>
                   <Folder size={16} /> {t('rolls.addExistingTitle')}
                 </button>
-                <button className="primary" onClick={() => { 
+                <button className="secondary" onClick={() => {
                   setSelectedCollectionId(activeCollectionId);
-                  setIsNewRollModalOpen(true); 
+                  setIsNewRollModalOpen(true);
                 }}>
                   <Plus size={16} /> {t('rolls.newRoll')}
                 </button>
@@ -1297,6 +1348,8 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
           </motion.div>
         )}
       
+      <input ref={quickCoverFileInputRef} type="file" accept="image/*" onChange={handleQuickCoverFileSelect} hidden />
+
             {/* Drawer for Roll Details */}
       <Drawer isOpen={isDrawerOpen && !!selectedRoll} onClose={() => setIsDrawerOpen(false)} width={600}>
         {selectedRoll && (
@@ -1329,8 +1382,15 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                          onDragLeave={() => setIsDragOver(false)}
                          onDrop={isUploading ? undefined : handleDrop}
                     >
-                      {getCoverUrl(selectedRoll) && !isUploading ? (
-                        <div className="cover-preview" style={{ backgroundImage: `url(${getCoverUrl(selectedRoll)})` }} />
+                      {selectedRollCoverUrl && !isUploading ? (
+                        <button
+                          type="button"
+                          className="cover-preview roll-cover-preview-button"
+                          style={{ backgroundImage: `url(${selectedRollCoverUrl})` }}
+                          onClick={() => setCoverPreviewUrl(selectedRollCoverUrl)}
+                          aria-label={t('rolls.viewCover')}
+                          title={t('rolls.viewCover')}
+                        />
                       ) : isUploading ? (
                         <div className="roll-cover-uploading">
                           <span>{uploadProgress}%</span>
@@ -1346,19 +1406,26 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                     </div>
                   </div>
                   <div className="roll-cover-editor-content">
-                    <p>{getCoverUrl(selectedRoll) ? t('rolls.coverCustom') : t('rolls.uploadCoverHint')}</p>
-                    <button
-                      type="button"
-                      className="secondary roll-cover-action"
-                      onClick={() => coverFileInputRef.current?.click()}
-                      disabled={isUploading}
-                    >
-                      {isUploading
-                        ? t('rolls.uploadingCover')
-                        : getCoverUrl(selectedRoll)
-                          ? t('rolls.changeCover')
-                          : t('rolls.uploadCover')}
-                    </button>
+                    <p>{selectedRollCoverUrl ? t('rolls.coverCustom') : t('rolls.uploadCoverHint')}</p>
+                    <div className="roll-cover-actions">
+                      {selectedRollCoverUrl && (
+                        <button type="button" className="secondary roll-cover-action" onClick={() => setCoverPreviewUrl(selectedRollCoverUrl)}>
+                          <Eye size={16} /> {t('rolls.viewCover')}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="secondary roll-cover-action"
+                        onClick={() => coverFileInputRef.current?.click()}
+                        disabled={isUploading}
+                      >
+                        {isUploading
+                          ? t('rolls.uploadingCover')
+                          : selectedRollCoverUrl
+                            ? t('rolls.changeCover')
+                            : t('rolls.uploadCover')}
+                      </button>
+                    </div>
                     <input ref={coverFileInputRef} type="file" accept="image/*" onChange={handleFileSelect} disabled={isUploading} hidden />
                   </div>
                 </div>
@@ -1425,25 +1492,41 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
               </div>
 
               <div className="drawer-section roll-drawer-section roll-drawer-advanced-section">
-                <h3>{t('rolls.advanced')}</h3>
-                <p className="roll-form-hint">{t('rolls.cameraTransferHint')}</p>
-                {selectedRoll.status === 'active' ? (
-                  <button type="button" className="secondary" onClick={openCameraTransfer} disabled={!currentRollCameraId}>
-                    <Camera size={16} /> {t('rolls.changeCamera')}
+                <div className="roll-drawer-section-heading">
+                  <h3>{t('rolls.advanced')}</h3>
+                  <button
+                    type="button"
+                    className="secondary roll-advanced-toggle"
+                    onClick={() => setIsAdvancedOpen(open => !open)}
+                    aria-expanded={isAdvancedOpen}
+                    aria-controls="roll-advanced-options"
+                  >
+                    {isAdvancedOpen ? t('rolls.hideAdvanced') : t('rolls.showAdvanced')}
+                    <ChevronDown size={16} aria-hidden="true" />
                   </button>
-                ) : (
-                  <p className="roll-form-hint">{t('rolls.cameraTransferArchivedHint')}</p>
-                )}
-                {(selectedRoll.cameraTransfers || []).length > 0 && (
-                  <ol className="roll-camera-transfer-history" aria-label={t('rolls.cameraTransferHistory')}>
-                    {(selectedRoll.cameraTransfers || []).map((transfer: CameraTransfer, index: number) => (
-                      <li key={`${transfer.changedAt}-${transfer.toCameraId}-${index}`}>
-                        <strong>{getCameraName(transfer.fromCameraId)} → {getCameraName(transfer.toCameraId)}</strong>
-                        <span>{new Date(transfer.changedAt).toLocaleDateString()}</span>
-                        {transfer.note && <p>{transfer.note}</p>}
-                      </li>
-                    ))}
-                  </ol>
+                </div>
+                {isAdvancedOpen && (
+                  <div id="roll-advanced-options" className="roll-advanced-options">
+                    <p className="roll-form-hint">{t('rolls.cameraTransferHint')}</p>
+                    {selectedRoll.status === 'active' ? (
+                      <button type="button" className="secondary" onClick={openCameraTransfer} disabled={!currentRollCameraId}>
+                        <Camera size={16} /> {t('rolls.changeCamera')}
+                      </button>
+                    ) : (
+                      <p className="roll-form-hint">{t('rolls.cameraTransferArchivedHint')}</p>
+                    )}
+                    {(selectedRoll.cameraTransfers || []).length > 0 && (
+                      <ol className="roll-camera-transfer-history" aria-label={t('rolls.cameraTransferHistory')}>
+                        {(selectedRoll.cameraTransfers || []).map((transfer: CameraTransfer, index: number) => (
+                          <li key={`${transfer.changedAt}-${transfer.toCameraId}-${index}`}>
+                            <strong>{getCameraName(transfer.fromCameraId)} → {getCameraName(transfer.toCameraId)}</strong>
+                            <span>{new Date(transfer.changedAt).toLocaleDateString()}</span>
+                            {transfer.note && <p>{transfer.note}</p>}
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -1553,6 +1636,18 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
           </>
         )}
       </Drawer>
+
+      <Modal isOpen={Boolean(coverPreviewUrl)} onClose={() => setCoverPreviewUrl(null)} style={{ maxWidth: 'min(920px, calc(100vw - 32px))' }}>
+        <div className="roll-cover-preview-modal">
+          <div className="modal-header">
+            <h3>{t('rolls.coverPhoto')}</h3>
+            <button type="button" className="icon-btn" onClick={() => setCoverPreviewUrl(null)} aria-label={t('common.cancel')}>
+              <X size={20} />
+            </button>
+          </div>
+          {coverPreviewUrl && <img src={coverPreviewUrl} alt={selectedRoll?.name || t('rolls.coverPhoto')} />}
+        </div>
+      </Modal>
 
       <Modal isOpen={isCameraTransferOpen} onClose={() => setIsCameraTransferOpen(false)} style={{ maxWidth: '460px' }}>
         <h3>{t('rolls.changeCameraTitle')}</h3>
