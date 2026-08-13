@@ -77,3 +77,4 @@ docs/audit_result/
 docs/Data/
 docs/supabase_schema.sql
 .agents/
+docs/Detailed-Specs/FEATURE_COMPARISON.md
