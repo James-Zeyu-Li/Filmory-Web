@@ -1,6 +1,7 @@
 .login-container {
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -44,6 +45,7 @@
   width: 100%;
   max-width: 420px;
   max-height: calc(100vh - 28px);
+  max-height: calc(100dvh - 28px);
   overflow-y: auto;
   background: rgba(20, 24, 32, 0.6);
   backdrop-filter: blur(20px);
@@ -447,6 +449,7 @@
   .auth-glass-card {
     max-width: min(460px, calc(100vw - 24px));
     max-height: calc(100vh - 20px);
+    max-height: calc(100dvh - 20px);
     padding: 28px 18px 20px;
   }
 

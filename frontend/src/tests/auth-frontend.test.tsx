@@ -70,6 +70,24 @@ describe('Auth frontend closure', () => {
     mockedAuth.getSession.mockResolvedValue({ data: { session: null }, error: null });
   });
 
+  it('announces login failures to assistive technology', async () => {
+    mockedAuth.signInWithPassword.mockResolvedValue({ data: {}, error: new Error('Invalid login credentials') });
+
+    render(
+      <MemoryRouter initialEntries={[AUTH_ROUTES.login]}>
+        <Routes>
+          <Route path={AUTH_ROUTES.login} element={<LoginView />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'wrong@grainfolio.app' } });
+    fireEvent.change(screen.getByLabelText('密码'), { target: { value: 'wrong-password' } });
+    fireEvent.click(screen.getByRole('button', { name: '登录' }));
+
+    expect(await screen.findByRole('alert')).toHaveAttribute('aria-live', 'assertive');
+  });
+
   it('register flow sends signup email redirect and navigates to check-email notice', async () => {
     render(
       <MemoryRouter initialEntries={[AUTH_ROUTES.login]}>

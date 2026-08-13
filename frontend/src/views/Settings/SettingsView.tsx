@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BackupService } from '../../services/backupService';
-import { Shield, Download, X, Sun, Moon, Monitor, Coins, Film, ArrowUp, ArrowDown, Folder, Languages, ChevronDown, CloudUpload } from 'lucide-react';
+import { deleteCurrentAccount } from '../../services/accountService';
+import { Shield, Download, X, Sun, Moon, Monitor, Coins, Film, ArrowUp, ArrowDown, Folder, Languages, ChevronDown, UserX, CloudUpload } from 'lucide-react';
 import { useAuth } from '../../contexts/useAuth';
 import { useTheme } from '../../contexts/useTheme';
 import { Modal } from '../../components/Modal';
@@ -31,7 +32,7 @@ interface SettingsViewProps {
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setEnableFilmMode, onClose }) => {
-  const { user, isDevBypass } = useAuth();
+  const { user, isDevBypass, completeSignedOutTransition } = useAuth();
   const { theme, setTheme } = useTheme();
   const { currency, setCurrency, currencySymbol } = useCurrency();
   const { language, setLanguage, t } = useLanguage();
@@ -49,6 +50,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
   const [rollsTabOrder, setRollsTabOrder] = useState<RollsTabId[]>(() => readRollsTabOrder());
   const [rollsCollectionsEnabled, setRollsCollectionsEnabled] = useState<boolean>(() => readRollsCollectionsTabEnabled());
   const [isRollTabLayoutExpanded, setIsRollTabLayoutExpanded] = useState(false);
+  const [deleteConfirmationStep, setDeleteConfirmationStep] = useState(0);
+  const [deleteInput, setDeleteInput] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
   const pendingPhotoUploadCount = user && SyncService.isAutoSyncEnabled()
     ? photoAssets.filter(photo => Boolean(photo.id && photo.blob && !photo.storageKey)).length
     : 0;
@@ -143,6 +149,46 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
     }
   };
 
+  const closeDeleteConfirmation = () => {
+    setDeleteConfirmationStep(0);
+    setDeleteInput('');
+    setDeleteError('');
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmationStep === 0) {
+      setDeleteConfirmationStep(1);
+      setDeleteInput('');
+      setDeleteError('');
+      return;
+    }
+
+    if (deleteConfirmationStep === 1) {
+      if (deleteInput.trim() !== 'DELETE') {
+        setDeleteError(t('settings.deleteInputError'));
+        return;
+      }
+
+      try {
+        setIsDeletingAccount(true);
+        if (!isDevBypass) {
+          await deleteCurrentAccount();
+        }
+        completeSignedOutTransition('deletingAccount');
+        onClose();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : t('settings.unknownError');
+        notify({
+          type: 'error',
+          title: t('settings.deleteFailedTitle'),
+          message
+        });
+      } finally {
+        setIsDeletingAccount(false);
+      }
+    }
+  };
+
   const handleCurrencyConversion = async (event: React.FormEvent) => {
     event.preventDefault();
 
@@ -209,6 +255,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
   };
 
   return (
+    <>
     <Modal 
       isOpen={true} 
       onClose={onClose} 
@@ -357,17 +404,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
                   </div>
                 </div>
 
-	                <div className="settings-rolls-order-list">
-	                  {rollsTabOrder.map((tab, index) => {
-	                    const collectionsLocked = tab === 'collections' && !enableFilmMode;
-	                    const collectionsHidden = enableFilmMode && !rollsCollectionsEnabled && (tab === 'collections' || tab === 'loose');
-	                    return (
-	                      <div key={tab} className={`settings-rolls-order-item ${collectionsLocked ? 'locked' : ''} ${collectionsHidden ? 'hidden-tab' : ''}`}>
-	                        <div className="settings-rolls-order-copy">
-	                          <span>{rollsTabLabels[tab]}</span>
-	                          {collectionsLocked && <small>{t('settings.collectionsLocked')}</small>}
-	                          {collectionsHidden && <small>{t('settings.collectionsHidden')}</small>}
-	                        </div>
+                <div className="settings-rolls-order-list">
+                  {rollsTabOrder.map((tab, index) => {
+                    const collectionsLocked = tab === 'collections' && !enableFilmMode;
+                    const collectionsHidden = enableFilmMode && !rollsCollectionsEnabled && (tab === 'collections' || tab === 'loose');
+                    return (
+                      <div key={tab} className={`settings-rolls-order-item ${collectionsLocked ? 'locked' : ''} ${collectionsHidden ? 'hidden-tab' : ''}`}>
+                        <div className="settings-rolls-order-copy">
+                          <span>{rollsTabLabels[tab]}</span>
+                          {collectionsLocked && <small>{t('settings.collectionsLocked')}</small>}
+                          {collectionsHidden && <small>{t('settings.collectionsHidden')}</small>}
+                        </div>
                         <div className="settings-rolls-order-actions">
                           <button
                             type="button"
@@ -479,6 +526,36 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
           </div>
         </div>
 
+        {(user || isDevBypass) && (
+          <div className="settings-section">
+            <div className="section-header">
+              <h3>{t('settings.accountSecurity')}</h3>
+            </div>
+            <div className="settings-list-group">
+              <div className="settings-list-item danger-zone">
+                <div className="settings-item-content">
+                  <div className="settings-item-icon danger"><UserX size={18} /></div>
+                  <div className="settings-item-text">
+                    <h4>{isDevBypass ? t('account.devDeleteTitle') : t('settings.deleteTitle')}</h4>
+                    <p>{isDevBypass ? t('account.devDeleteDesc') : t('settings.deleteDesc')}</p>
+                  </div>
+                </div>
+                <div className="settings-item-action">
+                  <button
+                    type="button"
+                    className={`${isDevBypass ? 'secondary' : 'danger'} btn-sm`}
+                    onClick={handleDeleteAccount}
+                    disabled={isProcessing || isDeletingAccount}
+                    aria-haspopup="dialog"
+                  >
+                    {isDevBypass ? t('account.devDeleteAction') : t('settings.deleteStart')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* Processing Overlay */}
@@ -541,6 +618,48 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
           </div>
         </form>
       </Modal>
+
+      <Modal
+        isOpen={deleteConfirmationStep === 1}
+        onClose={closeDeleteConfirmation}
+        style={{ maxWidth: '420px', width: 'calc(100vw - 32px)' }}
+        overlayStyle={{ zIndex: 10001 }}
+      >
+        <section className="account-delete-dialog" aria-labelledby="delete-account-dialog-title">
+          <h3 id="delete-account-dialog-title">
+            {isDevBypass ? t('account.devDeleteTitle') : t('settings.deleteConfirmTitle')}
+          </h3>
+          <p>
+            {isDevBypass
+              ? t('account.devDeleteDesc')
+              : <>{t('settings.deleteConfirmDescPrefix')} <code>DELETE</code> {t('settings.deleteConfirmDescSuffix')}</>}
+          </p>
+          <label htmlFor="delete-account-confirmation">{t('settings.deleteInputAria')}</label>
+          <input
+            id="delete-account-confirmation"
+            type="text"
+            placeholder="DELETE"
+            value={deleteInput}
+            onChange={(event) => {
+              setDeleteInput(event.target.value);
+              if (deleteError) setDeleteError('');
+            }}
+            aria-invalid={Boolean(deleteError)}
+            aria-describedby={deleteError ? 'delete-account-error' : undefined}
+            autoFocus
+          />
+          {deleteError && <p id="delete-account-error" className="account-delete-error" role="alert">{deleteError}</p>}
+          <div className="account-delete-dialog-actions">
+            <button type="button" className="secondary" onClick={closeDeleteConfirmation} disabled={isDeletingAccount}>
+              {t('common.cancel')}
+            </button>
+            <button type="button" className="danger" onClick={handleDeleteAccount} disabled={isDeletingAccount}>
+              {t('settings.deleteConfirmAction')}
+            </button>
+          </div>
+        </section>
+      </Modal>
     </Modal>
+    </>
   );
 };
