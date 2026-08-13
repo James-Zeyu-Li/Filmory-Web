@@ -53,6 +53,34 @@ describe('Tenant Isolation Breach Defenses (Multi-Tenant)', () => {
     expect(hasUserB).toBe(false);
   });
 
+  it('exports every camera involved in a roll under the participating cameras column', async () => {
+    await db.cameras.bulkAdd([
+      { id: 'cam-a', userId: 'user_A', name: 'Leica M6', type: 'film', format: '135', addedAt: Date.now() },
+      { id: 'cam-b', userId: 'user_A', name: 'Nikon F3', type: 'film', format: '135', addedAt: Date.now() },
+    ]);
+    await db.rolls.add({
+      id: 'roll-a',
+      userId: 'user_A',
+      name: 'City walk',
+      currentCameraId: 'cam-b',
+      cameraIds: ['cam-a', 'cam-b'],
+      status: 'active',
+      startDate: Date.now(),
+    });
+
+    await BackupService.exportDatabaseToExcel('user_A');
+
+    const blob = vi.mocked(FileSaver.saveAs).mock.calls[0][0] as Blob;
+    const workbook = XLSX.read(await blob.arrayBuffer(), { type: 'array' });
+    const rollsSheet = workbook.Sheets['拍摄任务'];
+    const exportedRolls = XLSX.utils.sheet_to_json<Record<string, string>>(rollsSheet);
+
+    expect(exportedRolls[0]).toMatchObject({
+      '参与机身': 'Leica M6, Nikon F3',
+    });
+    expect(exportedRolls[0]).not.toHaveProperty('使用相机');
+  });
+
   it('should import Excel rows into the current user without reusing another user same-name gear', async () => {
     await db.cameras.add({
       id: 'cam_user_B',
@@ -106,6 +134,7 @@ describe('Tenant Isolation Breach Defenses (Multi-Tenant)', () => {
     expect(userACamera?.id).not.toBe('cam_user_B');
     expect(userAFilm?.id).not.toBe('film_user_B');
     expect(userARoll?.userId).toBe('user_A');
+    expect(userARoll?.currentCameraId).toBe(userACamera.id);
     expect(userARoll?.cameraIds).toEqual([userACamera.id]);
     expect(userARoll?.filmStockId).toBe(userAFilm.id);
     expect(userBFilm?.stockCount).toBe(8);

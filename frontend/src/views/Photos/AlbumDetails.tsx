@@ -170,7 +170,8 @@ export const AlbumDetails: React.FC<AlbumDetailsProps> = ({
   const getPhotoMetadata = (photo: PhotoAsset) => {
     const roll = rolls.find(r => r.id === photo.rollId);
     if (!roll) return null;
-    const camera = cameras.find(c => (roll.cameraIds || []).includes(c.id!));
+    const currentCameraId = roll.currentCameraId || roll.cameraIds?.[0];
+    const camera = cameras.find(c => c.id === currentCameraId);
     const film = filmStocks.find(f => f.id === roll.filmStockId);
     return {
       rollName: roll.name,

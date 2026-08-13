@@ -831,7 +831,7 @@ describe('SyncService schema parity', () => {
     }
   });
 
-  it('pushes roll cameraIds, lensIds, collectionId, and filmBackId using Supabase snake_case fields', async () => {
+  it('pushes roll camera state, transfers, lenses, collection, and film back using Supabase snake_case fields', async () => {
     await db.syncQueue.add({
       userId: 'user-1',
       tableName: 'rolls',
@@ -841,7 +841,9 @@ describe('SyncService schema parity', () => {
         id: 'roll-1',
         userId: 'user-1',
         name: 'Roll 1',
+        currentCameraId: 'camera-2',
         cameraIds: ['camera-1', 'camera-2'],
+        cameraTransfers: [{ fromCameraId: 'camera-1', toCameraId: 'camera-2', changedAt: 1782864000000 }],
         lensIds: ['lens-1', 'lens-2'],
         filmBackId: 'back-1',
         filmStockId: 'film-1',
@@ -858,7 +860,9 @@ describe('SyncService schema parity', () => {
       expect.objectContaining({
         id: 'roll-1',
         user_id: 'user-1',
+        current_camera_id: 'camera-2',
         camera_ids: ['camera-1', 'camera-2'],
+        camera_transfers: [{ from_camera_id: 'camera-1', to_camera_id: 'camera-2', changed_at: 1782864000000 }],
         lens_ids: ['lens-1', 'lens-2'],
         film_back_id: 'back-1',
         film_stock_id: 'film-1',

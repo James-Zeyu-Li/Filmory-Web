@@ -149,4 +149,36 @@ describe('RollsView tabs and empty states', () => {
       expect((await db.rolls.get('roll-1'))?.name).toBe('东京街拍');
     });
   });
+
+  it('records a confirmed camera transfer and updates the current camera', async () => {
+    const user = userEvent.setup();
+    const now = Date.now();
+
+    await db.cameras.bulkAdd([
+      { id: 'camera-a', userId: 'mock-user-id', name: 'Leica M6', type: 'film', format: '135', addedAt: now },
+      { id: 'camera-b', userId: 'mock-user-id', name: 'Nikon F3', type: 'film', format: '135', addedAt: now },
+    ]);
+    await db.rolls.add({
+      id: 'roll-transfer', userId: 'mock-user-id', name: 'Weekend walk',
+      currentCameraId: 'camera-a', cameraIds: ['camera-a'], status: 'active', startDate: now,
+    });
+
+    renderRollsView(false);
+    await user.click(await screen.findByText('Weekend walk'));
+    await user.click(screen.getByRole('button', { name: '更换拍摄机身' }));
+    await user.selectOptions(screen.getByLabelText('接手机身'), 'camera-b');
+
+    const confirmButton = screen.getByRole('button', { name: '确认更换机身' });
+    expect(confirmButton).toBeDisabled();
+    await user.click(screen.getByLabelText('我确认这卷胶片已安全转移，且不会同时装载在两台机身中。'));
+    await user.click(confirmButton);
+
+    await waitFor(async () => {
+      expect(await db.rolls.get('roll-transfer')).toMatchObject({
+        currentCameraId: 'camera-b',
+        cameraIds: ['camera-a', 'camera-b'],
+        cameraTransfers: [expect.objectContaining({ fromCameraId: 'camera-a', toCameraId: 'camera-b' })],
+      });
+    });
+  });
 });

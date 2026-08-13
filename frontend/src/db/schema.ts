@@ -157,7 +157,10 @@ export interface FilmStock {
 export interface Roll {
   id?: string;
   name: string;
+  // Canonical current body. cameraIds remains a legacy compatibility list.
+  currentCameraId?: string;
   cameraIds: string[];
+  cameraTransfers?: CameraTransfer[];
   lensIds?: string[];
   filmBackId?: string;
   // A shooting record can be retained after its source stock was removed.
@@ -174,6 +177,13 @@ export interface Roll {
   developPrice?: number;
   userId?: string;
   collectionId?: string;
+}
+
+export interface CameraTransfer {
+  fromCameraId: string;
+  toCameraId: string;
+  changedAt: number;
+  note?: string;
 }
 
 export interface OtherEquipment {
@@ -652,6 +662,33 @@ export class GrainfolioDatabase extends Dexie {
       userProfiles: 'id, userId, tier, displayName, membershipRequestStatus, membershipRequestedAt',
       collections: 'id, userId, name, date, addedAt'
     });
+
+    // Version 25: a roll has one current camera. Historical camera arrays are
+    // retained for compatibility, while intentional body changes are explicit.
+    this.version(25).stores({
+      cameras: 'id, userId, name, type, format, cameraSystemId, backType, avatarUrl, addedAt',
+      cameraSystems: 'id, userId, name, mountKey, addedAt',
+      filmBacks: 'id, userId, cameraSystemId, name, format, status, addedAt',
+      lenses: 'id, userId, name, focalLength, maxAperture, type, mountKey, addedAt',
+      filmStocks: 'id, userId, brand, name, iso, colorType, format, isSystem, systemKey, addedAt',
+      rolls: 'id, userId, name, currentCameraId, *cameraIds, *lensIds, filmBackId, filmStockId, status, startDate, endDate, rating, location, developNotes, collectionId',
+      photoAssets: 'id, userId, rollId, originalFileName, fileSize, thumbnailUrl, previewUrl, storageKey, addedAt, isPinned, rating, tags, orderIndex',
+      otherEquipments: 'id, userId, name, type, notes, purchaseDate, expiryDate, addedAt',
+      albums: 'id, userId, name, description, coverPhotoId, addedAt',
+      albumPhotos: 'id, userId, albumId, photoId, addedAt',
+      tagConfigs: 'id, userId, &[userId+name], color',
+      syncQueue: '++id, userId, kind, operationId, operationType, tableName, action, recordId, timestamp, failureKind, nextRetryAt',
+      ledgerTransactions: 'id, userId, amount, date, type, category, relatedEntityId, addedAt',
+      userProfiles: 'id, userId, tier, displayName, membershipRequestStatus, membershipRequestedAt',
+      collections: 'id, userId, name, date, addedAt'
+    }).upgrade(tx => tx.table('rolls').toCollection().modify(roll => {
+      if (!roll.currentCameraId && Array.isArray(roll.cameraIds) && roll.cameraIds[0]) {
+        roll.currentCameraId = roll.cameraIds[0];
+      }
+      if (!Array.isArray(roll.cameraTransfers)) {
+        roll.cameraTransfers = [];
+      }
+    }));
 
     // Auto-inject userId and track sync changes on creation
     this.on('ready', () => {

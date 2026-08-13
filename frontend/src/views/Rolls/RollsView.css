@@ -3,6 +3,7 @@
   padding: 24px;
   background-color: var(--bg-primary);
   min-height: calc(100vh - 82px);
+  min-height: calc(100dvh - 82px);
 }
 
 .rolls-grid {
@@ -22,6 +23,7 @@
   cursor: pointer;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .roll-card:hover,
@@ -56,6 +58,66 @@
   justify-content: center;
   color: var(--text-muted);
   opacity: 0.4;
+}
+
+.roll-drawer-current-value {
+  margin: 0;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.roll-drawer-advanced-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.roll-camera-transfer-history {
+  width: 100%;
+  display: grid;
+  gap: 8px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roll-camera-transfer-history li {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+}
+
+.roll-camera-transfer-history span,
+.roll-camera-transfer-history p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.roll-camera-transfer-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.roll-camera-transfer-confirmation {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.roll-camera-transfer-confirmation input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
 }
 
 .roll-card-status {
@@ -167,12 +229,19 @@
   align-items: stretch;
   min-height: 112px;
   width: 100%;
+  position: relative;
 }
 
 .collection-card-row:hover,
 .collection-card-row:focus-within {
   border-color: var(--accent);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.collection-card-row:focus-visible,
+.collection-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .collection-card-row:hover .collection-card-thumb,
@@ -278,12 +347,43 @@
   align-items: stretch;
   min-height: 112px;
   width: 100%;
+  position: relative;
+}
+
+.record-card-open-action {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  min-height: 100%;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.record-card-open-action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -3px;
+}
+
+.roll-card-actions,
+.roll-card-row-actions,
+.collection-card-actions {
+  position: relative;
+  z-index: 2;
 }
 
 .roll-card-row:hover,
 .roll-card-row:focus-within {
   border-color: var(--accent);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.roll-card-row:focus-visible,
+.roll-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .roll-card-row:hover .roll-card-row-thumb,
@@ -440,8 +540,8 @@
 }
 
 .view-toggle-btn {
-  min-width: 32px;
-  height: 30px;
+  min-width: 40px;
+  min-height: 40px;
   padding: 0 9px;
   border: none;
   border-radius: var(--radius-sm);
@@ -552,6 +652,61 @@
 .new-roll-actions {
   padding-top: 20px;
   border-top: 1px solid var(--border-color);
+}
+
+.new-roll-field-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.new-roll-option-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.new-roll-option-chip {
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.new-roll-option-chip.is-selected {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #000;
+}
+
+.new-roll-film-search {
+  position: relative;
+}
+
+.premium-search-input.is-selected {
+  border-color: var(--success);
+}
+
+.roll-price-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.roll-price-step {
+  min-width: 40px;
+  min-height: 40px;
+  padding: 6px 8px;
+}
+
+.roll-price-input {
+  margin: 0;
+  text-align: center;
 }
 
 @media (max-width: 640px) {
@@ -881,6 +1036,12 @@
 }
 
 .custom-dropdown-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  justify-content: flex-start;
   padding: 8px 16px;
   cursor: pointer;
   transition: background var(--transition-fast);
@@ -1084,7 +1245,8 @@
   cursor: pointer;
   font-size: 11px;
   font-weight: 500;
-  padding: 4px 8px;
+  min-height: 36px;
+  padding: 6px 8px;
   border-radius: 6px;
   color: var(--text-secondary);
   transition: all 0.2s;
@@ -1113,11 +1275,215 @@
   white-space: nowrap;
 }
 
+.rolls-main-content {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  max-width: none;
+}
+
+.rolls-view-header-title,
+.rolls-view-header-actions,
+.rolls-collection-heading,
+.rolls-collection-actions-row,
+.rolls-collection-actions,
+.rolls-toolbar-actions,
+.roll-drawer-header-actions,
+.roll-drawer-name-row,
+.roll-drawer-date-row {
+  display: flex;
+  align-items: center;
+}
+
+.rolls-view-header-title {
+  gap: 16px;
+}
+
+.rolls-view-header-actions,
+.rolls-collection-actions,
+.roll-drawer-header-actions {
+  gap: 8px;
+}
+
+.rolls-collection-details,
+.rolls-library-content {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  margin-top: 16px;
+  padding: 0 32px;
+}
+
+.rolls-collection-heading {
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.rolls-collection-heading h2 {
+  margin: 0;
+}
+
+.rolls-collection-heading p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.rolls-collection-actions-row {
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.rolls-empty-grid-item {
+  grid-column: 1 / -1;
+}
+
+.rolls-toolbar-actions {
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 240px;
+  max-width: 100%;
+}
+
+.rolls-search-input {
+  position: relative;
+  flex: 1 1 120px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-tertiary);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+}
+
+.rolls-search-icon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  color: var(--text-tertiary);
+  transform: translateY(-50%);
+}
+
+.rolls-search-field {
+  width: 100%;
+  height: 36px;
+  padding-left: 36px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.rolls-sort-menu {
+  position: relative;
+}
+
+.rolls-sort-chevron {
+  opacity: 0.6;
+}
+
+.rolls-sort-options {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 100;
+  display: flex;
+  width: 140px;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-secondary);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.rolls-sort-option {
+  padding: 8px 12px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+}
+
+.rolls-sort-option:hover,
+.rolls-sort-option:focus-visible,
+.rolls-sort-option.is-selected {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.roll-drawer-complete-action {
+  min-height: 36px;
+  padding: 6px 10px;
+  border-color: var(--success);
+  color: var(--success);
+  font-size: 12px;
+}
+
+.roll-cover-dropzone {
+  height: 100%;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+}
+
+.roll-drawer-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.roll-drawer-chip {
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.roll-drawer-chip.is-selected {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.roll-drawer-name-row,
+.roll-drawer-date-row {
+  gap: 16px;
+}
+
+.roll-drawer-name-row .form-group,
+.roll-drawer-date-row .form-group {
+  flex: 1;
+  margin: 0;
+}
+
+.roll-drawer-lab-notes {
+  font-family: monospace;
+  font-size: 13px;
+}
+
 /* === MOBILE RESPONSIVE LAYOUT (Max width: 768px) === */
 
 @media (max-width: 768px) {
   .roll-drawer-header {
     padding: 14px 16px;
+  }
+
+  .roll-drawer-chip,
+  .new-roll-option-chip {
+    min-height: 40px;
+  }
+
+  .action-btn {
+    min-height: 40px;
   }
 
   .roll-drawer-header-actions {
@@ -1207,6 +1573,16 @@
     flex-wrap: nowrap;
     justify-content: flex-end;
   }
+
+  .roll-price-control {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(40px, 1fr));
+  }
+
+  .roll-price-input {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
   
   .search-input-wrapper {
     width: auto;
@@ -1226,7 +1602,7 @@
   }
   
   /* 5. Dropdowns Bottom Sheet */
-  .rolls-toolbar-actions > div[style*="position: relative"] > div {
+  .rolls-sort-options {
     position: fixed !important;
     top: auto !important;
     bottom: 0 !important;

@@ -220,6 +220,7 @@ export const importExcelDataFromFile = async (
         id,
         userId,
         name,
+        currentCameraId: camera.id,
         cameraIds: [camera.id],
         filmStockId: filmId || 'digital-placeholder',
         status: 'active',

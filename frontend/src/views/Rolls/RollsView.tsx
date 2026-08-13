@@ -42,7 +42,7 @@ import { requestImmediateSync } from '../../services/syncEvents';
 import { adjustFilmStock, createRollWithInventory } from '../../services/inventoryOperationService';
 
 import { CollectionsTab } from './CollectionsTab';
-import type { Roll } from '../../db/schema';
+import type { CameraTransfer, Roll } from '../../db/schema';
 
 interface RollsViewProps {
   enableFilmMode: boolean;
@@ -143,6 +143,11 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   const [keepModalOpen, setKeepModalOpen] = useState(false);
   const [quickAddCameraOpen, setQuickAddCameraOpen] = useState(false);
   const [quickAddFilmOpen, setQuickAddFilmOpen] = useState(false);
+  const [isCameraTransferOpen, setIsCameraTransferOpen] = useState(false);
+  const [transferCameraId, setTransferCameraId] = useState('');
+  const [transferDate, setTransferDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [transferNote, setTransferNote] = useState('');
+  const [hasConfirmedCameraTransfer, setHasConfirmedCameraTransfer] = useState(false);
 
   // New Roll Form
   const [rollTitle, setRollTitle] = useState('');
@@ -189,6 +194,17 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     .map(camera => filmBacks.find(back => back.cameraSystemId === camera.cameraSystemId && back.status !== 'archived'))
     .find((back): back is NonNullable<typeof back> => Boolean(back));
   const effectiveFilmBackId = selectedRequiresFilmBack ? selectedFilmBackId : fixed120Back?.id;
+  const currentRollCameraId = selectedRoll?.currentCameraId || selectedRoll?.cameraIds?.[0];
+  const currentRollCamera = cameras.find(camera => camera.id === currentRollCameraId);
+  const selectedRollFilmBack = filmBacks.find(back => back.id === selectedRoll?.filmBackId);
+  const transferCandidateCameras = selectedRoll
+    ? cameras.filter(camera => {
+      if (!camera.id || camera.id === currentRollCameraId || camera.status === 'archived') return false;
+      if (selectedRollFilmBack) return camera.cameraSystemId === selectedRollFilmBack.cameraSystemId;
+      if (!currentRollCamera) return true;
+      return camera.type === currentRollCamera.type && camera.format === currentRollCamera.format;
+    })
+    : [];
 
   const getFilmBackName = (id?: string) => {
     return filmBacks.find(back => back.id === id)?.name || t('common.notSelectedBack');
@@ -215,6 +231,58 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     setDevelopNotes(roll.developNotes || '');
     setDevelopPrice(roll.developPrice || '');
     setIsDrawerOpen(true);
+  };
+
+  const openCameraTransfer = () => {
+    if (!selectedRoll || selectedRoll.status !== 'active' || !currentRollCameraId) return;
+    setTransferCameraId('');
+    setTransferDate(new Date().toISOString().slice(0, 10));
+    setTransferNote('');
+    setHasConfirmedCameraTransfer(false);
+    setIsCameraTransferOpen(true);
+  };
+
+  const handleCameraTransfer = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selectedRoll?.id || !currentRollCameraId || !transferCameraId || !hasConfirmedCameraTransfer) return;
+
+    const changedAt = new Date(transferDate).getTime();
+    const rollStartDate = selectedRoll.startDate
+      ? new Date(selectedRoll.startDate).toISOString().slice(0, 10)
+      : undefined;
+    const latestTransferDate = new Date(nowTimestamp).toISOString().slice(0, 10);
+    const isEligibleCamera = transferCandidateCameras.some(camera => camera.id === transferCameraId);
+    const isInvalidDate = !Number.isFinite(changedAt)
+      || (rollStartDate !== undefined && transferDate < rollStartDate)
+      || transferDate > latestTransferDate;
+    if (!isEligibleCamera || isInvalidDate) {
+      notify({ type: 'error', title: t('rolls.cameraTransferInvalidTitle'), message: t('rolls.cameraTransferInvalidMessage') });
+      return;
+    }
+
+    const transfers: CameraTransfer[] = [
+      ...(selectedRoll.cameraTransfers || []),
+      {
+        fromCameraId: currentRollCameraId,
+        toCameraId: transferCameraId,
+        changedAt,
+        note: transferNote.trim() || undefined,
+      },
+    ];
+    const cameraIds = Array.from(new Set([
+      ...(selectedRoll.cameraIds || []),
+      currentRollCameraId,
+      transferCameraId,
+    ]));
+
+    await db.rolls.update(selectedRoll.id, {
+      currentCameraId: transferCameraId,
+      cameraIds,
+      cameraTransfers: transfers,
+    });
+    requestImmediateSync('roll-camera-transfer');
+    setIsCameraTransferOpen(false);
+    notify({ type: 'success', title: t('rolls.cameraTransferSavedTitle'), message: t('rolls.cameraTransferSavedMessage') });
   };
 
   useEffect(() => {
@@ -399,6 +467,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     const newRoll: Roll = {
       id: crypto.randomUUID(),
       name: rollTitle,
+      currentCameraId: selectedCameraIds[0],
       cameraIds: selectedCameraIds,
       lensIds: selectedLensIds,
       filmBackId: effectiveFilmBackId,
@@ -467,7 +536,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     
     const existing = cameras.find(camera => camera.name === qaCameraName.trim());
     if (existing && existing.id) {
-      setSelectedCameraIds(prev => prev.includes(existing.id!) ? prev : [...prev, existing.id!]);
+      setSelectedCameraIds([existing.id]);
     } else {
       const newId = crypto.randomUUID();
       await db.cameras.add({
@@ -479,7 +548,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
         addedAt: Date.now()
       });
       requestImmediateSync('roll-quick-add-camera');
-      setSelectedCameraIds(prev => [...prev, newId]);
+      setSelectedCameraIds([newId]);
     }
     setQaCameraName('');
     setQuickAddCameraOpen(false);
@@ -735,13 +804,11 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
         const locationMatch = r.location?.toLowerCase().includes(q);
         const notesMatch = r.notes?.toLowerCase().includes(q);
         
-        let cameraMatch = false;
-        if (r.cameraIds) {
-          cameraMatch = r.cameraIds.some((id: string) => {
-            const cam = cameras.find(c => c.id === id);
-            return cam && (cam.name.toLowerCase().includes(q) || cam.brand.toLowerCase().includes(q));
-          });
-        }
+        const currentCameraId = r.currentCameraId || r.cameraIds?.[0];
+        const currentCamera = cameras.find(camera => camera.id === currentCameraId);
+        const cameraMatch = Boolean(currentCamera && (
+          currentCamera.name.toLowerCase().includes(q) || currentCamera.brand.toLowerCase().includes(q)
+        ));
         
         let filmMatch = false;
         if (r.filmStockId) {
@@ -762,8 +829,10 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
       if (sortBy === 'name') {
         return a.name.localeCompare(b.name);
       } else if (sortBy === 'camera') {
-        const aCam = a.cameraIds?.[0] ? cameras.find(c => c.id === a.cameraIds![0])?.name || '' : '';
-        const bCam = b.cameraIds?.[0] ? cameras.find(c => c.id === b.cameraIds![0])?.name || '' : '';
+        const aCameraId = a.currentCameraId || a.cameraIds?.[0];
+        const bCameraId = b.currentCameraId || b.cameraIds?.[0];
+        const aCam = aCameraId ? cameras.find(c => c.id === aCameraId)?.name || '' : '';
+        const bCam = bCameraId ? cameras.find(c => c.id === bCameraId)?.name || '' : '';
         return aCam.localeCompare(bCam);
       } else {
         return b.startDate - a.startDate;
@@ -812,6 +881,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
           className="roll-card-row"
           onClick={() => openRollDrawer(roll)}
         >
+          <button type="button" className="record-card-open-action" onClick={(event) => { event.stopPropagation(); openRollDrawer(roll); }} aria-label={t('rolls.openDetails', { name: roll.name })} />
           <div className="roll-card-row-thumb-wrapper">
             {coverUrl ? (
               <div className="roll-card-row-thumb" style={{ backgroundImage: `url(${coverUrl})` }} />
@@ -837,7 +907,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
 
             <p className="roll-card-meta">
               <Camera size={12} style={{ flexShrink: 0 }} />
-              {(roll.cameraIds || []).map(getCameraName).join(', ') || t('rolls.unboundCamera')}
+              {getCameraName(roll.currentCameraId || roll.cameraIds?.[0])}
             </p>
             {roll.filmBackId && (
               <p className="roll-card-meta">
@@ -862,16 +932,16 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
 
           <div className="roll-card-row-actions">
             {collectionActionId && roll.collectionId === collectionActionId && (
-              <button className="action-btn" onClick={(e) => handleRemoveFromCollection(roll.id!, e)} title={t('rolls.removeFromCollectionTitle')}>
+              <button className="action-btn" onClick={(e) => handleRemoveFromCollection(roll.id!, e)} title={t('rolls.removeFromCollectionTitle')} aria-label={t('rolls.removeFromCollectionTitle')}>
                 <Folder size={12} /> <span>{t('rolls.removeFromCollection')}</span>
               </button>
             )}
             {roll.status === 'active' && (
-              <button className="action-btn success" onClick={(e) => handleArchiveRoll(roll.id!, e)} title={t('rolls.completeTitle')}>
+              <button className="action-btn success" onClick={(e) => handleArchiveRoll(roll.id!, e)} title={t('rolls.completeTitle')} aria-label={t('rolls.completeTitle')}>
                 <CheckCircle size={14} /> <span>{t('rolls.complete')}</span>
               </button>
             )}
-            <button className="action-btn danger" onClick={(e) => handleDeleteRoll(roll.id!, e)} title={t('rolls.deleteTitle')}>
+            <button className="action-btn danger" onClick={(e) => handleDeleteRoll(roll.id!, e)} title={t('rolls.deleteTitle')} aria-label={t('rolls.deleteTitle')}>
               <Trash2 size={14} /> <span>{t('rolls.delete')}</span>
             </button>
           </div>
@@ -885,6 +955,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
         className="roll-card"
         onClick={() => openRollDrawer(roll)}
       >
+        <button type="button" className="record-card-open-action" onClick={(event) => { event.stopPropagation(); openRollDrawer(roll); }} aria-label={t('rolls.openDetails', { name: roll.name })} />
         {/* Image Zone */}
         <div 
           className="roll-card-cover" 
@@ -910,7 +981,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
           <h3>{roll.name}</h3>
           <p className="roll-card-meta">
             <Camera size={12} style={{ flexShrink: 0 }} />
-            {(roll.cameraIds || []).map(getCameraName).join(', ') || t('rolls.unboundCamera')}
+            {getCameraName(roll.currentCameraId || roll.cameraIds?.[0])}
           </p>
           {roll.filmBackId && (
             <p className="roll-card-meta">
@@ -937,16 +1008,16 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
           
           <div className="roll-card-actions">
             {activeCollectionId && roll.collectionId === activeCollectionId && (
-              <button className="action-btn" onClick={(e) => handleRemoveFromCollection(roll.id!, e)} title={t('rolls.removeFromCollectionTitle')}>
+              <button className="action-btn" onClick={(e) => handleRemoveFromCollection(roll.id!, e)} title={t('rolls.removeFromCollectionTitle')} aria-label={t('rolls.removeFromCollectionTitle')}>
                 <Folder size={12} /> <span>{t('rolls.removeFromCollection')}</span>
               </button>
             )}
             {roll.status === 'active' && (
-              <button className="action-btn success" onClick={(e) => handleArchiveRoll(roll.id!, e)} title={t('rolls.completeTitle')}>
+              <button className="action-btn success" onClick={(e) => handleArchiveRoll(roll.id!, e)} title={t('rolls.completeTitle')} aria-label={t('rolls.completeTitle')}>
                 <CheckCircle size={14} /> <span>{t('rolls.complete')}</span>
               </button>
             )}
-            <button className="action-btn danger" onClick={(e) => handleDeleteRoll(roll.id!, e)} title={t('rolls.deleteTitle')}>
+            <button className="action-btn danger" onClick={(e) => handleDeleteRoll(roll.id!, e)} title={t('rolls.deleteTitle')} aria-label={t('rolls.deleteTitle')}>
               <Trash2 size={14} /> <span>{t('rolls.delete')}</span>
             </button>
           </div>
@@ -968,10 +1039,10 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   );
 
   return (
-    <div className="main-content" style={{ width: '100%', maxWidth: 'none', flex: 1 }}>
+    <div className="main-content rolls-main-content">
       <header className="view-header">
         <div className="view-header-title-container">
-          <motion.div key={libraryView} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <motion.div key={libraryView} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} className="rolls-view-header-title">
             <div className="view-header-icon">
               {libraryView === 'collections' ? <Folder size={20} /> : libraryView === 'loose' ? <LayoutGrid size={20} /> : <Film size={20} />}
             </div>
@@ -986,19 +1057,25 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
           </motion.div>
         </div>
         
-        <div className="view-header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div className="view-header-actions rolls-view-header-actions">
            <div className="view-toggle-group">
 	             <button
                className={`view-toggle-btn ${viewLayout === 'grid' ? 'active' : ''}`}
+               type="button"
                onClick={() => setViewLayout('grid')}
                title={t('rolls.gridView')}
+               aria-label={t('rolls.gridView')}
+               aria-pressed={viewLayout === 'grid'}
              >
                <LayoutGrid size={16} />
              </button>
 	             <button
                className={`view-toggle-btn ${viewLayout === 'list' ? 'active' : ''}`}
+               type="button"
                onClick={() => setViewLayout('list')}
                title={t('rolls.listView')}
+               aria-label={t('rolls.listView')}
+               aria-pressed={viewLayout === 'list'}
              >
                <List size={16} />
              </button>
@@ -1023,22 +1100,21 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="collection-details-view" 
-            style={{ padding: '0 32px', marginTop: '16px' }}
+            className="collection-details-view rolls-collection-details"
           >
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '24px' }}>
+            <div className="rolls-collection-heading">
               <IconButton variant="solid" onClick={() => setActiveCollectionId(null)} icon={<ArrowLeft size={20} />} />
               <div>
-                <h2 style={{ margin: 0 }}>{activeCollection?.name || t('common.loading')}</h2>
-                <p style={{ margin: '4px 0 0 0', color: 'var(--text-secondary)', fontSize: '14px' }}>
+                <h2>{activeCollection?.name || t('common.loading')}</h2>
+                <p>
                   {activeCollection?.description || ''} · {activeCollection?.date ? new Date(activeCollection.date).toLocaleDateString() : ''}
                 </p>
               </div>
             </div>
             
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div className="rolls-collection-actions-row">
               <h3>{t('rolls.all')} ({rolls.filter(r => r.collectionId === activeCollectionId).length})</h3>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div className="rolls-collection-actions">
                 <button className="secondary" onClick={() => {
                   setSelectedExistingRollIds([]);
                   setIsAddExistingModalOpen(true);
@@ -1063,7 +1139,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                 className={viewLayout === 'grid' ? 'rolls-grid' : 'rolls-list'}
               >
                 {rolls.filter(r => r.collectionId === activeCollectionId).length === 0 ? (
-                   <div style={{ gridColumn: '1 / -1' }}>
+                   <div className="rolls-empty-grid-item">
                       <EmptyState icon={Film} title={t('rolls.noRolls')} description={t('rolls.noRollsDesc')} />
                    </div>
                 ) : (
@@ -1076,8 +1152,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
         ) : (
           <motion.div 
             key="library-view"
-            className="unified-rolls-view" 
-            style={{ padding: '0 32px', marginTop: '16px', width: '100%', maxWidth: 'none', boxSizing: 'border-box' }}
+            className="unified-rolls-view rolls-library-content"
           >
             {/* TOP LEVEL LIBRARY TABS & SEARCH */}
             <div className="rolls-toolbar">
@@ -1094,19 +1169,11 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                 ))}
               </div>
               
-              <div className="rolls-toolbar-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center', flex: '1 1 auto', maxWidth: '100%', minWidth: '240px', justifyContent: 'flex-end' }}>
+              <div className="rolls-toolbar-actions">
                   <div 
-                    className="search-bar search-input-wrapper" 
-                    style={{ 
-                      flex: '1 1 120px',
-                      position: 'relative',
-                      transition: 'all 0.3s ease',
-                      backgroundColor: 'var(--bg-tertiary)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '8px'
-                    }}
+                    className="search-bar search-input-wrapper rolls-search-input"
                   >
-                    <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+                    <Search size={16} className="rolls-search-icon" />
 	                    <input
 	                      type="text"
 	                      placeholder={t('rolls.searchPlaceholder')}
@@ -1117,30 +1184,25 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                           setLibraryView('all');
                         }
                       }}
-	                      style={{
-	                        width: '100%',
-	                        paddingLeft: '36px',
-	                        height: '36px',
-	                        backgroundColor: 'transparent',
-                        color: 'var(--text-primary)',
-                        border: 'none',
-                        outline: 'none'
-                      }}
+	                      className="rolls-search-field"
                     />
                   </div>
                   
-                  <div ref={sortRef} style={{ position: 'relative' }}>
+                  <div ref={sortRef} className="rolls-sort-menu">
 	                    <button
 	                      className="secondary btn-sm sort-trigger-btn"
+                      type="button"
                       onClick={() => setIsSortOpen(!isSortOpen)}
+                      aria-expanded={isSortOpen}
+                      aria-controls="rolls-sort-options"
                     >
                       {sortBy === 'date' ? t('rolls.sortDate') : sortBy === 'camera' ? t('rolls.sortCamera') : t('rolls.sortName')}
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}><polyline points="6 9 12 15 18 9"></polyline></svg>
+                      <svg className="rolls-sort-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     </button>
                     {isSortOpen && (
-                      <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: '140px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '8px', zIndex: 100, boxShadow: '0 4px 20px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <div onClick={() => { setSortBy('date'); setIsSortOpen(false); }} style={{ padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', backgroundColor: sortBy === 'date' ? 'var(--accent-bg)' : 'transparent', color: sortBy === 'date' ? 'var(--accent)' : 'var(--text-primary)', fontSize: '13px' }}>{t('rolls.sortDate')}</div>
-                        <div onClick={() => { setSortBy('name'); setIsSortOpen(false); }} style={{ padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', backgroundColor: sortBy === 'name' ? 'var(--accent-bg)' : 'transparent', color: sortBy === 'name' ? 'var(--accent)' : 'var(--text-primary)', fontSize: '13px' }}>{t('rolls.sortName')}</div>
+                      <div id="rolls-sort-options" className="rolls-sort-options" role="menu">
+                        <button type="button" role="menuitemradio" aria-checked={sortBy === 'date'} className={`rolls-sort-option ${sortBy === 'date' ? 'is-selected' : ''}`} onClick={() => { setSortBy('date'); setIsSortOpen(false); }}>{t('rolls.sortDate')}</button>
+                        <button type="button" role="menuitemradio" aria-checked={sortBy === 'name'} className={`rolls-sort-option ${sortBy === 'name' ? 'is-selected' : ''}`} onClick={() => { setSortBy('name'); setIsSortOpen(false); }}>{t('rolls.sortName')}</button>
                       </div>
                     )}
                   </div>
@@ -1241,16 +1303,16 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
           <>
             <div className="drawer-header roll-drawer-header">
               <h2>{selectedRoll.name}</h2>
-              <div className="roll-drawer-header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div className="roll-drawer-header-actions">
                {selectedRoll.status === 'active' && (
-                <button className="outline-btn" style={{borderColor: 'var(--success)', color: 'var(--success)', fontSize: '12px', padding: '4px 8px'}} onClick={(e) => { handleArchiveRoll(selectedRoll.id!, e); setIsDrawerOpen(false); }}>
+                <button className="outline-btn roll-drawer-complete-action" onClick={(e) => { handleArchiveRoll(selectedRoll.id!, e); setIsDrawerOpen(false); }}>
                   {t('rolls.markCompleted')}
                 </button>
               )}
-              <button className="icon-btn danger" onClick={(e) => { handleDeleteRoll(selectedRoll.id!, e); setIsDrawerOpen(false); }}>
+              <button className="icon-btn danger" onClick={(e) => { handleDeleteRoll(selectedRoll.id!, e); setIsDrawerOpen(false); }} aria-label={t('rolls.deleteTitle')} title={t('rolls.deleteTitle')}>
                 <Trash2 size={18} />
               </button>
-              <button className="icon-btn" onClick={() => setIsDrawerOpen(false)}>
+              <button className="icon-btn" onClick={() => setIsDrawerOpen(false)} aria-label={t('common.cancel')} title={t('common.cancel')}>
                 <X size={20} />
               </button>
             </div>
@@ -1262,14 +1324,13 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                 <h3>{t('rolls.coverPhoto')}</h3>
                 <div className="roll-cover-editor">
                   <div className="cover-upload-container">
-                    <div className={`dropzone ${isDragOver ? 'drag-over' : ''} ${isUploading ? 'uploading' : ''}`}
+                    <div className={`dropzone roll-cover-dropzone ${isDragOver ? 'drag-over' : ''} ${isUploading ? 'uploading' : ''}`}
                          onDragOver={(e) => { e.preventDefault(); if (!isUploading) setIsDragOver(true); }}
                          onDragLeave={() => setIsDragOver(false)}
                          onDrop={isUploading ? undefined : handleDrop}
-                         style={{ height: '100%', padding: 0, border: 'none', borderRadius: 0 }}
                     >
                       {getCoverUrl(selectedRoll) && !isUploading ? (
-                        <div className="cover-preview" style={{ backgroundImage: `url(${getCoverUrl(selectedRoll)})`, width: '100%', height: '100%' }} />
+                        <div className="cover-preview" style={{ backgroundImage: `url(${getCoverUrl(selectedRoll)})` }} />
                       ) : isUploading ? (
                         <div className="roll-cover-uploading">
                           <span>{uploadProgress}%</span>
@@ -1278,7 +1339,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                           </div>
                         </div>
                       ) : (
-                        <div className="cover-upload-placeholder" style={{ width: '100%', height: '100%' }}>
+                        <div className="cover-upload-placeholder">
                           <Upload size={22} />
                         </div>
                       )}
@@ -1306,51 +1367,29 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
               <div className="drawer-section roll-drawer-section roll-drawer-gear-section">
                 <h3>{t('rolls.gearAndFilm')}</h3>
                 <div className="form-group roll-drawer-choice-field">
-                  <label className="roll-drawer-field-label">{t('rolls.camera')}</label>
-                  <div className="roll-drawer-chip-list" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {cameras.map(c => {
-                      const isSelected = (selectedRoll.cameraIds || []).includes(c.id!);
-                      return (
-                        <div key={c.id} 
-                          onClick={async () => {
-                            let newIds = [...(selectedRoll.cameraIds || [])];
-                            if (isSelected) newIds = newIds.filter(id => id !== c.id);
-                            else newIds.push(c.id!);
-                            if (newIds.length === 0) return; // Must have at least 1 camera
-                            await db.rolls.update(selectedRoll.id!, { cameraIds: newIds });
-                          }}
-                          style={{ 
-                            padding: '4px 10px', border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border-color)'}`, 
-                            borderRadius: '12px', fontSize: '11px', cursor: 'pointer',
-                            background: isSelected ? 'var(--accent)' : 'transparent', color: isSelected ? '#fff' : 'inherit'
-                          }}
-                        >{c.name}</div>
-                      );
-                    })}
-                  </div>
+                  <label className="roll-drawer-field-label">{t('rolls.currentCamera')}</label>
+                  <p className="roll-drawer-current-value">{currentRollCamera?.name || t('rolls.unboundCamera')}</p>
                   
                   <label className="roll-drawer-field-label">{t('rolls.lensMultiOptional')}</label>
-                  <div className="roll-drawer-chip-list" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  <div className="roll-drawer-chip-list">
                     {lenses.length === 0 ? (
                       <div className="roll-form-hint">{t('rolls.noLensHint')}</div>
                     ) : (
                       lenses.map(lens => {
                         const isSelected = (selectedRoll.lensIds || []).includes(lens.id!);
                         return (
-                          <div
+                          <button
                             key={lens.id}
+                            type="button"
                             onClick={async () => {
                               let newIds = [...(selectedRoll.lensIds || [])];
                               if (isSelected) newIds = newIds.filter(id => id !== lens.id);
                               else newIds.push(lens.id!);
                               await db.rolls.update(selectedRoll.id!, { lensIds: newIds });
                             }}
-                            style={{
-                              padding: '4px 10px', border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border-color)'}`,
-                              borderRadius: '12px', fontSize: '11px', cursor: 'pointer',
-                              background: isSelected ? 'var(--accent)' : 'transparent', color: isSelected ? '#fff' : 'inherit'
-                            }}
-                          >{lens.name}</div>
+                            className={`roll-drawer-chip ${isSelected ? 'is-selected' : ''}`}
+                            aria-pressed={isSelected}
+                          >{lens.name}</button>
                         );
                       })
                     )}
@@ -1365,21 +1404,18 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                   {enableFilmMode && (
                     <>
                       <label className="roll-drawer-field-label">{t('rolls.filmStock')}</label>
-                      <div className="roll-drawer-chip-list" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      <div className="roll-drawer-chip-list">
                         {visibleFilmStocks.map(f => {
                           const isSelected = selectedRoll.filmStockId === f.id;
                           return (
-                            <div key={f.id} 
+                            <button key={f.id} type="button"
                               onClick={async () => {
                                 if (isSelected) return; // Must have 1 film
                                 await db.rolls.update(selectedRoll.id!, { filmStockId: f.id });
                               }}
-                              style={{ 
-                                padding: '4px 10px', border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border-color)'}`, 
-                                borderRadius: '12px', fontSize: '11px', cursor: 'pointer',
-                                background: isSelected ? 'var(--accent)' : 'transparent', color: isSelected ? '#fff' : 'inherit'
-                              }}
-                            >{f.brand} {f.name}</div>
+                              className={`roll-drawer-chip ${isSelected ? 'is-selected' : ''}`}
+                              aria-pressed={isSelected}
+                            >{f.brand} {f.name}</button>
                           );
                         })}
                       </div>
@@ -1388,11 +1424,34 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                 </div>
               </div>
 
+              <div className="drawer-section roll-drawer-section roll-drawer-advanced-section">
+                <h3>{t('rolls.advanced')}</h3>
+                <p className="roll-form-hint">{t('rolls.cameraTransferHint')}</p>
+                {selectedRoll.status === 'active' ? (
+                  <button type="button" className="secondary" onClick={openCameraTransfer} disabled={!currentRollCameraId}>
+                    <Camera size={16} /> {t('rolls.changeCamera')}
+                  </button>
+                ) : (
+                  <p className="roll-form-hint">{t('rolls.cameraTransferArchivedHint')}</p>
+                )}
+                {(selectedRoll.cameraTransfers || []).length > 0 && (
+                  <ol className="roll-camera-transfer-history" aria-label={t('rolls.cameraTransferHistory')}>
+                    {(selectedRoll.cameraTransfers || []).map((transfer: CameraTransfer, index: number) => (
+                      <li key={`${transfer.changedAt}-${transfer.toCameraId}-${index}`}>
+                        <strong>{getCameraName(transfer.fromCameraId)} → {getCameraName(transfer.toCameraId)}</strong>
+                        <span>{new Date(transfer.changedAt).toLocaleDateString()}</span>
+                        {transfer.note && <p>{transfer.note}</p>}
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+
               <div className="drawer-section roll-drawer-section roll-drawer-shooting-section">
                 <h3>{t('rolls.shootingInfo')}</h3>
                 
-                <div className="roll-drawer-name-row" style={{ display: 'flex', gap: '16px' }}>
-                  <div className="form-group" style={{ flex: 1, margin: 0 }}>
+                <div className="roll-drawer-name-row">
+                  <div className="form-group">
                     <label>{t('rolls.rollName')}</label>
                     <input
                       type="text"
@@ -1404,8 +1463,8 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                   </div>
                 </div>
 
-                <div className="roll-drawer-date-row" style={{ display: 'flex', gap: '16px' }}>
-                  <div className="form-group" style={{ flex: 1, margin: 0 }}>
+                <div className="roll-drawer-date-row">
+                  <div className="form-group">
                     <label>{t('rolls.startDateLabel')}</label>
                     <input 
                       type="date" 
@@ -1419,7 +1478,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                     />
                   </div>
                   {selectedRoll.status === 'archived' && (
-                    <div className="form-group" style={{ flex: 1, margin: 0 }}>
+                    <div className="form-group">
                       <label>{t('rolls.completedDateLabel')}</label>
                       <input 
                         type="date" 
@@ -1474,14 +1533,14 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
               </div>
               
               <div className="drawer-section roll-drawer-section roll-drawer-lab-section">
-                <h3 style={{ color: 'var(--accent)' }}>{t('rolls.labRecord')}</h3>
+                <h3>{t('rolls.labRecord')}</h3>
                 <div className="form-group">
                   <label>{t('rolls.developmentCost', { symbol: currencySymbol })}</label>
                   <input type="number" className="form-control" placeholder={t('rolls.developmentCostPlaceholder')} value={developPrice} onChange={e => setDevelopPrice(e.target.value ? Number(e.target.value) : '')} />
                 </div>
                 <div className="form-group">
                   <label>{t('rolls.labNotes')}</label>
-                  <textarea className="form-control" rows={4} style={{ fontFamily: 'monospace', fontSize: '13px' }} placeholder={t('rolls.labNotesPlaceholder')} value={developNotes} onChange={e => setDevelopNotes(e.target.value)} />
+                  <textarea className="form-control roll-drawer-lab-notes" rows={4} placeholder={t('rolls.labNotesPlaceholder')} value={developNotes} onChange={e => setDevelopNotes(e.target.value)} />
                 </div>
               </div>
             </div>
@@ -1494,6 +1553,46 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
           </>
         )}
       </Drawer>
+
+      <Modal isOpen={isCameraTransferOpen} onClose={() => setIsCameraTransferOpen(false)} style={{ maxWidth: '460px' }}>
+        <h3>{t('rolls.changeCameraTitle')}</h3>
+        <p className="modal-helper-text">{t('rolls.changeCameraDescription', { camera: currentRollCamera?.name || t('rolls.unboundCamera') })}</p>
+        <form onSubmit={handleCameraTransfer} className="roll-camera-transfer-form">
+          <div className="form-group">
+            <label htmlFor="transfer-camera">{t('rolls.newCamera')}</label>
+            <select id="transfer-camera" className="form-control" value={transferCameraId} onChange={event => setTransferCameraId(event.target.value)} required>
+              <option value="">{t('rolls.selectCamera')}</option>
+              {transferCandidateCameras.map(camera => <option key={camera.id} value={camera.id}>{camera.name}</option>)}
+            </select>
+            {transferCandidateCameras.length === 0 && <p className="roll-form-hint">{t('rolls.noCompatibleTransferCamera')}</p>}
+          </div>
+          <div className="form-group">
+            <label htmlFor="transfer-date">{t('rolls.cameraTransferDate')}</label>
+            <input
+              id="transfer-date"
+              type="date"
+              className="form-control"
+              value={transferDate}
+              min={selectedRoll?.startDate ? new Date(selectedRoll.startDate).toISOString().slice(0, 10) : undefined}
+              max={new Date(nowTimestamp).toISOString().slice(0, 10)}
+              onChange={event => setTransferDate(event.target.value)}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="transfer-note">{t('rolls.cameraTransferNote')}</label>
+            <textarea id="transfer-note" className="form-control" rows={3} value={transferNote} onChange={event => setTransferNote(event.target.value)} placeholder={t('rolls.cameraTransferNotePlaceholder')} />
+          </div>
+          <label className="roll-camera-transfer-confirmation">
+            <input type="checkbox" checked={hasConfirmedCameraTransfer} onChange={event => setHasConfirmedCameraTransfer(event.target.checked)} />
+            <span>{t('rolls.cameraTransferConfirmation')}</span>
+          </label>
+          <div className="modal-actions">
+            <button type="button" className="secondary" onClick={() => setIsCameraTransferOpen(false)}>{t('common.cancel')}</button>
+            <button type="submit" className="primary" disabled={!transferCameraId || !hasConfirmedCameraTransfer}>{t('rolls.confirmCameraTransfer')}</button>
+          </div>
+        </form>
+      </Modal>
 
       {/* --- NEW ROLL MODAL --- */}
       <Modal
@@ -1510,29 +1609,25 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
 
               <div className="new-roll-section new-roll-field-grid new-roll-field-grid--equipment">
                 <div className="form-group">
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <div className="new-roll-field-heading">
                     <label>{t('rolls.cameraRequired')}</label>
                     <button type="button" className="text-btn" onClick={() => setQuickAddCameraOpen(true)}>{t('rolls.quickAddCamera')}</button>
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+                  <div className="new-roll-option-list">
                     {cameras.map(c => {
                       const isSelected = selectedCameraIds.includes(c.id!);
                       return (
-                        <div
+                        <button
                           key={c.id}
+                          type="button"
                           onClick={() => {
-                            if (isSelected) setSelectedCameraIds(prev => prev.filter(id => id !== c.id));
-                            else setSelectedCameraIds(prev => [...prev, c.id!]);
+                            setSelectedCameraIds([c.id!]);
                           }}
-                          style={{
-                            padding: '6px 12px', border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border-color)'}`,
-                            borderRadius: '16px', fontSize: '12px', cursor: 'pointer',
-                            background: isSelected ? 'var(--accent)' : 'transparent',
-                            color: isSelected ? '#fff' : 'inherit'
-                          }}
+                          className={`new-roll-option-chip ${isSelected ? 'is-selected' : ''}`}
+                          aria-pressed={isSelected}
                         >
                           {c.name}
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -1540,28 +1635,25 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
 
                 <div className="form-group">
                   <label>{t('rolls.lensOptional')}</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+                  <div className="new-roll-option-list">
                     {lenses.length === 0 ? (
                       <div className="roll-form-hint">{t('rolls.noLensHint')}</div>
                     ) : (
                       lenses.map(lens => {
                         const isSelected = selectedLensIds.includes(lens.id!);
                         return (
-                          <div
+                          <button
                             key={lens.id}
+                            type="button"
                             onClick={() => {
                               if (isSelected) setSelectedLensIds(prev => prev.filter(id => id !== lens.id));
                               else setSelectedLensIds(prev => [...prev, lens.id!]);
                             }}
-                            style={{
-                              padding: '6px 12px', border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border-color)'}`,
-                              borderRadius: '16px', fontSize: '12px', cursor: 'pointer',
-                              background: isSelected ? 'var(--accent)' : 'transparent',
-                              color: isSelected ? '#fff' : 'inherit'
-                            }}
+                            className={`new-roll-option-chip ${isSelected ? 'is-selected' : ''}`}
+                            aria-pressed={isSelected}
                           >
                             {lens.name}
-                          </div>
+                          </button>
                         );
                       })
                     )}
@@ -1603,16 +1695,15 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                 <>
                   <div className="new-roll-section new-roll-field-grid new-roll-field-grid--film">
                     <div className="form-group">
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <div className="new-roll-field-heading">
                         <label>{t('rolls.filmRequired')}</label>
                         <button type="button" className="text-btn" onClick={openQuickAddFilm}>{t('rolls.quickAdd')}</button>
                       </div>
-                      <div style={{ position: 'relative' }}>
+                      <div className="new-roll-film-search">
                         <div className="search-input-wrapper">
                           <Search className="search-icon" size={16} />
                           <input
                               type="text"
-                              className="form-control premium-search-input"
                               placeholder={t('rolls.filmSearchPlaceholder')}
                               value={filmSearchText}
                               onFocus={() => setIsFilmDropdownOpen(true)}
@@ -1625,7 +1716,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                                   else setSelectedFilmId('');
                               }}
                               required={enableFilmMode}
-                              style={{ borderColor: selectedFilmId ? 'var(--success)' : 'var(--border-color)' }}
+                              className={`form-control premium-search-input ${selectedFilmId ? 'is-selected' : ''}`}
                           />
                         </div>
                         {isFilmDropdownOpen && (
@@ -1637,22 +1728,26 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                           >
                             {visibleFilmStocks.filter(f => `${f.brand} ${f.name}`.toLowerCase().includes(filmSearchText.toLowerCase())).length > 0 ? (
                               visibleFilmStocks.filter(f => `${f.brand} ${f.name}`.toLowerCase().includes(filmSearchText.toLowerCase())).map(f => (
-                                <li key={f.id} className="custom-dropdown-item" onClick={() => {
+                              <li key={f.id}>
+                                <button type="button" className="custom-dropdown-item" onClick={() => {
                                     setFilmSearchText(`${f.brand} ${f.name}`);
                                     setSelectedFilmId(f.id!);
                                     setIsFilmDropdownOpen(false);
                                 }}>
                                   <div className="dropdown-item-title">{f.brand} {f.name}</div>
                                   <div className="dropdown-item-meta">{t('rolls.filmStockMeta', { iso: f.iso, count: f.stockCount || 0 })}</div>
-                                </li>
+                                </button>
+                              </li>
                               ))
                             ) : (
                               <div className="dropdown-empty-state">{t('rolls.filmNotFound')}</div>
                             )}
                             {!visibleFilmStocks.some(f => `${f.brand} ${f.name}`.toLowerCase() === filmSearchText.trim().toLowerCase()) && filmSearchText.trim() !== '' && (
-                              <li className="custom-dropdown-item create-new-item" onClick={() => setIsFilmDropdownOpen(false)}>
+                              <li>
+                                <button type="button" className="custom-dropdown-item create-new-item" onClick={() => setIsFilmDropdownOpen(false)}>
                                 <div className="dropdown-item-title dropdown-item-new"><Sparkles size={14} style={{ display: 'inline-block', verticalAlign: 'text-bottom', marginRight: '4px' }}/> {t('rolls.quickCreateFilm', { name: filmSearchText })}</div>
                                 <div className="dropdown-item-meta">{t('rolls.quickCreateFilmHint')}</div>
+                                </button>
                               </li>
                             )}
                           </motion.ul>
@@ -1662,12 +1757,12 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
 
                     <div className="form-group">
                       <label>{t('rolls.rollFilmCost', { symbol: currencySymbol })}</label>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <button type="button" className="secondary icon-btn" onClick={() => setRollFilmPrice(p => Math.max(0, (Number(p) || 0) - 5))} title="-5">-5</button>
-                        <button type="button" className="secondary icon-btn" onClick={() => setRollFilmPrice(p => Math.max(0, (Number(p) || 0) - 1))} title="-1">-1</button>
-                        <input type="number" className="form-control" style={{ textAlign: 'center', margin: 0 }} placeholder={t('rolls.costPlaceholder')} value={rollFilmPrice} onChange={e => setRollFilmPrice(e.target.value ? Number(e.target.value) : '')} />
-                        <button type="button" className="secondary icon-btn" onClick={() => setRollFilmPrice(p => (Number(p) || 0) + 1)} title="+1">+1</button>
-                        <button type="button" className="secondary icon-btn" onClick={() => setRollFilmPrice(p => (Number(p) || 0) + 5)} title="+5">+5</button>
+                      <div className="roll-price-control">
+                        <button type="button" className="secondary roll-price-step" onClick={() => setRollFilmPrice(p => Math.max(0, (Number(p) || 0) - 5))} aria-label={t('rolls.decreaseFilmCost', { amount: 5 })}>-5</button>
+                        <button type="button" className="secondary roll-price-step" onClick={() => setRollFilmPrice(p => Math.max(0, (Number(p) || 0) - 1))} aria-label={t('rolls.decreaseFilmCost', { amount: 1 })}>-1</button>
+                        <input type="number" className="form-control roll-price-input" placeholder={t('rolls.costPlaceholder')} value={rollFilmPrice} onChange={e => setRollFilmPrice(e.target.value ? Number(e.target.value) : '')} />
+                        <button type="button" className="secondary roll-price-step" onClick={() => setRollFilmPrice(p => (Number(p) || 0) + 1)} aria-label={t('rolls.increaseFilmCost', { amount: 1 })}>+1</button>
+                        <button type="button" className="secondary roll-price-step" onClick={() => setRollFilmPrice(p => (Number(p) || 0) + 5)} aria-label={t('rolls.increaseFilmCost', { amount: 5 })}>+5</button>
                       </div>
                       {rollFilmPrice !== '' && (
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px', fontSize: '13px', cursor: 'pointer' }}>

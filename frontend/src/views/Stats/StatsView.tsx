@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie, AreaChart, Area, ComposedChart, Legend
 } from 'recharts';
-import { BarChart3, TrendingUp, DollarSign, Camera, Film, Layers, Star, Package } from 'lucide-react';
+import { BarChart3, TrendingUp, DollarSign, Camera, Film, Layers, Star, Package, ChevronDown } from 'lucide-react';
 import './StatsView.css';
 import { useRolls, useCameras, useFilmStocks, usePhotoAssets, useCollections } from '../../hooks/useData';
-import { usePhotoUrlMap } from '../../hooks/usePhotoUrlMap';
+import { db, type CameraTransfer, type LedgerTransaction } from '../../db/schema';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { useAuth } from '../../contexts/useAuth';
 import { useCurrency } from '../../contexts/useCurrency';
 import { useLanguage } from '../../contexts/useLanguage';
 
@@ -15,16 +17,32 @@ interface StatsViewProps {
   isEmbedded?: boolean;
 }
 
+const chartAxisTick = { fill: 'var(--chart-axis)', fontSize: 11 };
+const chartTooltipStyle = {
+  background: 'var(--chart-tooltip-bg)',
+  border: '1px solid var(--chart-tooltip-border)',
+  borderRadius: 8,
+  color: 'var(--chart-tooltip-text)',
+  fontSize: 12,
+};
+
 export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded }) => {
   // Live queries
+  const { user } = useAuth();
   const rolls = useRolls();
   const cameras = useCameras();
   const filmStocks = useFilmStocks();
   const collections = useCollections();
   const photoAssets = usePhotoAssets();
-  const photoUrlMap = usePhotoUrlMap(photoAssets);
-  const { currencySymbol, formatCurrency } = useCurrency();
+  const transactions = useLiveQuery(
+    () => user?.id
+      ? db.ledgerTransactions.where('userId').equals(user.id).toArray()
+      : Promise.resolve([] as LedgerTransaction[]),
+    [user?.id],
+  ) ?? [];
+  const { currencySymbol } = useCurrency();
   const { t } = useLanguage();
+  const [isMoreInsightsOpen, setIsMoreInsightsOpen] = useState(false);
 
   // ===== KPI Calculations =====
   const totalRolls = rolls.length;
@@ -49,22 +67,28 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
   const bwRolls = filmRolls.length - colorRolls;
 
   const donutData = [
-    { name: t('stats.color'), value: colorRolls, fill: '#e2b028' },
-    { name: t('stats.bw'), value: bwRolls, fill: '#6b7280' }
+    { name: t('stats.color'), value: colorRolls, fill: 'var(--chart-series-gold)' },
+    { name: t('stats.bw'), value: bwRolls, fill: 'var(--chart-series-gray)' }
   ];
 
   // ===== Camera Usage Ranking =====
   const cameraCounts: { [key: string]: number } = {};
   rolls.forEach(r => {
-    const cam = cameras.find(c => (r.cameraIds || []).includes(c.id!));
-    if (cam) cameraCounts[cam.name] = (cameraCounts[cam.name] || 0) + 1;
+    const transfers: CameraTransfer[] = r.cameraTransfers || [];
+    const participatingCameraIds = transfers.length > 0
+      ? [transfers[0].fromCameraId, ...transfers.map((transfer: CameraTransfer) => transfer.toCameraId)]
+      : [r.currentCameraId || r.cameraIds?.[0]].filter((cameraId): cameraId is string => Boolean(cameraId));
+    new Set(participatingCameraIds).forEach(cameraId => {
+      const camera = cameras.find(c => c.id === cameraId);
+      if (camera) cameraCounts[camera.name] = (cameraCounts[camera.name] || 0) + 1;
+    });
   });
   const cameraChartData = Object.entries(cameraCounts)
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
 
-  const barColors = ['#e2b028', '#f59e0b', '#d97706', '#b45309', '#92400e'];
+  const barColors = ['var(--chart-series-gold)', 'var(--chart-series-gold-soft)', 'var(--chart-series-gold-deep)', 'var(--chart-series-gold-dark)', 'var(--chart-series-gold-muted)'];
 
   // ===== ISO Distribution =====
   const isoCounts: { [key: number]: number } = {};
@@ -118,73 +142,23 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
     monthlyDataMap[m] = { month: m, spend: 0, rollsShot: 0 };
   });
 
-  rolls.filter(r => r.status === 'archived').forEach(r => {
-    if (r.endDate) {
-      const d = new Date(r.endDate);
+  transactions.filter(transaction => transaction.type === 'expense').forEach(transaction => {
+    if (transaction.date) {
+      const d = new Date(transaction.date);
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       const key = `${d.getFullYear()}-${mm}`;
       if (monthlyDataMap[key]) {
-        monthlyDataMap[key].spend += (Number(r.filmPrice) || 0) + (Number(r.developPrice) || 0);
-        monthlyDataMap[key].rollsShot += 1;
+        monthlyDataMap[key].spend += Math.abs(Number(transaction.amount) || 0);
       }
     }
   });
-  const monthlyTrendData = Object.values(monthlyDataMap);
-
-  // B. Film Cost Split (Historical Average Strategy)
-  let totalUsedValue = 0;
-  let estimatedInventoryValue = 0;
-
-  filmStocks.forEach(film => {
-    if (film.isSystem === 1) return;
-    const usedRolls = rolls.filter(r => r.filmStockId === film.id);
-    let filmUsedSpend = 0;
-    let knownPriceRolls = 0;
-    
-    usedRolls.forEach(r => {
-      const price = Number(r.filmPrice);
-      if (price && price > 0) {
-        filmUsedSpend += price;
-        knownPriceRolls += 1;
-      }
-    });
-
-    totalUsedValue += filmUsedSpend;
-    const avgPrice = knownPriceRolls > 0 ? (filmUsedSpend / knownPriceRolls) : 0;
-    estimatedInventoryValue += (film.stockCount || 0) * avgPrice;
+  rolls.filter(r => r.status === 'archived' && r.endDate).forEach(r => {
+    const d = new Date(r.endDate!);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const key = `${d.getFullYear()}-${mm}`;
+    if (monthlyDataMap[key]) monthlyDataMap[key].rollsShot += 1;
   });
-
-  const costSplitData = [
-    { name: t('stats.usedFilmCost'), value: Math.round(totalUsedValue), fill: '#ef4444' },
-    { name: t('stats.inventoryValue'), value: Math.round(estimatedInventoryValue), fill: '#3b82f6' }
-  ];
-
-  // C. Camera Value & Usage Ranking (ROI)
-  const cameraRoiData = cameras.filter(c => c.type === 'film').map(c => {
-    const usedRolls = rolls.filter(r => (r.cameraIds || []).includes(c.id!));
-    const price = Number(c.purchasePrice) || 0;
-    return {
-      name: c.name,
-      price: price,
-      rolls: usedRolls.length,
-      roi: price > 0 ? (usedRolls.length / price) : 0
-    };
-  }).filter(c => c.rolls > 0 || c.price > 0)
-    .sort((a, b) => b.rolls - a.rolls)
-    .slice(0, 8);
-
-  // D. High-Rated Rolls Top 5
-  const topRolls = rolls
-    .filter(r => r.rating && r.rating >= 4)
-    .map(r => {
-      const pCount = photoAssets.filter(p => p.rollId === r.id).length;
-      return { ...r, photosCount: pCount };
-    })
-    .sort((a, b) => {
-      if (b.rating !== a.rating) return (b.rating || 0) - (a.rating || 0);
-      return b.photosCount - a.photosCount;
-    })
-    .slice(0, 5);
+  const monthlyTrendData = Object.values(monthlyDataMap);
 
   return (
     <div className={isEmbedded ? "" : "main-content"}>
@@ -195,7 +169,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
         </header>
       )}
 
-      <div className={`view-body stats-workspace-body ${isEmbedded ? 'embedded-mode' : ''}`} style={isEmbedded ? { padding: 0 } : {}}>
+      <div className={`view-body stats-workspace-body ${isEmbedded ? 'embedded-mode' : ''}`}>
         {/* KPI Cards Grid */}
         <div className="stats-kpi-grid">
           <div className="kpi-card stats-kpi-gold">
@@ -247,7 +221,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
         {/* Visual Charts Layout - Grid */}
         <div className="stats-charts-grid">
           {/* 1. Camera Attendance Chart */}
-          <div className="chart-card">
+          <div className="chart-card stats-chart-priority">
             <div className="chart-header">
               <Camera size={18} />
               <h3>{t('stats.cameraRanking')}</h3>
@@ -259,12 +233,12 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={cameraChartData} layout="vertical" margin={{ left: -10, right: 10 }}>
                     <XAxis type="number" hide />
-                    <YAxis type="category" dataKey="name" width={110} tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis type="category" dataKey="name" width={110} tick={chartAxisTick} axisLine={false} tickLine={false} />
                     <Tooltip
-                      contentStyle={{ background: '#20222a', border: '1px solid #272930', borderRadius: 8, fontSize: 12 }}
-                      cursor={{ fill: 'rgba(226,176,40,0.05)' }}
+                      contentStyle={chartTooltipStyle}
+                      cursor={{ fill: 'var(--chart-hover-fill)' }}
                     />
-                    <Bar dataKey="count" radius={[4, 4, 4, 4]} barSize={24} name={t('stats.rollUsage')}>
+                    <Bar dataKey="count" radius={[4, 4, 4, 4]} barSize={24} name={t('stats.cameraRecordUsage')}>
                       {cameraChartData.map((_, i) => (
                         <Cell key={i} fill={barColors[i % barColors.length]} />
                       ))}
@@ -276,7 +250,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
           </div>
 
           {/* 2. ISO Distribution Chart */}
-          <div className="chart-card">
+          <div className="chart-card stats-chart-priority">
             <div className="chart-header">
               <TrendingUp size={18} />
               <h3>{t('stats.isoTitle')}</h3>
@@ -288,12 +262,12 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={isoChartData} layout="vertical" margin={{ left: -10, right: 10 }}>
                     <XAxis type="number" hide />
-                    <YAxis type="category" dataKey="name" width={100} tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis type="category" dataKey="name" width={100} tick={chartAxisTick} axisLine={false} tickLine={false} />
                     <Tooltip
-                      contentStyle={{ background: '#20222a', border: '1px solid #272930', borderRadius: 8, fontSize: 12 }}
-                      cursor={{ fill: 'rgba(245,158,11,0.05)' }}
+                      contentStyle={chartTooltipStyle}
+                      cursor={{ fill: 'var(--chart-hover-fill)' }}
                     />
-                    <Bar dataKey="count" radius={[4, 4, 4, 4]} barSize={24} name={t('stats.rollUsage')} fill="#f59e0b">
+                    <Bar dataKey="count" radius={[4, 4, 4, 4]} barSize={24} name={t('stats.rollUsage')} fill="var(--chart-series-gold-soft)">
                       {isoChartData.map((_, i) => (
                         <Cell key={i} fill={barColors[i % barColors.length]} />
                       ))}
@@ -304,8 +278,23 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
             </div>
           </div>
 
+          <div className="stats-more-insights-toggle">
+            <button
+              type="button"
+              className="secondary stats-more-insights-button"
+              onClick={() => setIsMoreInsightsOpen(current => !current)}
+              aria-expanded={isMoreInsightsOpen}
+              aria-controls="stats-more-insights"
+            >
+              {isMoreInsightsOpen ? t('stats.hideMoreInsights') : t('stats.showMoreInsights')}
+              <ChevronDown size={16} className={isMoreInsightsOpen ? 'is-open' : ''} aria-hidden="true" />
+            </button>
+          </div>
+
+          {/* Secondary analyses are intentionally deferred until requested. */}
+          {isMoreInsightsOpen && <>
           {/* 3. Rating Distribution Chart */}
-          <div className="chart-card">
+          <div className="chart-card stats-chart-advanced">
             <div className="chart-header">
               <Star size={18} />
               <h3>{t('stats.ratingTitle')}</h3>
@@ -313,13 +302,13 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
             <div className="chart-content">
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={ratingChartData} margin={{ left: -20, right: 10, bottom: 0 }}>
-                  <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <XAxis dataKey="name" tick={chartAxisTick} axisLine={false} tickLine={false} />
+                  <YAxis tick={chartAxisTick} axisLine={false} tickLine={false} />
                   <Tooltip
-                    contentStyle={{ background: '#20222a', border: '1px solid #272930', borderRadius: 8, fontSize: 12 }}
-                    cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                    contentStyle={chartTooltipStyle}
+                    cursor={{ fill: 'var(--chart-surface-subtle)' }}
                   />
-                  <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={32} fill="rgba(56, 189, 248, 0.7)" name={t('stats.rollCount')} />
+                  <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={32} fill="var(--chart-series-blue)" name={t('stats.rollCount')} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -327,7 +316,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
 
           {/* 4. Color vs B&W Ratio (Pie) */}
           {enableFilmMode && (
-            <div className="chart-card">
+            <div className="chart-card stats-chart-advanced">
               <div className="chart-header">
                 <Layers size={18} />
                 <h3>{t('stats.colorBwTitle')}</h3>
@@ -370,9 +359,10 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
               </div>
             </div>
           )}
+          </>}
 
           {/* 5. Monthly Spend Trend (AreaChart) */}
-          <div className="chart-card" style={{ gridColumn: '1 / -1' }}>
+          <div className="chart-card stats-chart-priority stats-chart-wide">
             <div className="chart-header">
               <DollarSign size={18} />
               <h3>{t('stats.monthlySpend')}</h3>
@@ -382,24 +372,24 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
                 <AreaChart data={monthlyTrendData} margin={{ left: -20, right: 10, top: 10, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorSpend" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="var(--chart-series-green)" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="var(--chart-series-green)" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <XAxis dataKey="month" tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <XAxis dataKey="month" tick={chartAxisTick} axisLine={false} tickLine={false} />
+                  <YAxis tick={chartAxisTick} axisLine={false} tickLine={false} />
                   <Tooltip
-                    contentStyle={{ background: '#20222a', border: '1px solid #272930', borderRadius: 8, fontSize: 12 }}
-                    itemStyle={{ color: '#10b981' }}
+                    contentStyle={chartTooltipStyle}
+                    itemStyle={{ color: 'var(--chart-series-green)' }}
                   />
-                  <Area type="monotone" dataKey="spend" name={t('stats.totalSpend', { symbol: currencySymbol })} stroke="#10b981" fillOpacity={1} fill="url(#colorSpend)" />
+                  <Area type="monotone" dataKey="spend" name={t('stats.totalSpend', { symbol: currencySymbol })} stroke="var(--chart-series-green)" fillOpacity={1} fill="url(#colorSpend)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
 
           {/* 6. Monthly Shooting Trend (ComposedChart) */}
-          <div className="chart-card" style={{ gridColumn: '1 / -1' }}>
+          <div className="chart-card stats-chart-priority stats-chart-wide">
             <div className="chart-header">
               <Camera size={18} />
               <h3>{t('stats.monthlyCompleted')}</h3>
@@ -407,142 +397,18 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
             <div className="chart-content">
               <ResponsiveContainer width="100%" height={250}>
                 <ComposedChart data={monthlyTrendData} margin={{ left: -20, right: 10, top: 10, bottom: 0 }}>
-                  <XAxis dataKey="month" tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis yAxisId="left" tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <XAxis dataKey="month" tick={chartAxisTick} axisLine={false} tickLine={false} />
+                  <YAxis yAxisId="left" tick={chartAxisTick} axisLine={false} tickLine={false} />
                   <Tooltip
-                    contentStyle={{ background: '#20222a', border: '1px solid #272930', borderRadius: 8, fontSize: 12 }}
+                    contentStyle={chartTooltipStyle}
                   />
                   <Legend wrapperStyle={{ fontSize: 12, paddingTop: '10px' }} />
-                  <Bar yAxisId="left" dataKey="rollsShot" name={t('stats.archivedRolls')} barSize={32} fill="rgba(56, 189, 248, 0.7)" radius={[4, 4, 0, 0]} />
+                  <Bar yAxisId="left" dataKey="rollsShot" name={t('stats.archivedRolls')} barSize={32} fill="var(--chart-series-blue)" radius={[4, 4, 0, 0]} />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* 7. Film Cost Split */}
-          {enableFilmMode && (
-            <div className="chart-card">
-              <div className="chart-header">
-                <DollarSign size={18} />
-                <h3>{t('stats.filmCostSplit')}</h3>
-              </div>
-              <div className="chart-content flex-center-donut">
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie
-                      data={costSplitData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                      stroke="none"
-                    >
-                      {costSplitData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{ background: '#20222a', border: '1px solid #272930', borderRadius: 8, fontSize: 12 }}
-                      formatter={(value: any) => formatCurrency(Number(value))}
-                    />
-                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          )}
-
-          {/* 8. Camera Value & ROI */}
-          <div className="chart-card">
-            <div className="chart-header">
-              <Camera size={18} />
-              <h3>{t('stats.cameraEfficiency')}</h3>
-            </div>
-            <div className="chart-content">
-              {cameraRoiData.length === 0 ? (
-                <p className="no-data">{t('stats.noCameraValue')}</p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', height: '100%', padding: '10px 0', overflowY: 'auto' }}>
-                  {cameraRoiData.map((c, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '10px 12px', borderRadius: '8px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600 }}>{c.name}</span>
-                        <span style={{ fontSize: '11px', color: '#9ca3af' }}>{t('stats.purchasePrice', { price: c.price > 0 ? formatCurrency(c.price) : t('stats.priceMissing') })}</span>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '13px', color: '#e2b028', fontWeight: 600 }}>{t('stats.rollsValue', { count: c.rolls })}</div>
-                        <div style={{ fontSize: '11px', color: '#6b7280' }}>{t('stats.rollsPerCurrency', { symbol: currencySymbol, value: c.roi > 0 ? c.roi.toFixed(2) : '-' })}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 9. Top 5 Rolls */}
-          <div className="chart-card" style={{ gridColumn: '1 / -1' }}>
-            <div className="chart-header">
-              <Star size={18} fill="#e2b028" color="#e2b028" />
-              <h3>{t('stats.topRolls')}</h3>
-            </div>
-            <div className="chart-content" style={{ padding: '0 16px 16px 16px' }}>
-              {topRolls.length === 0 ? (
-                <p className="no-data">{t('stats.noTopRolls')}</p>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginTop: '16px' }}>
-                  {topRolls.map((r, i) => {
-                    const cover = photoAssets.find(p => p.id === r.coverPhotoId);
-                    const coverUrl = cover?.id ? photoUrlMap[cover.id] : undefined;
-                    return (
-                      <div key={r.id} style={{
-                        position: 'relative',
-                        height: '140px',
-                        borderRadius: '12px',
-                        overflow: 'hidden',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'flex-end',
-                        background: '#1f2937'
-                      }}>
-                        {coverUrl && (
-                          <div style={{
-                            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                            backgroundImage: `url(${coverUrl})`,
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                            opacity: 0.5
-                          }} />
-                        )}
-                        <div style={{
-                          position: 'relative',
-                          zIndex: 1,
-                          padding: '12px',
-                          background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%)'
-                        }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                            <div>
-                              <div style={{ color: '#e2b028', fontWeight: 800, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                #{i + 1} <Star size={14} fill="#e2b028" /> {r.rating}
-                              </div>
-                              <div style={{ fontSize: '13px', fontWeight: 600, marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>
-                                {r.name}
-                              </div>
-                            </div>
-                            <div style={{ fontSize: '12px', color: '#9ca3af', fontWeight: 600 }}>
-                              {t('stats.samplePhotos', { count: r.photosCount })}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       </div>
     </div>

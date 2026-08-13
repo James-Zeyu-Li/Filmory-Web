@@ -56,7 +56,7 @@ export const BackupService = {
 
     const ws_rolls = XLSX.utils.json_to_sheet(rolls.map(r => {
       const film = filmStocks.find(f => f.id === r.filmStockId);
-      const usedCameras = (r.cameraIds || []).map(id => cameras.find(c => c.id === id)?.name || id).join(', ');
+      const participatingCameras = (r.cameraIds || []).map(id => cameras.find(c => c.id === id)?.name || id).join(', ');
       
       let startDateStr = '';
       let endDateStr = '';
@@ -66,7 +66,7 @@ export const BackupService = {
       return { 
         '拍摄卷名称': r.name, 
         '胶卷型号': film ? `${film.brand} ${film.name}` : r.filmStockId, 
-        '使用相机': usedCameras,
+        '参与机身': participatingCameras,
         '状态': r.status === 'active' ? '拍摄中' : '已归档',
         '开始日期': startDateStr,
         '结束日期': endDateStr,
