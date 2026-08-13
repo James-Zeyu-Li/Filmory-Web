@@ -8,6 +8,7 @@ import { useCurrency } from '../../contexts/useCurrency';
 import { useLanguage } from '../../contexts/useLanguage';
 import { useCameraSystems, useCameras, useFilmBacks, useLenses, useFilmStocks, useOtherEquipments } from '../../hooks/useData';
 import { Modal } from '../../components/Modal';
+import { PageTabs } from '../../components/ui/PageTabs';
 import { motion } from 'framer-motion';
 import {
   GEAR_AVATAR_MAX_EDGE,
@@ -338,35 +339,19 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
       <div className="unified-rolls-view" style={{ padding: '0 32px', marginTop: '16px', width: '100%', maxWidth: 'none', boxSizing: 'border-box' }}>
         <div className="rolls-toolbar">
-          <div className="tab-navigation rolls-tabs" style={{ marginBottom: 0, borderBottom: 'none', paddingBottom: 0, flexShrink: 0, display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            <button
-              className={`tab-btn ${subTab === 'cameras' ? 'active' : ''}`}
-              onClick={() => setSubTab('cameras')}
-              style={{ whiteSpace: 'nowrap', flex: '0 0 auto' }}
-            >
-              <CameraIcon size={16} /> {t('gear.camerasTab')} ({cameras.length})
-            </button>
-            <button
-              className={`tab-btn ${subTab === 'lenses' ? 'active' : ''}`}
-              onClick={() => setSubTab('lenses')}
-            >
-              <Aperture size={16} /> {t('gear.lensesTab')} ({lenses.length})
-            </button>
-            {enableFilmMode && (
-              <button
-                className={`tab-btn ${subTab === 'filmStocks' ? 'active' : ''}`}
-                onClick={() => setSubTab('filmStocks')}
-              >
-                <Film size={16} /> {t('gear.filmStocksTab')} ({filmStocks.length})
-              </button>
-            )}
-            <button
-              className={`tab-btn ${subTab === 'otherEquipments' ? 'active' : ''}`}
-              onClick={() => setSubTab('otherEquipments')}
-            >
-              <Package size={16} /> {t('gear.otherTab')} ({otherEquipments.length})
-            </button>
-          </div>
+          <PageTabs
+            className="gear-page-tabs"
+            tabs={[
+              { id: 'cameras', label: <><CameraIcon size={16} /> {t('gear.camerasTab')} ({cameras.length})</> },
+              { id: 'lenses', label: <><Aperture size={16} /> {t('gear.lensesTab')} ({lenses.length})</> },
+              ...(enableFilmMode ? [{ id: 'filmStocks' as const, label: <><Film size={16} /> {t('gear.filmStocksTab')} ({filmStocks.length})</> }] : []),
+              { id: 'otherEquipments', label: <><Package size={16} /> {t('gear.otherTab')} ({otherEquipments.length})</> },
+            ]}
+            activeId={subTab}
+            onChange={setSubTab}
+            ariaLabel={t('nav.gear')}
+            idPrefix="gear"
+          />
           <div className="rolls-toolbar-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center', flex: '1 1 auto', maxWidth: '100%', minWidth: '240px', justifyContent: 'flex-end' }}>
             <div
               className="search-bar search-input-wrapper"
@@ -442,7 +427,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
           </div>
         </div>
 
-        <div>
+        <div id={`gear-${subTab}-panel`} role="tabpanel" aria-labelledby={`gear-${subTab}-tab`}>
           <motion.div
             key={subTab}
             initial={{ opacity: 0 }}

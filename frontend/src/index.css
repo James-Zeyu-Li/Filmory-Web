@@ -261,6 +261,13 @@ html.theme-transitioning *::after {
   align-items: center;
 }
 
+@media (max-width: 1024px) {
+  /* Keep the global menu reachable; page titles should not consume scroll space. */
+  .view-header {
+    position: relative;
+  }
+}
+
 .view-body {
   padding: 32px;
   width: 100%;
@@ -277,9 +284,6 @@ html.theme-transitioning *::after {
 
 @media (max-width: 950px) {
   .rolls-toolbar {
-    justify-content: center !important;
-  }
-  .rolls-toolbar .rolls-tab-navigation {
     justify-content: center !important;
   }
   .rolls-toolbar-actions {

@@ -56,7 +56,7 @@ describe('RollsView tabs and empty states', () => {
       expect(screen.getByRole('heading', { name: '全部拍摄记录' })).toBeInTheDocument();
     });
 
-    const tabButtons = screen.getAllByRole('button', { name: /^(全部拍摄记录|项目集|独立记录)$/ });
+    const tabButtons = screen.getAllByRole('tab', { name: /^(全部拍摄记录|项目集|独立记录)$/ });
     expect(tabButtons.map(button => button.textContent)).toEqual(['全部拍摄记录', '项目集', '独立记录']);
     expect(screen.getByText('所有拍摄记录都在这里。')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: '新建拍摄记录' }).length).toBeGreaterThan(1);
@@ -77,7 +77,7 @@ describe('RollsView tabs and empty states', () => {
   it('shows the same centered New record CTA in Independent records when empty', async () => {
     renderRollsView();
 
-    fireEvent.click(screen.getByRole('button', { name: '独立记录' }));
+    fireEvent.click(screen.getByRole('tab', { name: '独立记录' }));
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: '独立记录' })).toBeInTheDocument();
@@ -89,7 +89,7 @@ describe('RollsView tabs and empty states', () => {
   it('shows a New collection header action and a New record empty-state action in empty Collections', async () => {
     renderRollsView();
 
-    fireEvent.click(screen.getByRole('button', { name: '项目集' }));
+    fireEvent.click(screen.getByRole('tab', { name: '项目集' }));
 
     await waitFor(() => {
       expect(screen.getByText('暂无项目集')).toBeInTheDocument();
@@ -107,7 +107,7 @@ describe('RollsView tabs and empty states', () => {
       .find(button => button.closest('.rolls-view-header-actions'));
     expect(headerNewShoot).toHaveClass('primary');
 
-    await user.click(screen.getByRole('button', { name: '项目集' }));
+    await user.click(screen.getByRole('tab', { name: '项目集' }));
     const headerNewCollection = screen.getAllByRole('button', { name: '新建项目集' })
       .find(button => button.closest('.rolls-view-header-actions'));
     expect(headerNewCollection).toHaveClass('primary');
@@ -124,7 +124,7 @@ describe('RollsView tabs and empty states', () => {
     });
 
     renderRollsView();
-    await user.click(screen.getByRole('button', { name: '项目集' }));
+    await user.click(screen.getByRole('tab', { name: '项目集' }));
     await user.click(await screen.findByRole('button', { name: '东京散步 (0 卷)' }));
 
     const emptyState = await screen.findByText('暂无拍摄记录');
@@ -153,7 +153,7 @@ describe('RollsView tabs and empty states', () => {
     });
 
     renderRollsView(false);
-    await user.click(screen.getByRole('button', { name: '项目集' }));
+    await user.click(screen.getByRole('tab', { name: '项目集' }));
     await user.click(await screen.findByRole('button', { name: '海边周末 (0 卷)' }));
 
     const emptyState = await screen.findByText('暂无拍摄记录');
@@ -182,7 +182,7 @@ describe('RollsView tabs and empty states', () => {
     });
 
     renderRollsView(false);
-    await user.click(screen.getByRole('button', { name: '项目集' }));
+    await user.click(screen.getByRole('tab', { name: '项目集' }));
     await user.click(await screen.findByRole('button', { name: '新建拍摄记录' }));
     await user.type(screen.getByLabelText('记录名称'), '独立记录');
     await user.click(screen.getByRole('button', { name: 'Leica M6' }));

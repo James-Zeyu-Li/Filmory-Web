@@ -590,41 +590,9 @@
   line-height: 1;
 }
 
-.rolls-tab-navigation {
-  display: flex;
-  gap: 8px;
-  background-color: var(--bg-tertiary);
-  padding: 4px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-color);
-  margin-bottom: 0;
-  border-bottom: none;
-  padding-bottom: 4px;
-  flex-shrink: 0;
-  flex-wrap: wrap;
-}
-
-.rolls-tab-btn {
-  flex: 0 0 auto;
-  padding: 6px 16px;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.rolls-tab-btn:hover {
-  color: var(--text-primary);
-}
-
-.rolls-tab-btn.active {
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+.rolls-page-tabs,
+.gear-page-tabs {
+  flex: 0 1 auto;
 }
 
 .view-toggle-group {
@@ -1356,17 +1324,6 @@
   box-shadow: 0 0 0 2px var(--accent-bg);
 }
 
-/* Tab Active State Premium Polish */
-.rolls-tab-btn.active {
-  background-color: var(--accent-bg) !important;
-  color: var(--accent) !important;
-  border-bottom: 2px solid var(--accent) !important;
-  border-radius: 8px 8px 0 0;
-}
-.rolls-tab-navigation {
-  align-items: flex-end; /* Prevent tabs from overflowing bottom border */
-}
-
 /* Status Badges Polish */
 .status-badge.active {
   background-color: rgba(46, 204, 113, 0.15); /* Fresh Green */
@@ -1784,25 +1741,6 @@
     gap: 16px;
   }
   
-  .rolls-tabs {
-    flex-wrap: wrap; /* Let tabs wrap to next line if needed */
-    overflow: visible;
-    width: 100%;
-    border-bottom: none !important;
-    padding-bottom: 0 !important;
-  }
-  
-  .rolls-tabs .rolls-tab-btn {
-    white-space: nowrap;
-    flex: 1 0 auto;
-    text-align: center;
-    padding: 8px 12px;
-    font-size: 13px;
-    height: auto;
-    min-height: 40px;
-    line-height: 1.2;
-  }
-
   .rolls-toolbar-actions {
     margin-left: 0 !important;
     max-width: 100% !important;

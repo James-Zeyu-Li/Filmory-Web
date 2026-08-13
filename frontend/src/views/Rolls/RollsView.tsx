@@ -24,6 +24,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { Modal } from '../../components/Modal';
 import { Drawer } from '../../components/Drawer';
 import { Button } from '../../components/ui/Button';
+import { PageTabs } from '../../components/ui/PageTabs';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getCompatibleFilmBacks, getLoadedFilmBackIds, isInterchangeable120Camera } from '../../services/filmBackService';
 import {
@@ -1247,17 +1248,17 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
             {/* TOP LEVEL LIBRARY TABS & SEARCH */}
             <div className="rolls-toolbar">
               
-              <div className="rolls-tab-navigation rolls-tabs">
-                {visibleTabOrder.map(tab => (
-                  <button
-                    key={tab}
-                    className={`rolls-tab-btn ${libraryView === tab ? 'active' : ''}`}
-                    onClick={() => setLibraryView(tab)}
-                  >
-                    {tab === 'collections' ? t('rolls.collections') : tab === 'all' ? t('rolls.all') : t('rolls.loose')}
-                  </button>
-                ))}
-              </div>
+              <PageTabs
+                className="rolls-page-tabs"
+                tabs={visibleTabOrder.map(tab => ({
+                  id: tab,
+                  label: tab === 'collections' ? t('rolls.collections') : tab === 'all' ? t('rolls.all') : t('rolls.loose'),
+                }))}
+                activeId={libraryView}
+                onChange={setLibraryView}
+                ariaLabel={t('nav.rolls')}
+                idPrefix="rolls-library"
+              />
               
               <div className="rolls-toolbar-actions">
                   <div 
@@ -1301,6 +1302,12 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
             </div>
 
             {/* CONTENT AREA */}
+            <div
+              id={`rolls-library-${libraryView}-panel`}
+              className="rolls-library-tab-panel"
+              role="tabpanel"
+              aria-labelledby={`rolls-library-${libraryView}-tab`}
+            >
               {isCollectionsTabVisible && libraryView === 'collections' && (
                 <motion.div
                   key="collections"
@@ -1384,6 +1391,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                   </div>
                 </motion.div>
               )}
+            </div>
           </motion.div>
         )}
       

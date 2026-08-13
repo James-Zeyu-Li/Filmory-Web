@@ -69,7 +69,7 @@ describe('RollsView VIP Limitations', () => {
       </MemoryRouter>
     );
 
-    fireEvent.click(screen.getByRole('button', { name: '全部拍摄记录' }));
+    fireEvent.click(screen.getByRole('tab', { name: '全部拍摄记录' }));
 
     await waitFor(() => {
       expect(screen.getByText('Roll 0')).toBeInTheDocument();
@@ -129,7 +129,7 @@ describe('RollsView VIP Limitations', () => {
       </MemoryRouter>
     );
 
-    fireEvent.click(screen.getByRole('button', { name: '全部拍摄记录' }));
+    fireEvent.click(screen.getByRole('tab', { name: '全部拍摄记录' }));
 
     // Wait for Dexie live queries to resolve
     await waitFor(() => {
