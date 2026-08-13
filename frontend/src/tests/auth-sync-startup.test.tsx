@@ -23,12 +23,17 @@ const SyncLifecycleProbe = () => {
   const auth = useContext(AuthContext);
 
   useEffect(() => {
-    if (!auth?.user || auth.authMode === 'trial') return;
+    if (!auth?.user || auth.authMode !== 'supabase') return;
     SyncService.start();
     return () => SyncService.stop();
   }, [auth?.authMode, auth?.user]);
 
-  return <div>{auth?.user?.id ?? 'signed-out'}</div>;
+  return (
+    <div>
+      <span>{auth?.user?.id ?? 'signed-out'}</span>
+      <button type="button" onClick={auth?.signInMock}>Use dev bypass</button>
+    </div>
+  );
 };
 
 describe('Auth sync startup', () => {
@@ -87,5 +92,24 @@ describe('Auth sync startup', () => {
       expect(startSpy).toHaveBeenCalledTimes(1);
     });
     expect(startedWithUserIds).toEqual([signedInUser.id]);
+  });
+
+  it('does not start cloud sync for the local developer bypass account', async () => {
+    const startSpy = vi.spyOn(SyncService, 'start').mockImplementation(() => undefined);
+    vi.spyOn(SyncService, 'stop').mockImplementation(() => undefined);
+
+    render(
+      <AuthProvider>
+        <SyncLifecycleProbe />
+      </AuthProvider>
+    );
+
+    await screen.findByText('signed-out');
+    await act(async () => {
+      screen.getByRole('button', { name: 'Use dev bypass' }).click();
+    });
+
+    await screen.findByText('mock_uid_123');
+    expect(startSpy).not.toHaveBeenCalled();
   });
 });

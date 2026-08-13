@@ -93,7 +93,7 @@ function AppContent() {
   }, [authLoading, authMode, userId]);
 
   useEffect(() => {
-    if (!userId || authMode === 'trial') {
+    if (!userId || authMode !== 'supabase') {
       SyncService.stop();
       return;
     }
@@ -186,9 +186,11 @@ function AppContent() {
         </AnimatePresence>
       </main>
 
-      <div className="global-sync-status">
-        <SyncStatusBadge />
-      </div>
+      {authMode === 'supabase' && (
+        <div className="global-sync-status">
+          <SyncStatusBadge />
+        </div>
+      )}
 
       <AnimatePresence>
         {isAccountCenterOpen && (
