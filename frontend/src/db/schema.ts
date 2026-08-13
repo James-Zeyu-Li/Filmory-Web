@@ -198,6 +198,8 @@ export interface PhotoAsset {
   thumbnailUrl?: string; // 300px thumbnail preview
   previewUrl?: string; // 1600px preview
   storageKey?: string; // S3 storage key
+  cloudUploadPending?: boolean; // Local-only marker for a deferred cloud upload
+  cloudUploadError?: string; // Local-only diagnostic for the last failed upload
   addedAt: number;
   note?: string;
   focalLength?: number;

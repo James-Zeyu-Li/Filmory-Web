@@ -7,6 +7,8 @@ import { useCurrency } from '../../contexts/useCurrency';
 import { useTrialGate } from '../../contexts/useTrialGate';
 import { useLanguage } from '../../contexts/useLanguage';
 import { uploadPhotoToCloud } from '../../services/storageService';
+import { SyncService } from '../../services/syncService';
+import { saveDeferredPhotoUpload } from '../../services/photoUploadRecoveryService';
 import { Folder, Search, LayoutGrid, List, Trash2, Film, Plus, Camera, ArrowLeft, CheckCircle, X, Upload, Star, Sparkles, Package, Aperture } from 'lucide-react';
 import { IconButton } from '../../components/ui/IconButton';
 import { motion } from 'framer-motion';
@@ -634,41 +636,62 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
         const currentUserId = user?.id || 'offline';
         
         let uploadResult = null;
+        const cloudUploadPending = Boolean(user && SyncService.isAutoSyncEnabled());
+        let isDeferredCloudUpload = false;
         if (user) {
           try {
             uploadResult = await uploadPhotoToCloud(webpFile, user.id, selectedRollId, (pct) => setUploadProgress(pct));
           } catch (err) {
-            console.error("Cloud upload failed, falling back to local DB", err);
+            isDeferredCloudUpload = cloudUploadPending;
+            if (isDeferredCloudUpload) {
+              console.error('Cloud upload failed; keeping the cover local until it can be retried.', err);
+              notify({
+                type: 'error',
+                title: t('rolls.coverUploadFailedTitle'),
+                message: t('rolls.coverUploadDeferredMessage'),
+              });
+            }
           }
         }
-        
-        await db.photoAssets.add({
+
+        const photoAsset = {
           id: photoId,
           userId: currentUserId,
           rollId: selectedRollId,
           originalFileName: file.name,
           fileSize: webpFile.size,
-          blob: uploadResult ? undefined : webpFile, // Fallback to local blob if no cloud upload
+          blob: uploadResult ? undefined : webpFile,
+          cloudUploadPending: isDeferredCloudUpload,
+          cloudUploadError: isDeferredCloudUpload ? t('rolls.coverUploadDeferredMessage') : undefined,
           storageKey: uploadResult?.storageKey,
           previewUrl: uploadResult?.previewUrl,
           thumbnailUrl: uploadResult?.thumbnailUrl,
           addedAt: Date.now(),
           isPinned: 1,
           orderIndex: 0
-        });
-        
-        await db.rolls.update(selectedRollId, { coverPhotoId: photoId });
-        
-        // delete old covers for this roll
-        if (selectedRoll?.coverPhotoId) {
-             const oldPhotos = await db.photoAssets.where('rollId').equals(selectedRollId).toArray();
-             for (const p of oldPhotos) {
-                 if (p.id !== photoId && p.id) {
-                     await db.photoAssets.delete(p.id);
-                 }
-             }
+        };
+
+        if (isDeferredCloudUpload) {
+          await saveDeferredPhotoUpload(photoAsset);
+        } else {
+          await db.transaction('rw', db.photoAssets, db.rolls, async () => {
+            await db.photoAssets.add(photoAsset);
+            await db.rolls.update(selectedRollId, { coverPhotoId: photoId });
+          });
         }
-        requestImmediateSync('roll-cover-upload');
+
+        if (uploadResult) {
+          await db.transaction('rw', db.photoAssets, async () => {
+            // Do not remove the previous cloud cover until the replacement uploaded.
+            if (selectedRoll?.coverPhotoId) {
+              const oldPhotos = await db.photoAssets.where('rollId').equals(selectedRollId).toArray();
+              for (const p of oldPhotos) {
+                if (p.id !== photoId && p.id) await db.photoAssets.delete(p.id);
+              }
+            }
+          });
+          requestImmediateSync('roll-cover-upload');
+        }
     } catch(e) {
         console.error(e);
     }

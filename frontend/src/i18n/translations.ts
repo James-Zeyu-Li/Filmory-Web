@@ -286,6 +286,9 @@ export const translations = {
     'auth.statusCheckDesc': '{{target}}{{hint}} 完成验证后会自动回到应用。',
     'auth.statusVerifiedDesc': '如果你是从验证邮件跳转回来的，现在可以直接使用邮箱和密码登录。',
 
+    'rolls.coverUploadFailedTitle': '封面暂未上传到云端',
+    'rolls.coverUploadDeferredMessage': '图片已保留在当前设备，可在设置中重新上传。',
+
     'feedback.dismiss': '关闭提示',
 
     'pwa.updateTitle': '发现新版本',
@@ -1287,6 +1290,9 @@ export const translations = {
     'auth.statusTargetEmail': 'Target email: {{email}}.',
     'auth.statusCheckDesc': '{{target}}{{hint}} After verification, you will return to the app automatically.',
     'auth.statusVerifiedDesc': 'If you returned from a verification email, you can now log in with email and password.',
+
+    'rolls.coverUploadFailedTitle': 'Cover upload is waiting for cloud sync',
+    'rolls.coverUploadDeferredMessage': 'The image remains on this device. You can upload it again from Settings.',
 
     'feedback.dismiss': 'Dismiss notification',
 
