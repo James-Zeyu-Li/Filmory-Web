@@ -140,6 +140,29 @@
   background: #ef4444;
 }
 
+@media (max-width: 768px) {
+  .compare-page-header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .compare-page-header .view-header-actions,
+  .compare-mode-toggle {
+    width: 100%;
+  }
+
+  .compare-mode-toggle button {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .compare-clear-btn {
+    width: 44px;
+    height: 44px;
+  }
+}
+
 .compare-side-by-side {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

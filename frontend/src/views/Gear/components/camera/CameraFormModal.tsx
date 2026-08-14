@@ -537,10 +537,11 @@ export const CameraFormModal = ({
 
     <label>{t('gear.chooseCameraSystem')}</label>
     {!editingCameraId && cameraSystems.length > 0 && (
-    <div className="camera-system-mode-toggle">
+    <div className="camera-system-mode-toggle" role="group" aria-label={t('gear.chooseCameraSystem')}>
     <button
     type="button"
     className={`system-mode-btn ${cameraSystemMode === 'new' ? 'active' : ''}`}
+    aria-pressed={cameraSystemMode === 'new'}
     onClick={() => {
     setCameraSystemMode('new');
     setSelectedExistingCameraSystemId('');
@@ -552,6 +553,7 @@ export const CameraFormModal = ({
     <button
     type="button"
     className={`system-mode-btn ${cameraSystemMode === 'existing' ? 'active' : ''}`}
+    aria-pressed={cameraSystemMode === 'existing'}
     onClick={() => {
     setCameraSystemMode('existing');
     setCameraBackNames([]);

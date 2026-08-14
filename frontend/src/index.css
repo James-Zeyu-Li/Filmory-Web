@@ -219,7 +219,13 @@ html.theme-transitioning *::after {
 .view-header-title-container {
   display: flex;
   align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
   gap: 16px;
+}
+
+.view-header-title-container > * {
+  min-width: 0;
 }
 
 .view-header-icon {
@@ -257,14 +263,101 @@ html.theme-transitioning *::after {
 
 .view-header-actions {
   display: flex;
+  flex: 0 0 auto;
   gap: 12px;
   align-items: center;
+}
+
+.view-header-action-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 @media (max-width: 1024px) {
   /* Keep the global menu reachable; page titles should not consume scroll space. */
   .view-header {
     position: relative;
+  }
+
+  /* Match page tools to the mobile navigation breakpoint. */
+  .rolls-toolbar {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 12px;
+  }
+
+  .rolls-toolbar-actions {
+    width: 100%;
+    min-width: 0 !important;
+    justify-content: flex-start;
+  }
+
+  .gear-page-tabs,
+  .rolls-page-tabs {
+    width: 100%;
+  }
+}
+
+.view-header-subtitle-mobile {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* Compact, stable page header shared by all primary mobile workspaces. */
+  .view-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    min-height: 84px;
+    padding: 14px 16px;
+  }
+
+  .view-header-title-container {
+    gap: 0;
+  }
+
+  .view-header-icon {
+    display: none;
+  }
+
+  .view-header-text-group {
+    min-width: 0;
+    gap: 2px;
+  }
+
+  .view-header h1,
+  .view-header-subtitle {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .view-header-subtitle {
+    min-height: 18px;
+  }
+
+  .view-header-subtitle-desktop {
+    display: none;
+  }
+
+  .view-header-subtitle-mobile {
+    display: inline;
+  }
+
+  .view-header-actions {
+    width: auto;
+    min-width: 0;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .view-header-actions > button {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding-inline: 12px;
+    white-space: nowrap;
   }
 }
 

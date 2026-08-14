@@ -22,4 +22,12 @@ describe('CompareView', () => {
     const dropzones = screen.getAllByText(/把照片拖到这里/);
     expect(dropzones.length).toBe(2);
   });
+
+  it('expresses the selected comparison mode as a pressed segmented button', () => {
+    render(<CompareView />);
+
+    expect(screen.getByRole('group', { name: '对比方式' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '滑尺对比' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: '左右双列' })).toHaveAttribute('aria-pressed', 'false');
+  });
 });

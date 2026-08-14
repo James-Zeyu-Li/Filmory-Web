@@ -9,7 +9,8 @@ import { useLanguage } from '../../contexts/useLanguage';
 import { useCameraSystems, useCameras, useFilmBacks, useLenses, useFilmStocks, useOtherEquipments } from '../../hooks/useData';
 import { Modal } from '../../components/Modal';
 import { PageTabs } from '../../components/ui/PageTabs';
-import { motion } from 'framer-motion';
+import { ResponsiveHeaderSubtitle } from '../../components/ui/ResponsiveHeaderSubtitle';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   GEAR_AVATAR_MAX_EDGE,
   GEAR_AVATAR_WEBP_QUALITY,
@@ -44,6 +45,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
   const { notify } = useFeedback();
   const { currencySymbol } = useCurrency();
   const { t } = useLanguage();
+  const reduceMotion = useReducedMotion();
   const gearActions = useGearActions();
   const location = useLocation();
   const navigate = useNavigate();
@@ -299,7 +301,13 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     <div className="main-content" style={{ width: '100%', maxWidth: 'none', flex: 1 }}>
       <header className="view-header">
         <div className="view-header-title-container">
-          <motion.div key={subTab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <motion.div
+            key={subTab}
+            initial={reduceMotion ? false : { opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.18, ease: 'easeOut' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '16px' }}
+          >
             <div className="view-header-icon">
               {subTab === 'cameras' ? <CameraIcon size={20} /> : subTab === 'lenses' ? <Aperture size={20} /> : subTab === 'filmStocks' ? <Film size={20} /> : <Package size={20} />}
             </div>
@@ -307,45 +315,41 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
               <h1>
                 {subTab === 'cameras' ? t('gear.camerasTitle') : subTab === 'lenses' ? t('gear.lensesTitle') : subTab === 'filmStocks' ? t('gear.filmStocksTitle') : t('gear.otherTitle')}
               </h1>
-              <p className="view-header-subtitle">
-                {subTab === 'cameras' ? t('gear.camerasSubtitle') : subTab === 'lenses' ? t('gear.lensesSubtitle') : subTab === 'filmStocks' ? t('gear.filmStocksSubtitle') : t('gear.otherSubtitle')}
-              </p>
+              <ResponsiveHeaderSubtitle
+                desktop={subTab === 'cameras' ? t('gear.camerasSubtitle') : subTab === 'lenses' ? t('gear.lensesSubtitle') : subTab === 'filmStocks' ? t('gear.filmStocksSubtitle') : t('gear.otherSubtitle')}
+                mobile={subTab === 'cameras' ? t('gear.camerasMobileSubtitle') : subTab === 'lenses' ? t('gear.lensesMobileSubtitle') : subTab === 'filmStocks' ? t('gear.filmStocksMobileSubtitle') : t('gear.otherMobileSubtitle')}
+              />
             </div>
           </motion.div>
         </div>
         <div className="view-header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {subTab === 'cameras' && (
-            <button className="primary" onClick={openNewCamera}>
-              <Plus size={16} /> <span>{t('gear.addCamera')}</span>
-            </button>
-          )}
-          {subTab === 'lenses' && (
-            <button className="primary" onClick={openNewLens}>
-              <Plus size={16} /> <span>{t('gear.addLens')}</span>
-            </button>
-          )}
-          {subTab === 'filmStocks' && enableFilmMode && (
-            <button className="primary" onClick={openNewFilm}>
-              <Plus size={16} /> <span>{t('gear.addFilmStock')}</span>
-            </button>
-          )}
-          {subTab === 'otherEquipments' && (
-            <button className="primary" onClick={openNewEquipment}>
-              <Plus size={16} /> <span>{t('gear.addGear')}</span>
-            </button>
-          )}
+          <button
+            className="primary"
+            onClick={subTab === 'cameras' ? openNewCamera : subTab === 'lenses' ? openNewLens : subTab === 'filmStocks' ? openNewFilm : openNewEquipment}
+          >
+            <motion.span
+              key={subTab}
+              className="view-header-action-content"
+              initial={reduceMotion ? false : { opacity: 0, x: 4 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: reduceMotion ? 0 : 0.18, ease: 'easeOut' }}
+            >
+              <Plus size={16} />
+              <span>{subTab === 'cameras' ? t('gear.addCamera') : subTab === 'lenses' ? t('gear.addLens') : subTab === 'filmStocks' ? t('gear.addFilmStock') : t('gear.addGear')}</span>
+            </motion.span>
+          </button>
         </div>
       </header>
 
-      <div className="unified-rolls-view" style={{ padding: '0 32px', marginTop: '16px', width: '100%', maxWidth: 'none', boxSizing: 'border-box' }}>
+      <div className="unified-rolls-view gear-library-content" style={{ padding: '0 32px', marginTop: '16px', width: '100%', maxWidth: 'none', boxSizing: 'border-box' }}>
         <div className="rolls-toolbar">
           <PageTabs
             className="gear-page-tabs"
             tabs={[
-              { id: 'cameras', label: <><CameraIcon size={16} /> {t('gear.camerasTab')} ({cameras.length})</> },
-              { id: 'lenses', label: <><Aperture size={16} /> {t('gear.lensesTab')} ({lenses.length})</> },
-              ...(enableFilmMode ? [{ id: 'filmStocks' as const, label: <><Film size={16} /> {t('gear.filmStocksTab')} ({filmStocks.length})</> }] : []),
-              { id: 'otherEquipments', label: <><Package size={16} /> {t('gear.otherTab')} ({otherEquipments.length})</> },
+              { id: 'cameras', label: <><CameraIcon size={16} /> {t('gear.camerasTab')} ({cameras.length})</>, mobileLabel: <><CameraIcon size={16} /> {t('gear.camerasMobileTab')} ({cameras.length})</>, ariaLabel: `${t('gear.camerasTab')} (${cameras.length})` },
+              { id: 'lenses', label: <><Aperture size={16} /> {t('gear.lensesTab')} ({lenses.length})</>, mobileLabel: <><Aperture size={16} /> {t('gear.lensesMobileTab')} ({lenses.length})</>, ariaLabel: `${t('gear.lensesTab')} (${lenses.length})` },
+              ...(enableFilmMode ? [{ id: 'filmStocks' as const, label: <><Film size={16} /> {t('gear.filmStocksTab')} ({filmStocks.length})</>, mobileLabel: <><Film size={16} /> {t('gear.filmStocksMobileTab')} ({filmStocks.length})</>, ariaLabel: `${t('gear.filmStocksTab')} (${filmStocks.length})` }] : []),
+              { id: 'otherEquipments', label: <><Package size={16} /> {t('gear.otherTab')} ({otherEquipments.length})</>, mobileLabel: <><Package size={16} /> {t('gear.otherMobileTab')} ({otherEquipments.length})</>, ariaLabel: `${t('gear.otherTab')} (${otherEquipments.length})` },
             ]}
             activeId={subTab}
             onChange={setSubTab}

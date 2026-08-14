@@ -11,7 +11,7 @@ import { SyncService } from '../../services/syncService';
 import { saveDeferredPhotoUpload } from '../../services/photoUploadRecoveryService';
 import { Folder, Search, LayoutGrid, List, Trash2, Film, Plus, Camera, ArrowLeft, CheckCircle, X, Upload, Star, Sparkles, Package, Aperture, ChevronDown, Eye } from 'lucide-react';
 import { IconButton } from '../../components/ui/IconButton';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   ROLL_COVER_PREVIEW_MAX_EDGE,
   ROLL_COVER_PREVIEW_WEBP_QUALITY,
@@ -25,6 +25,7 @@ import { Modal } from '../../components/Modal';
 import { Drawer } from '../../components/Drawer';
 import { Button } from '../../components/ui/Button';
 import { PageTabs } from '../../components/ui/PageTabs';
+import { ResponsiveHeaderSubtitle } from '../../components/ui/ResponsiveHeaderSubtitle';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getCompatibleFilmBacks, getLoadedFilmBackIds, isInterchangeable120Camera } from '../../services/filmBackService';
 import {
@@ -72,6 +73,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   const { currencySymbol } = useCurrency();
   const { guardTrialResource, requireRegistration } = useTrialGate();
   const { t } = useLanguage();
+  const reduceMotion = useReducedMotion();
   const location = useLocation();
   const { tier: userTier, isLoading: isUserTierLoading } = useUserTier();
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
@@ -1103,7 +1105,13 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     <div className={`main-content rolls-main-content ${activeCollectionId ? 'has-active-collection' : ''}`}>
       <header className="view-header">
         <div className="view-header-title-container">
-          <motion.div key={libraryView} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} className="rolls-view-header-title">
+          <motion.div
+            key={libraryView}
+            initial={reduceMotion ? false : { opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.18, ease: 'easeOut' }}
+            className="rolls-view-header-title"
+          >
             <div className="view-header-icon">
               {libraryView === 'collections' ? <Folder size={20} /> : libraryView === 'loose' ? <LayoutGrid size={20} /> : <Film size={20} />}
             </div>
@@ -1111,9 +1119,10 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
               <h1>
                 {libraryView === 'collections' ? t('rolls.collections') : libraryView === 'loose' ? t('rolls.loose') : t('rolls.all')}
               </h1>
-              <p className="view-header-subtitle">
-                {libraryView === 'collections' ? t('rolls.collectionsSubtitle') : libraryView === 'loose' ? t('rolls.looseSubtitle') : t('rolls.allSubtitle')}
-              </p>
+              <ResponsiveHeaderSubtitle
+                desktop={libraryView === 'collections' ? t('rolls.collectionsSubtitle') : libraryView === 'loose' ? t('rolls.looseSubtitle') : t('rolls.allSubtitle')}
+                mobile={libraryView === 'collections' ? t('rolls.collectionsMobileSubtitle') : libraryView === 'loose' ? t('rolls.looseMobileSubtitle') : t('rolls.allMobileSubtitle')}
+              />
             </div>
           </motion.div>
         </div>
@@ -1152,8 +1161,16 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                openNewShoot();
              }}
            >
-             {libraryView === 'collections' && isCollectionsTabVisible ? <Folder size={16} /> : <Plus size={16} />}
-             {libraryView === 'collections' && isCollectionsTabVisible ? t('rolls.newCollection') : t('rolls.newRoll')}
+             <motion.span
+               key={libraryView === 'collections' && isCollectionsTabVisible ? 'collection' : 'shoot'}
+               className="view-header-action-content"
+               initial={reduceMotion ? false : { opacity: 0, x: 4 }}
+               animate={{ opacity: 1, x: 0 }}
+               transition={{ duration: reduceMotion ? 0 : 0.18, ease: 'easeOut' }}
+             >
+               {libraryView === 'collections' && isCollectionsTabVisible ? <Folder size={16} /> : <Plus size={16} />}
+               {libraryView === 'collections' && isCollectionsTabVisible ? t('rolls.newCollection') : t('rolls.newRoll')}
+             </motion.span>
            </button>
         </div>
       </header>
@@ -1253,6 +1270,8 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                 tabs={visibleTabOrder.map(tab => ({
                   id: tab,
                   label: tab === 'collections' ? t('rolls.collections') : tab === 'all' ? t('rolls.all') : t('rolls.loose'),
+                  mobileLabel: tab === 'collections' ? t('rolls.collectionsMobileTab') : tab === 'all' ? t('rolls.allMobileTab') : t('rolls.looseMobileTab'),
+                  ariaLabel: tab === 'collections' ? t('rolls.collections') : tab === 'all' ? t('rolls.all') : t('rolls.loose'),
                 }))}
                 activeId={libraryView}
                 onChange={setLibraryView}
@@ -1267,6 +1286,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                     <Search size={16} className="rolls-search-icon" />
 	                    <input
 	                      type="text"
+	                      aria-label={t('rolls.searchLabel')}
 	                      placeholder={t('rolls.searchPlaceholder')}
                       value={searchQuery}
                       onChange={(e) => {

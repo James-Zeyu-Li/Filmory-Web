@@ -55,4 +55,21 @@ describe('PageTabs', () => {
     fireEvent.keyDown(filmTab, { key: 'Home' });
     expect(shootingTab).toHaveFocus();
   });
+
+  it('keeps a stable accessible name when a compact mobile label is provided', () => {
+    render(
+      <PageTabs
+        tabs={[{ id: 'shooting', label: 'All shooting records', mobileLabel: 'All', ariaLabel: 'All shooting records' }]}
+        activeId="shooting"
+        onChange={() => undefined}
+        ariaLabel="Shooting records"
+        idPrefix="compact-tabs"
+      />
+    );
+
+    const tab = screen.getByRole('tab', { name: 'All shooting records' });
+    expect(tab).toHaveAttribute('aria-selected', 'true');
+    expect(tab.querySelector('.page-tab-label-mobile')).toHaveAttribute('aria-hidden', 'true');
+    expect(tab).toHaveTextContent('All');
+  });
 });

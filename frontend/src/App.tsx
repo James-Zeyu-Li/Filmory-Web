@@ -168,7 +168,7 @@ function AppContent() {
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
       
-      <main className="app-main-content">
+      <main className={`app-main-content ${authMode === 'supabase' ? 'has-sync-status' : ''}`}>
         <TrialBanner />
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>

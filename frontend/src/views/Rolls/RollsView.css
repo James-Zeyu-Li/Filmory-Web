@@ -1437,6 +1437,13 @@
   padding: 0 32px;
 }
 
+@media (max-width: 1024px) {
+  .rolls-collection-details,
+  .rolls-library-content {
+    padding-inline: 24px;
+  }
+}
+
 .rolls-collection-heading {
   gap: 16px;
   margin-bottom: 24px;
@@ -1602,14 +1609,10 @@
   }
 
   .rolls-main-content:not(.has-active-collection) > .view-header {
-    flex-direction: row;
     align-items: center !important;
-    gap: 12px;
-    padding: 12px 16px;
   }
 
   .rolls-main-content:not(.has-active-collection) .view-header-icon,
-  .rolls-main-content:not(.has-active-collection) .view-header-subtitle,
   .rolls-main-content:not(.has-active-collection) .rolls-view-header-actions .view-toggle-group {
     display: none;
   }
@@ -1622,7 +1625,7 @@
 
   .rolls-main-content:not(.has-active-collection) .rolls-view-header-actions > button {
     flex: 0 0 auto;
-    min-height: 40px;
+    min-height: 44px;
   }
 
   .rolls-collection-details {
@@ -1706,35 +1709,7 @@
     position: static;
   }
 
-  /* 1. Header Layout */
-  .view-header {
-    flex-direction: column;
-    align-items: flex-start !important;
-    gap: 16px;
-  }
-  
-  .view-header-actions {
-    flex-wrap: wrap;
-    width: 100%;
-    gap: 12px !important;
-  }
-  
-  .view-header-actions button {
-    white-space: nowrap;
-    flex: 1;
-    justify-content: center;
-  }
-  
-  .view-header-actions .view-toggle-group {
-    width: 100%;
-    margin-right: 0 !important;
-  }
-
-  .view-header-actions .view-toggle-group button {
-    flex: 1;
-  }
-  
-  /* 2. Toolbar & Tabs */
+  /* 1. Toolbar & Tabs */
   .rolls-toolbar {
     flex-direction: column;
     align-items: stretch !important;

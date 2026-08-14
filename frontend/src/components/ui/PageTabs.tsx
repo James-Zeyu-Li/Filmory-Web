@@ -1,10 +1,22 @@
 import { useRef, type KeyboardEvent, type ReactNode } from 'react';
 import './PageTabs.css';
 
-export interface PageTab<T extends string> {
+interface BasePageTab<T extends string> {
   id: T;
   label: ReactNode;
 }
+
+type ResponsivePageTabLabel =
+  | {
+      mobileLabel: ReactNode;
+      ariaLabel: string;
+    }
+  | {
+      mobileLabel?: never;
+      ariaLabel?: string;
+    };
+
+export type PageTab<T extends string> = BasePageTab<T> & ResponsivePageTabLabel;
 
 interface PageTabsProps<T extends string> {
   tabs: readonly PageTab<T>[];
@@ -58,12 +70,18 @@ export function PageTabs<T extends string>({
             id={`${idPrefix}-${tab.id}-tab`}
             aria-controls={`${idPrefix}-${tab.id}-panel`}
             aria-selected={isActive}
+            aria-label={tab.ariaLabel}
             tabIndex={isActive ? 0 : -1}
             ref={element => { tabRefs.current[index] = element; }}
             onClick={() => onChange(tab.id)}
             onKeyDown={event => handleKeyDown(event, index)}
           >
-            {tab.label}
+            <span className="page-tab-label page-tab-label-desktop">{tab.label}</span>
+            {tab.mobileLabel !== undefined && tab.mobileLabel !== null ? (
+              <span className="page-tab-label page-tab-label-mobile" aria-hidden="true">
+                {tab.mobileLabel}
+              </span>
+            ) : null}
           </button>
         );
       })}

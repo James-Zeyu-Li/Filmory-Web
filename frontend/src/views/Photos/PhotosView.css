@@ -43,6 +43,38 @@
 @media (max-width: 720px) {
   .filter-toolbar {
     position: static;
+    align-items: stretch;
+    padding: 12px 16px;
+  }
+
+  .filter-toolbar .search-bar {
+    max-width: none;
+  }
+
+  .filter-selects {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filter-select {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+  }
+
+  .filter-selects .filter-select:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 420px) {
+  .filter-selects {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .filter-selects .filter-select:last-child:nth-child(odd) {
+    grid-column: auto;
   }
 }
 
@@ -554,93 +586,4 @@
   grid-column: span 4;
   padding: 40px;
   color: var(--text-muted);
-}
-
-/* --- Multi-select Mode Styles --- */
-.photo-card.selected-mode {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent);
-}
-
-.photo-card.selected-mode .photo-card-overlay {
-  opacity: 1; /* Keep overlay visible when selected */
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(var(--accent-rgb), 0.3) 100%);
-}
-
-.photo-card-selection-check {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 10;
-  background-color: #fff;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-}
-
-/* --- Batch Action Bar --- */
-.batch-action-bar {
-  position: fixed;
-  bottom: 32px;
-  left: 50%;
-  transform: translateX(-50%) !important; /* overrides framer motion x to stay centered while y animates */
-  z-index: 2000;
-  background-color: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  border-radius: 40px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-  padding: 8px 24px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-.batch-action-content {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-}
-
-.batch-count {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--accent);
-  white-space: nowrap;
-}
-
-.batch-actions-group {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.batch-rate-group {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.batch-label {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-right: 4px;
-}
-
-.batch-divider {
-  width: 1px;
-  height: 24px;
-  background-color: var(--border-color);
-}
-
-.action-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  font-size: 13px;
-  border-radius: 20px;
-  font-weight: 600;
 }

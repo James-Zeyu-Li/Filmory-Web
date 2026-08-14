@@ -317,22 +317,28 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
                 </div>
               </div>
               <div className="settings-item-action">
-                <div className="theme-segmented-control">
+                <div className="theme-segmented-control" role="group" aria-label={t('settings.theme')}>
                 <button
+                  type="button"
                   className={`theme-segment-btn ${theme === 'light' ? 'active' : ''}`}
                   onClick={() => setTheme('light')}
+                  aria-pressed={theme === 'light'}
                 >
                   <Sun size={16} /> {t('settings.themeLight')}
                 </button>
                 <button
+                  type="button"
                   className={`theme-segment-btn ${theme === 'dark' ? 'active' : ''}`}
                   onClick={() => setTheme('dark')}
+                  aria-pressed={theme === 'dark'}
                 >
                   <Moon size={16} /> {t('settings.themeDark')}
                 </button>
                 <button
+                  type="button"
                   className={`theme-segment-btn ${theme === 'system' ? 'active' : ''}`}
                   onClick={() => setTheme('system')}
+                  aria-pressed={theme === 'system'}
                 >
                   <Monitor size={16} /> {t('settings.themeSystem')}
                 </button>

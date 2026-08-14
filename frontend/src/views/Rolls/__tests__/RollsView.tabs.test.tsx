@@ -57,7 +57,7 @@ describe('RollsView tabs and empty states', () => {
     });
 
     const tabButtons = screen.getAllByRole('tab', { name: /^(全部拍摄记录|项目集|独立记录)$/ });
-    expect(tabButtons.map(button => button.textContent)).toEqual(['全部拍摄记录', '项目集', '独立记录']);
+    expect(tabButtons.map(button => button.getAttribute('aria-label'))).toEqual(['全部拍摄记录', '项目集', '独立记录']);
     expect(screen.getByText('所有拍摄记录都在这里。')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: '新建拍摄记录' }).length).toBeGreaterThan(1);
   });

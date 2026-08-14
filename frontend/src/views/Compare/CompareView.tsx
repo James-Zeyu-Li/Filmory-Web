@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Columns, Split, UploadCloud, X, Image as ImageIcon, MoveHorizontal } from 'lucide-react';
 import { useLanguage } from '../../contexts/useLanguage';
+import { ResponsiveHeaderSubtitle } from '../../components/ui/ResponsiveHeaderSubtitle';
 import './CompareView.css';
 
 interface FileDropzoneProps {
@@ -29,7 +30,7 @@ const FileDropzone: React.FC<FileDropzoneProps> = ({ target, file, url, onDropFi
         <img src={url} alt={copy.previewAlt} />
         <div className="dropzone-overlay">
           <span>{file?.name}</span>
-          <button className="compare-clear-btn" onClick={() => onClearFile(target)} title={copy.clearTitle}>
+          <button className="compare-clear-btn" type="button" onClick={() => onClearFile(target)} aria-label={copy.clearTitle} title={copy.clearTitle}>
             <X size={14} />
           </button>
         </div>
@@ -121,22 +122,34 @@ export const CompareView: React.FC = () => {
 
   return (
     <div className="main-content">
-      <header className="view-header">
-        <h1>{t('compare.title')}</h1>
+      <header className="view-header compare-page-header">
+        <div className="view-header-title-container">
+          <div className="view-header-icon">
+            <ImageIcon size={20} />
+          </div>
+          <div className="view-header-text-group">
+            <h1>{t('compare.title')}</h1>
+            <ResponsiveHeaderSubtitle desktop={t('compare.subtitle')} mobile={t('compare.mobileSubtitle')} />
+          </div>
+        </div>
         <div className="view-header-actions">
-          <div className="compare-mode-toggle">
+          <div className="compare-mode-toggle" role="group" aria-label={t('compare.viewMode')}>
             <button 
+              type="button"
               className={viewMode === 'sideBySide' ? 'primary' : ''}
               onClick={() => setViewMode('sideBySide')}
               disabled={!urlA || !urlB}
+              aria-pressed={viewMode === 'sideBySide'}
             >
               <Columns size={16} />
               <span>{t('compare.sideBySide')}</span>
             </button>
             <button 
+              type="button"
               className={viewMode === 'split' ? 'primary' : ''}
               onClick={() => setViewMode('split')}
               disabled={!urlA || !urlB}
+              aria-pressed={viewMode === 'split'}
             >
               <Split size={16} />
               <span>{t('compare.splitSlider')}</span>

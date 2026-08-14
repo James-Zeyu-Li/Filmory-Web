@@ -128,6 +128,20 @@ describe('SettingsView account boundary', () => {
     expect(screen.getByLabelText('输入 DELETE 确认注销')).toBeInTheDocument();
   });
 
+  it('exposes the active theme as a pressed segmented button', () => {
+    render(
+      <SettingsView
+        enableFilmMode={true}
+        setEnableFilmMode={mockSetEnableFilmMode}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole('group', { name: '色彩主题' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '跟随系统' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: '浅色' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
   it('keeps roll tab layout collapsed by default until expanded', () => {
     render(
       <SettingsView

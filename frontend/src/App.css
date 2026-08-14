@@ -51,6 +51,11 @@
   }
 }
 
+.app-container {
+  --fixed-bottom-inset: max(24px, env(safe-area-inset-bottom));
+  --sync-status-reserve: 40px;
+}
+
 .app-main-content {
   flex: 1;
   position: relative;
@@ -65,7 +70,8 @@
   position: fixed;
   right: max(24px, env(safe-area-inset-right));
   bottom: max(24px, env(safe-area-inset-bottom));
-  z-index: 70;
+  /* Global utility layer: above page content, below navigation and dialogs. */
+  z-index: 110;
   pointer-events: none;
 }
 
@@ -80,9 +86,18 @@
 }
 
 @media (max-width: 1024px) {
+  .app-container {
+    --fixed-bottom-inset: max(16px, env(safe-area-inset-bottom));
+  }
+
+  .app-main-content.has-sync-status {
+    /* Keep the last control clear of the fixed sync status and safe-area inset. */
+    padding-bottom: calc(var(--sync-status-reserve) + var(--fixed-bottom-inset));
+  }
+
   .global-sync-status {
     right: 16px;
-    bottom: max(16px, env(safe-area-inset-bottom));
+    bottom: var(--fixed-bottom-inset);
   }
 
   .global-sync-status .sync-status-badge {
