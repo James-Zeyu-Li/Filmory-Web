@@ -68,13 +68,23 @@ const useSyncIssues = (isOpen: boolean) => useLiveQuery(async (): Promise<SyncIs
   const userId = localStorage.getItem('grainfolio_user_id');
   if (!userId) return [];
   const queue = await db.syncQueue.orderBy('timestamp').toArray();
-  const items = queue.filter((item): item is SyncQueueItem & { id: number } => (
+  const failedItems = queue.filter((item): item is SyncQueueItem & { id: number } => (
     item.id !== undefined
     && item.userId === userId
     && item.failureKind === 'needs_attention'
   ));
+  const visibleItems = new Map<string, SyncQueueItem & { id: number }>();
 
-  return Promise.all(items.map(async queueItem => ({
+  failedItems.forEach(item => {
+    const key = isSyncRecordQueueItem(item)
+      ? `record:${item.tableName}:${item.recordId}`
+      : `operation:${item.operationId}`;
+    // The queue is timestamp ordered, so the latest record payload becomes the
+    // representative issue while idempotent operations remain independent.
+    visibleItems.set(key, item);
+  });
+
+  return Promise.all([...visibleItems.values()].map(async queueItem => ({
     queueItem,
     targetName: await getIssueTargetName(queueItem, userId),
     canKeepWithoutInventory: isSyncOperationQueueItem(queueItem) && await canKeepRollWithoutInventory(queueItem, userId),

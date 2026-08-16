@@ -1,6 +1,7 @@
 import {
   db,
   isSyncOperationQueueItem,
+  isSyncRecordQueueItem,
   suppressSyncRecordsForCurrentTransaction,
   type LedgerTransaction,
   type Roll,
@@ -74,11 +75,21 @@ const clearFailureState = <T extends SyncQueueItem>(operation: T): T => {
 /** Re-open the exact failed operation without creating a second operation id. */
 export const retrySyncIssue = async (queueItemId: number, userId: string): Promise<void> => {
   await db.transaction('rw', db.syncQueue, async () => {
-    const operation = await getFailedQueueItem(queueItemId, userId);
-    await db.syncQueue.put({
-      ...clearFailureState(operation),
-      id: operation.id,
-    });
+    const queueItem = await getFailedQueueItem(queueItemId, userId);
+    const retryItems = isSyncRecordQueueItem(queueItem)
+      ? (await db.syncQueue.where('recordId').equals(queueItem.recordId).toArray()).filter(item => (
+          item.id !== undefined
+          && isSyncRecordQueueItem(item)
+          && item.userId === userId
+          && item.tableName === queueItem.tableName
+          && item.failureKind === 'needs_attention'
+        )) as FailedSyncQueueItem[]
+      : [queueItem];
+
+    await db.syncQueue.bulkPut(retryItems.map(item => ({
+      ...clearFailureState(item),
+      id: item.id,
+    })));
   });
 
   requestImmediateSync('sync-issue-retry');

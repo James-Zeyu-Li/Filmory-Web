@@ -122,4 +122,24 @@ describe('SyncIssuesModal', () => {
     fireEvent.click(screen.getByRole('button', { name: '重试同步' }));
     await waitFor(() => expect(syncIssueServiceMock.retrySyncIssue).toHaveBeenCalledWith(queueItemId, userId));
   });
+
+  it('shows one actionable card for repeated failures of the same record', async () => {
+    await db.syncQueue.bulkAdd([
+      {
+        userId, tableName: 'rolls', action: 'upsert', recordId: 'roll-1',
+        payload: { id: 'roll-1', userId, name: 'Sync1' }, timestamp: 1,
+        failureKind: 'needs_attention', lastErrorCode: 'PGRST204',
+      },
+      {
+        userId, tableName: 'rolls', action: 'upsert', recordId: 'roll-1',
+        payload: { id: 'roll-1', userId, name: 'Sync1' }, timestamp: 2,
+        failureKind: 'needs_attention', lastErrorCode: 'PGRST204',
+      },
+    ]);
+
+    renderModal();
+
+    expect(await screen.findAllByText('Sync1')).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: '重试同步' })).toHaveLength(1);
+  });
 });

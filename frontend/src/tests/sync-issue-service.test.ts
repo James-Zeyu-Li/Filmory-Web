@@ -69,6 +69,46 @@ describe('sync issue recovery service', () => {
     expect(syncEventsMock.requestImmediateSync).toHaveBeenCalledWith('sync-issue-retry');
   });
 
+  it('retries every failed queue entry for the same ordinary record', async () => {
+    const firstId = await db.syncQueue.add({
+      userId,
+      tableName: 'rolls',
+      action: 'upsert',
+      recordId: 'roll-1',
+      payload: { id: 'roll-1', userId, name: 'Earlier name' },
+      timestamp: 1,
+      failureKind: 'needs_attention',
+      lastErrorCode: 'PGRST204',
+    });
+    const latestId = await db.syncQueue.add({
+      userId,
+      tableName: 'rolls',
+      action: 'upsert',
+      recordId: 'roll-1',
+      payload: { id: 'roll-1', userId, name: 'Latest name' },
+      timestamp: 2,
+      failureKind: 'needs_attention',
+      lastErrorCode: 'PGRST204',
+    });
+    await db.syncQueue.add({
+      userId,
+      tableName: 'rolls',
+      action: 'upsert',
+      recordId: 'roll-2',
+      payload: { id: 'roll-2', userId, name: 'Other record' },
+      timestamp: 3,
+      failureKind: 'needs_attention',
+      lastErrorCode: 'PGRST204',
+    });
+
+    await retrySyncIssue(latestId, userId);
+
+    expect(await db.syncQueue.get(firstId)).not.toHaveProperty('failureKind');
+    expect(await db.syncQueue.get(latestId)).not.toHaveProperty('failureKind');
+    expect((await db.syncQueue.where('recordId').equals('roll-2').first())?.failureKind).toBe('needs_attention');
+    expect(syncEventsMock.requestImmediateSync).toHaveBeenCalledTimes(1);
+  });
+
   it('removes stale local inventory when Cloud reports the film stock is missing', async () => {
     await db.filmStocks.add({ ...film, stockCount: 6 });
     await db.syncQueue.clear();
