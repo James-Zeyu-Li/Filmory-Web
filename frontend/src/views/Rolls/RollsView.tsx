@@ -95,7 +95,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   const photoUrlMap = usePhotoUrlMap(photos);
   const initialSearchParams = new URLSearchParams(location.search);
   const shouldOpenNewRoll = initialSearchParams.get('newRoll') === '1';
-  const initialOpenRollId = initialSearchParams.get('openRoll');
+  const openRollId = initialSearchParams.get('openRoll');
   const initialVisibleTabOrder = getVisibleRollsTabOrder(enableFilmMode);
   const [visibleTabOrder, setVisibleTabOrder] = useState<RollsTabId[]>(initialVisibleTabOrder);
   const isCollectionsTabVisible = visibleTabOrder.includes('collections');
@@ -108,7 +108,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   );
   const [libraryView, setLibraryView] = useState<'collections' | 'all' | 'loose'>(() => {
     const saved = localStorage.getItem(ROLLS_LIBRARY_VIEW_KEY);
-    return getDefaultLibraryView(saved, initialVisibleTabOrder, shouldOpenNewRoll || Boolean(initialOpenRollId));
+    return getDefaultLibraryView(saved, initialVisibleTabOrder, shouldOpenNewRoll || Boolean(openRollId));
   });
 
   
@@ -129,10 +129,11 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     };
   }, [isSortOpen]);
 
-  const [selectedRollId, setSelectedRollId] = useState<string | null>(initialOpenRollId);
-  const selectedRoll = useMemo(() => rolls.find(r => r.id === selectedRollId) || null, [rolls, selectedRollId]);
-
-  const [isDrawerOpen, setIsDrawerOpen] = useState(Boolean(initialOpenRollId));
+  const selectedRollId = openRollId;
+  const selectedRoll = openRollId && user?.id
+    ? rolls.find(candidate => candidate.id === openRollId && candidate.userId === user.id) || null
+    : null;
+  const isDrawerOpen = Boolean(openRollId);
   
   // Phase 3: All Rolls State
   const [searchQuery, setSearchQuery] = useState('');
@@ -236,14 +237,32 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   };
 
   const openRollDrawer = (roll: Roll) => {
-    setSelectedRollId(roll.id!);
+    const params = new URLSearchParams(location.search);
+    params.set('tab', params.get('tab') || (visibleTabOrder.includes(libraryView) ? libraryView : visibleTabOrder[0] || 'all'));
+    params.set('openRoll', roll.id!);
+    navigate({ pathname: '/rolls', search: `?${params.toString()}` }, {
+      state: { ...location.state, grainfolioRollDetailOrigin: 'rolls-list' },
+    });
     setDrawerRollTitle(roll.name || '');
     setRollLocation(roll.location || '');
     setRollNotes(roll.notes || '');
     setDevelopNotes(roll.developNotes || '');
     setDevelopPrice(roll.developPrice || '');
     setIsAdvancedOpen(false);
-    setIsDrawerOpen(true);
+  };
+
+  const closeRollDrawer = () => {
+    if (!openRollId) return;
+
+    if (location.state?.grainfolioRollDetailOrigin === 'rolls-list') {
+      navigate(-1);
+      return;
+    }
+
+    const params = new URLSearchParams(location.search);
+    params.delete('openRoll');
+    params.delete('newRoll');
+    navigate({ pathname: '/rolls', search: params.toString() ? `?${params.toString()}` : '' }, { replace: true });
   };
 
   const openCameraTransfer = () => {
@@ -320,9 +339,21 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   }, [viewLayout]);
 
   useEffect(() => {
-    if (!location.search) return;
-    navigate('/rolls', { replace: true });
-  }, [location.search, navigate]);
+    const params = new URLSearchParams(location.search);
+    const hasOpenRollWithoutTab = params.has('openRoll') && !params.has('tab');
+    const hasTransientNewRoll = params.get('newRoll') === '1';
+    if (!hasOpenRollWithoutTab && !hasTransientNewRoll) return;
+
+    if (hasOpenRollWithoutTab) {
+      params.set('tab', visibleTabOrder.includes(libraryView) ? libraryView : visibleTabOrder[0] || 'all');
+    }
+    if (hasTransientNewRoll) params.delete('newRoll');
+
+    navigate({ pathname: '/rolls', search: params.toString() ? `?${params.toString()}` : '' }, {
+      replace: true,
+      state: location.state,
+    });
+  }, [libraryView, location.search, location.state, navigate, visibleTabOrder]);
 
   useEffect(() => {
     const nextVisibleTabOrder = getVisibleRollsTabOrder(enableFilmMode);
@@ -627,8 +658,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
       requestImmediateSync('roll-delete');
       
       if (selectedRollId === id) {
-        setIsDrawerOpen(false);
-        setSelectedRollId(null);
+        closeRollDrawer();
       }
     }
   };
@@ -690,7 +720,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
       type: 'success',
       title: t('rolls.detailsSaved')
     });
-    setIsDrawerOpen(false);
+    closeRollDrawer();
   };
 
   const handleSetRating = async (rating: number) => {
@@ -698,7 +728,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     await db.rolls.update(selectedRollId, { rating });
   };
   
-  const handleCoverUpload = async (file: File, targetRoll: Roll | null = selectedRoll) => {
+  const handleCoverUpload = async (file: File, targetRoll: Roll | null = selectedRoll ?? null) => {
     const targetRollId = targetRoll?.id;
     if (!targetRollId) return;
     if (authMode === 'trial') {
@@ -1418,21 +1448,29 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
       <input ref={quickCoverFileInputRef} type="file" accept="image/*" onChange={handleQuickCoverFileSelect} hidden />
 
             {/* Drawer for Roll Details */}
-      <Drawer isOpen={isDrawerOpen && !!selectedRoll} onClose={() => setIsDrawerOpen(false)} width={600}>
-        {selectedRoll && (
+      <Drawer isOpen={isDrawerOpen} onClose={closeRollDrawer} width={600}>
+        {!selectedRoll ? (
+          <div className="drawer-content roll-drawer-resolution-state">
+            <div className="roll-drawer-resolution-card">
+              <h2>{selectedRoll === undefined ? t('rolls.loadingDetails') : t('rolls.detailUnavailableTitle')}</h2>
+              <p>{selectedRoll === undefined ? t('common.loading') : t('rolls.detailUnavailableMessage')}</p>
+              <button type="button" className="secondary" onClick={closeRollDrawer}>{t('common.cancel')}</button>
+            </div>
+          </div>
+        ) : (
           <>
             <div className="drawer-header roll-drawer-header">
               <h2>{selectedRoll.name}</h2>
               <div className="roll-drawer-header-actions">
                {selectedRoll.status === 'active' && (
-                <button className="outline-btn roll-drawer-complete-action" onClick={(e) => { handleArchiveRoll(selectedRoll.id!, e); setIsDrawerOpen(false); }}>
+                <button className="outline-btn roll-drawer-complete-action" onClick={(e) => { void handleArchiveRoll(selectedRoll.id!, e); closeRollDrawer(); }}>
                   {t('rolls.markCompleted')}
                 </button>
               )}
-              <button className="icon-btn danger" onClick={(e) => { handleDeleteRoll(selectedRoll.id!, e); setIsDrawerOpen(false); }} aria-label={t('rolls.deleteTitle')} title={t('rolls.deleteTitle')}>
+              <button className="icon-btn danger" onClick={(e) => { void handleDeleteRoll(selectedRoll.id!, e); }} aria-label={t('rolls.deleteTitle')} title={t('rolls.deleteTitle')}>
                 <Trash2 size={18} />
               </button>
-              <button className="icon-btn" onClick={() => setIsDrawerOpen(false)} aria-label={t('common.cancel')} title={t('common.cancel')}>
+              <button className="icon-btn" onClick={closeRollDrawer} aria-label={t('common.cancel')} title={t('common.cancel')}>
                 <X size={20} />
               </button>
             </div>
@@ -1619,7 +1657,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                     <input 
                       type="date" 
                       className="form-control"
-                      value={new Date(selectedRoll.startDate).toISOString().split('T')[0]}
+                      value={selectedRoll.startDate ? new Date(selectedRoll.startDate).toISOString().split('T')[0] : ''}
                       onChange={async (e) => {
                          if (e.target.value) {
                            await db.rolls.update(selectedRoll.id!, { startDate: new Date(e.target.value).getTime() });

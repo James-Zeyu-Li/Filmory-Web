@@ -238,7 +238,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
                         {new Date(roll.startDate).toLocaleDateString()}
                       </span>
                     )}
-                    <button className="primary btn-sm" onClick={() => onNavigate(`rolls?openRoll=${roll.id}`, { skipPageTransition: true })}>
+                    <button className="primary btn-sm" onClick={() => onNavigate(`rolls?tab=all&openRoll=${roll.id}`, { skipPageTransition: true })}>
                       {t('dashboard.continue')} <ArrowRight size={12} />
                     </button>
                   </div>

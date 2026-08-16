@@ -48,9 +48,13 @@ test.describe('Dashboard film workspace', () => {
   test('opens the selected active roll from the dashboard', async ({ page }) => {
     await page.getByRole('button', { name: /继续记录/ }).first().click();
 
-    await expect(page).toHaveURL(/\/rolls$/);
+    await expect(page).toHaveURL(/\/rolls\?tab=all&openRoll=/);
     await expect(page.locator('.drawer-panel').filter({ hasText: '春日公园' })).toBeVisible();
     await expect(page.locator('.drawer-content').filter({ hasText: '拍摄信息' })).toBeVisible();
+
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page).toHaveURL(/\/rolls\?tab=all&openRoll=/);
+    await expect(page.locator('.drawer-panel').filter({ hasText: '春日公园' })).toBeVisible();
   });
 
   test('keeps rolls tab and list layout after refresh', async ({ page }) => {

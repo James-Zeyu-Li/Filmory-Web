@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { RollsView } from '../RollsView';
 import { ConfirmProvider } from '../../../contexts/ConfirmContext';
@@ -10,12 +10,18 @@ import { db } from '../../../db/schema';
 
 const storage = new Map<string, string>();
 
-const renderRollsView = (enableFilmMode = true) => render(
-  <MemoryRouter>
+const LocationProbe = () => {
+  const location = useLocation();
+  return <output data-testid="location-probe">{`${location.pathname}${location.search}`}</output>;
+};
+
+const renderRollsView = (enableFilmMode = true, initialEntry = '/rolls') => render(
+  <MemoryRouter initialEntries={[initialEntry]}>
     <ConfirmProvider>
       <FeedbackProvider>
         <CurrencyProvider>
           <RollsView enableFilmMode={enableFilmMode} />
+          <LocationProbe />
         </CurrencyProvider>
       </FeedbackProvider>
     </ConfirmProvider>
@@ -285,6 +291,45 @@ describe('RollsView tabs and empty states', () => {
     await user.click(await screen.findByText('查看封面'));
 
     expect(await screen.findByRole('img', { name: 'Rainy afternoon' })).toHaveAttribute('src', 'https://example.test/rain.jpg');
+  });
+
+  it('keeps the opened shooting record in the URL and closes back to the list', async () => {
+    const user = userEvent.setup();
+    const now = Date.now();
+
+    await db.rolls.add({
+      id: 'roll-url', userId: 'mock-user-id', name: 'URL record',
+      cameraIds: [], status: 'active', startDate: now,
+    });
+
+    renderRollsView(false);
+    await user.click(await screen.findByText('URL record'));
+
+    expect(screen.getByTestId('location-probe')).toHaveTextContent('/rolls?tab=all&openRoll=roll-url');
+    expect(within(screen.getByRole('dialog')).getByRole('heading', { name: 'URL record', level: 2 })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '取消' }));
+    expect(screen.getByTestId('location-probe')).toHaveTextContent('/rolls');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('resolves a direct roll link after local data is available and rejects another user record', async () => {
+    const now = Date.now();
+    await db.rolls.bulkAdd([
+      { id: 'roll-direct', userId: 'mock-user-id', name: 'Direct record', cameraIds: [], status: 'active', startDate: now },
+      { id: 'roll-other-user', userId: 'other-user-id', name: 'Private record', cameraIds: [], status: 'active', startDate: now },
+    ]);
+
+    renderRollsView(false, '/rolls?openRoll=roll-direct');
+    const directDialog = await screen.findByRole('dialog');
+    expect(within(directDialog).getByRole('heading', { name: 'Direct record', level: 2 })).toBeInTheDocument();
+    expect(screen.getByTestId('location-probe')).toHaveTextContent('/rolls?openRoll=roll-direct&tab=all');
+
+    await userEvent.setup().click(screen.getByRole('button', { name: '取消' }));
+    cleanup();
+    renderRollsView(false, '/rolls?tab=all&openRoll=roll-other-user');
+    expect(await screen.findByRole('heading', { name: '拍摄记录暂不可用' })).toBeInTheDocument();
+    expect(screen.queryByText('Private record')).not.toBeInTheDocument();
   });
 
   it('records a confirmed camera transfer and updates the current camera', async () => {
