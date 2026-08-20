@@ -327,15 +327,20 @@ html.theme-transitioning *::after {
     gap: 2px;
   }
 
-  .view-header h1,
-  .view-header-subtitle {
+  .view-header h1 {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .view-header-subtitle {
+    display: -webkit-box;
     min-height: 18px;
+    overflow: hidden;
+    line-height: 1.35;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 
   .view-header-subtitle-desktop {
@@ -358,6 +363,22 @@ html.theme-transitioning *::after {
     min-height: 44px;
     padding-inline: 12px;
     white-space: nowrap;
+  }
+}
+
+@media (max-width: 360px) {
+  .view-header.view-header-stack-narrow {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .view-header-stack-narrow .view-header-actions,
+  .view-header-stack-narrow .view-header-actions > button {
+    width: 100%;
+  }
+
+  .view-header-stack-narrow .view-header-actions > button {
+    justify-content: center;
   }
 }
 

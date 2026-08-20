@@ -1434,12 +1434,6 @@
   min-width: 0;
 }
 
-.rolls-view-header-title .view-header-subtitle {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .rolls-view-header-actions,
 .rolls-collection-actions,
 .roll-drawer-header-actions {

@@ -1133,7 +1133,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
 
   return (
     <div className={`main-content rolls-main-content ${activeCollectionId ? 'has-active-collection' : ''}`}>
-      <header className="view-header">
+      <header className="view-header view-header-stack-narrow">
         <div className="view-header-title-container">
           <motion.div
             key={libraryView}

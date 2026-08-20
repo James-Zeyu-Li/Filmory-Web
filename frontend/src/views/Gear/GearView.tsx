@@ -299,7 +299,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
   return (
     <div className="main-content" style={{ width: '100%', maxWidth: 'none', flex: 1 }}>
-      <header className="view-header">
+      <header className="view-header view-header-stack-narrow">
         <div className="view-header-title-container">
           <motion.div
             key={subTab}
