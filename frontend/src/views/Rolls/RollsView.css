@@ -1492,10 +1492,6 @@
 }
 
 .rolls-toolbar-actions {
-  flex: 1 1 auto;
-  justify-content: flex-end;
-  gap: 12px;
-  min-width: 240px;
   max-width: 100%;
 }
 
@@ -1742,7 +1738,7 @@
     margin-left: 0 !important;
     max-width: 100% !important;
     flex-wrap: nowrap;
-    justify-content: flex-end;
+    justify-content: flex-start;
   }
 
   .roll-price-control {

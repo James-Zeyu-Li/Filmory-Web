@@ -356,33 +356,18 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
             ariaLabel={t('nav.gear')}
             idPrefix="gear"
           />
-          <div className="rolls-toolbar-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center', flex: '1 1 auto', maxWidth: '100%', minWidth: '240px', justifyContent: 'flex-end' }}>
+          <div className="rolls-toolbar-actions gear-toolbar-actions">
             <div
-              className="search-bar search-input-wrapper"
-              style={{
-                flex: '1 1 120px',
-                position: 'relative',
-                transition: 'all 0.3s ease',
-                backgroundColor: 'var(--bg-tertiary)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '8px'
-              }}
+              className="search-bar search-input-wrapper gear-search-input"
             >
-              <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+              <Search size={16} className="gear-search-icon" />
               <input
                 type="text"
+                aria-label={t('gear.searchLabel')}
                 placeholder={t('gear.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                style={{
-                  width: '100%',
-                  paddingLeft: '36px',
-                  height: '36px',
-                  backgroundColor: 'transparent',
-                  color: 'var(--text-primary)',
-                  border: 'none',
-                  outline: 'none'
-                }}
+                className="gear-search-field"
               />
             </div>
 

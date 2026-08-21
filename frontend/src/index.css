@@ -297,6 +297,20 @@ html.theme-transitioning *::after {
   .rolls-page-tabs {
     width: 100%;
   }
+
+  .rolls-toolbar-actions > .search-input-wrapper {
+    min-height: 44px;
+  }
+
+  .rolls-toolbar-actions .sort-trigger-btn {
+    min-height: 44px;
+    height: auto;
+  }
+
+  .gear-search-field,
+  .rolls-search-field {
+    height: 42px;
+  }
 }
 
 .view-header-subtitle-mobile {
@@ -396,12 +410,32 @@ html.theme-transitioning *::after {
   margin-bottom: 24px;
 }
 
+.rolls-toolbar-actions {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 240px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.rolls-toolbar-actions > .search-input-wrapper {
+  min-width: 0;
+  flex: 1 1 160px;
+}
+
+.rolls-toolbar-actions > .sort-dropdown-container,
+.rolls-toolbar-actions > .rolls-sort-menu {
+  flex: 0 0 auto;
+}
+
+
 @media (max-width: 950px) {
   .rolls-toolbar {
     justify-content: center !important;
   }
   .rolls-toolbar-actions {
-    justify-content: center !important;
+    justify-content: flex-start !important;
   }
 }
 
