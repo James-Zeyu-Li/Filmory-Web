@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
 import './EmptyState.css';
 
@@ -11,12 +11,14 @@ interface EmptyStateProps {
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({ icon: Icon, title, description, action }) => {
+  const reduceMotion = useReducedMotion();
+
   return (
     <motion.div 
       className="premium-empty-state"
-      initial={{ opacity: 0, y: 15 }}
+      initial={reduceMotion ? false : { opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: 'easeOut' }}
+      transition={{ duration: reduceMotion ? 0 : 0.4, ease: 'easeOut' }}
     >
       <div className="empty-icon-wrapper">
         <Icon size={48} strokeWidth={1.5} />

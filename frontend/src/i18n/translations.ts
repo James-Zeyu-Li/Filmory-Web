@@ -1081,6 +1081,10 @@ export const translations = {
     'compare.previewAlt': '预览 {{target}}',
     'compare.imageAlt': '照片 {{target}}',
     'compare.clearPhoto': '移除照片 {{target}}',
+    'compare.choosePhoto': '选择照片 {{target}}',
+    'compare.invalidFile': '{{target}} 位置只能选择图片文件。',
+    'compare.readError': '无法读取 {{target}} 位置的照片，请尝试其他文件。',
+    'compare.sliderValue': '照片 A {{a}}%，照片 B {{b}}%',
 
     'collections.emptyTitle': '暂无项目集',
     'collections.emptyDesc': '项目集可选；例如创建“北海道旅拍”，把相关的多条拍摄记录放在一起整理。',
@@ -2152,6 +2156,10 @@ export const translations = {
     'compare.previewAlt': 'Preview {{target}}',
     'compare.imageAlt': 'Photo {{target}}',
     'compare.clearPhoto': 'Remove photo {{target}}',
+    'compare.choosePhoto': 'Choose photo {{target}}',
+    'compare.invalidFile': 'Choose an image file for position {{target}}.',
+    'compare.readError': 'Photo {{target}} could not be read. Try a different file.',
+    'compare.sliderValue': 'Photo A {{a}}%, Photo B {{b}}%',
 
     'collections.emptyTitle': 'No collections yet',
     'collections.emptyDesc': 'Collections are optional. Create one, such as a travel project, to organize related shooting records together.',

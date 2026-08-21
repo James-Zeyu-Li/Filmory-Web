@@ -117,7 +117,8 @@ The `grainfolio-assets` Storage bucket must remain private. Photo reads use sign
 The detailed architecture and operational notes are maintained locally rather than published in the repository:
 
 - `.local-docs/architecture/`: architecture guides, API contract, database schema, and call-chain references
-- `docs/ROADMAP_TODO.md`: local implementation roadmap and verification notes
+- `.local-docs/roadmap/ROADMAP_TODO.md`: local implementation roadmap and verification notes
+- `.local-docs/operations/`: deployment, debugging, release, and manual verification runbooks
 
 These paths are intentionally ignored by Git, so a fresh clone will not contain the maintainer documentation set.
 

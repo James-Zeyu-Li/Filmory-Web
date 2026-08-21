@@ -8,6 +8,12 @@
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 
+  --media-overlay: rgba(10, 12, 16, 0.58);
+  --media-overlay-strong: rgba(10, 12, 16, 0.78);
+  --media-control-bg: rgba(255, 255, 255, 0.2);
+  --text-on-media: #ffffff;
+  --text-on-accent: #111827;
+
   --brand-lightbox-start: #fffef8;
   --brand-lightbox-end: #f4efe2;
 
@@ -429,11 +435,11 @@ html.theme-transitioning *::after {
   flex: 0 0 auto;
 }
 
-
 @media (max-width: 950px) {
   .rolls-toolbar {
     justify-content: center !important;
   }
+
   .rolls-toolbar-actions {
     justify-content: flex-start !important;
   }

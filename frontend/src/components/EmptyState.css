@@ -43,3 +43,9 @@
   50% { transform: translateY(-8px); }
   100% { transform: translateY(0px); }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .empty-icon-wrapper {
+    animation: none;
+  }
+}

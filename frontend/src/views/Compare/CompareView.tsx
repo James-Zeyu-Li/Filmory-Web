@@ -1,25 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Columns, Split, UploadCloud, X, Image as ImageIcon, MoveHorizontal } from 'lucide-react';
+import { AlertCircle, Columns, Split, UploadCloud, X, Image as ImageIcon, MoveHorizontal } from 'lucide-react';
 import { useLanguage } from '../../contexts/useLanguage';
+import { EmptyState } from '../../components/EmptyState';
 import { ResponsiveHeaderSubtitle } from '../../components/ui/ResponsiveHeaderSubtitle';
 import './CompareView.css';
 
+type CompareTarget = 'A' | 'B';
+
 interface FileDropzoneProps {
-  target: 'A' | 'B';
+  target: CompareTarget;
   file: File | null;
   url: string | null;
-  onDropFile: (e: React.DragEvent<HTMLDivElement>, target: 'A' | 'B') => void;
-  onSelectFile: (e: React.ChangeEvent<HTMLInputElement>, target: 'A' | 'B') => void;
-  onClearFile: (target: 'A' | 'B') => void;
+  onDropFile: (e: React.DragEvent<HTMLDivElement>, target: CompareTarget) => void;
+  onSelectFile: (e: React.ChangeEvent<HTMLInputElement>, target: CompareTarget) => void;
+  onClearFile: (target: CompareTarget) => void;
+  onImageError: (target: CompareTarget) => void;
   copy: {
     dropTitle: string;
     dropHint: string;
     clearTitle: string;
+    inputLabel: string;
     previewAlt: string;
   };
 }
 
-const FileDropzone: React.FC<FileDropzoneProps> = ({ target, file, url, onDropFile, onSelectFile, onClearFile, copy }) => (
+const FileDropzone: React.FC<FileDropzoneProps> = ({ target, file, url, onDropFile, onSelectFile, onClearFile, onImageError, copy }) => (
   <div
     className={`local-dropzone ${file ? 'has-file' : ''}`}
     onDragOver={e => e.preventDefault()}
@@ -27,7 +32,7 @@ const FileDropzone: React.FC<FileDropzoneProps> = ({ target, file, url, onDropFi
   >
     {url ? (
       <div className="dropzone-preview">
-        <img src={url} alt={copy.previewAlt} />
+        <img src={url} alt={copy.previewAlt} onError={() => onImageError(target)} />
         <div className="dropzone-overlay">
           <span>{file?.name}</span>
           <button className="compare-clear-btn" type="button" onClick={() => onClearFile(target)} aria-label={copy.clearTitle} title={copy.clearTitle}>
@@ -36,17 +41,20 @@ const FileDropzone: React.FC<FileDropzoneProps> = ({ target, file, url, onDropFi
         </div>
       </div>
     ) : (
-      <label className="dropzone-empty">
+      <div className="dropzone-empty" aria-hidden="true">
         <UploadCloud size={32} />
         <h4>{copy.dropTitle}</h4>
         <p>{copy.dropHint}</p>
-        <input
-          type="file"
-          accept="image/*"
-          style={{ display: 'none' }}
-          onChange={e => onSelectFile(e, target)}
-        />
-      </label>
+      </div>
+    )}
+    {!url && (
+      <input
+        className="dropzone-file-input"
+        type="file"
+        accept="image/*"
+        aria-label={copy.inputLabel}
+        onChange={e => onSelectFile(e, target)}
+      />
     )}
   </div>
 );
@@ -55,6 +63,7 @@ export const CompareView: React.FC = () => {
   const { t } = useLanguage();
   const [sourceA, setSourceA] = useState<{ file: File; url: string } | null>(null);
   const [sourceB, setSourceB] = useState<{ file: File; url: string } | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const sourceAUrlRef = useRef<string | null>(null);
   const sourceBUrlRef = useRef<string | null>(null);
 
@@ -65,7 +74,7 @@ export const CompareView: React.FC = () => {
     if (sourceBUrlRef.current) URL.revokeObjectURL(sourceBUrlRef.current);
   }, []);
 
-  const replaceSource = (target: 'A' | 'B', file: File | null) => {
+  const replaceSource = (target: CompareTarget, file: File | null) => {
     const nextUrl = file ? URL.createObjectURL(file) : null;
     const urlRef = target === 'A' ? sourceAUrlRef : sourceBUrlRef;
     if (urlRef.current) URL.revokeObjectURL(urlRef.current);
@@ -80,43 +89,47 @@ export const CompareView: React.FC = () => {
   const urlA = sourceA?.url ?? null;
   const urlB = sourceB?.url ?? null;
 
-  const handleFileDrop = (e: React.DragEvent<HTMLDivElement>, target: 'A' | 'B') => {
+  const acceptFile = (file: File, target: CompareTarget) => {
+    if (!file.type.startsWith('image/')) {
+      setFileError(t('compare.invalidFile', { target }));
+      return;
+    }
+
+    try {
+      replaceSource(target, file);
+      setFileError(null);
+    } catch {
+      setFileError(t('compare.readError', { target }));
+    }
+  };
+
+  const handleFileDrop = (e: React.DragEvent<HTMLDivElement>, target: CompareTarget) => {
     e.preventDefault();
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      if (file.type.startsWith('image/')) {
-        if (target === 'A') {
-          replaceSource('A', file);
-        } else {
-          replaceSource('B', file);
-        }
-      }
-    }
+    const file = e.dataTransfer.files[0];
+    if (file) acceptFile(file, target);
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, target: 'A' | 'B') => {
-    if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
-      if (target === 'A') {
-        replaceSource('A', file);
-      } else {
-        replaceSource('B', file);
-      }
-    }
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, target: CompareTarget) => {
+    const file = e.target.files?.[0];
+    if (file) acceptFile(file, target);
+    e.target.value = '';
   };
 
-  const handleClearFile = (target: 'A' | 'B') => {
-    if (target === 'A') {
-      replaceSource('A', null);
-    } else {
-      replaceSource('B', null);
-    }
+  const handleClearFile = (target: CompareTarget) => {
+    replaceSource(target, null);
+    setFileError(null);
   };
 
-  const getDropzoneCopy = (target: 'A' | 'B') => ({
+  const handleImageError = (target: CompareTarget) => {
+    replaceSource(target, null);
+    setFileError(t('compare.readError', { target }));
+  };
+
+  const getDropzoneCopy = (target: CompareTarget) => ({
     dropTitle: t('compare.dropTitle'),
     dropHint: t('compare.dropHint', { target }),
     clearTitle: t('compare.clearPhoto', { target }),
+    inputLabel: t('compare.choosePhoto', { target }),
     previewAlt: t('compare.previewAlt', { target }),
   });
 
@@ -158,37 +171,38 @@ export const CompareView: React.FC = () => {
         </div>
       </header>
 
-      <div className="view-body compare-workspace-body" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        {/* Intro */}
-        <p style={{ color: 'var(--text-muted)', marginBottom: '16px', fontSize: '13px' }}>
-          {t('compare.intro')}
-        </p>
+      <div className="view-body compare-workspace-body">
+        <p className="compare-intro">{t('compare.intro')}</p>
 
         {/* Uploader Bar */}
         <div className="compare-uploaders-container">
-          <FileDropzone target="A" file={fileA} url={urlA} onDropFile={handleFileDrop} onSelectFile={handleFileSelect} onClearFile={handleClearFile} copy={getDropzoneCopy('A')} />
-          <FileDropzone target="B" file={fileB} url={urlB} onDropFile={handleFileDrop} onSelectFile={handleFileSelect} onClearFile={handleClearFile} copy={getDropzoneCopy('B')} />
+          <FileDropzone target="A" file={fileA} url={urlA} onDropFile={handleFileDrop} onSelectFile={handleFileSelect} onClearFile={handleClearFile} onImageError={handleImageError} copy={getDropzoneCopy('A')} />
+          <FileDropzone target="B" file={fileB} url={urlB} onDropFile={handleFileDrop} onSelectFile={handleFileSelect} onClearFile={handleClearFile} onImageError={handleImageError} copy={getDropzoneCopy('B')} />
         </div>
 
-        {/* Viewer */}
-        <div className="compare-viewer-container" style={{ flex: 1, minHeight: 0, marginTop: '16px', position: 'relative', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+        {fileError && (
+          <div className="compare-file-alert" role="alert" aria-live="assertive">
+            <AlertCircle size={18} aria-hidden="true" />
+            <span>{fileError}</span>
+          </div>
+        )}
+
+        <div className="compare-viewer-container">
           {(!urlA || !urlB) ? (
-            <div className="empty-state" style={{ height: '100%' }}>
-              <ImageIcon size={48} />
-              <h3>{t('compare.emptyTitle')}</h3>
-              <p>{t('compare.emptyDesc')}</p>
+            <div className="compare-empty-state">
+              <EmptyState icon={ImageIcon} title={t('compare.emptyTitle')} description={t('compare.emptyDesc')} />
             </div>
           ) : (
             <>
-              {viewMode === 'split' && <ImageSlider imgA={urlA} imgB={urlB} altA={t('compare.imageAlt', { target: 'A' })} altB={t('compare.imageAlt', { target: 'B' })} label={t('compare.splitPosition')} />}
+              {viewMode === 'split' && <ImageSlider imgA={urlA} imgB={urlB} altA={t('compare.imageAlt', { target: 'A' })} altB={t('compare.imageAlt', { target: 'B' })} label={t('compare.splitPosition')} valueText={position => t('compare.sliderValue', { a: position, b: 100 - position })} onImageError={handleImageError} />}
               {viewMode === 'sideBySide' && (
                 <div className="compare-side-by-side">
                   <div className="compare-side-by-side-pane">
-                    <img src={urlA} alt={t('compare.imageAlt', { target: 'A' })} />
+                    <img src={urlA} alt={t('compare.imageAlt', { target: 'A' })} onError={() => handleImageError('A')} />
                     <span className="compare-lane-label">{t('compare.laneA')}</span>
                   </div>
                   <div className="compare-side-by-side-pane">
-                    <img src={urlB} alt={t('compare.imageAlt', { target: 'B' })} />
+                    <img src={urlB} alt={t('compare.imageAlt', { target: 'B' })} onError={() => handleImageError('B')} />
                     <span className="compare-lane-label">{t('compare.laneB')}</span>
                   </div>
                 </div>
@@ -208,9 +222,11 @@ interface ImageSliderProps {
   altA: string;
   altB: string;
   label: string;
+  valueText: (position: number) => string;
+  onImageError: (target: CompareTarget) => void;
 }
 
-const ImageSlider: React.FC<ImageSliderProps> = ({ imgA, imgB, altA, altB, label }) => {
+const ImageSlider: React.FC<ImageSliderProps> = ({ imgA, imgB, altA, altB, label, valueText, onImageError }) => {
   const [sliderPosition, setSliderPosition] = useState(50);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -266,6 +282,8 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ imgA, imgB, altA, altB, label
     }
   };
 
+  const roundedPosition = Math.round(sliderPosition);
+
   return (
     <div 
       className="image-slider-container" 
@@ -279,32 +297,21 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ imgA, imgB, altA, altB, label
       aria-label={label}
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-valuenow={Math.round(sliderPosition)}
-      aria-valuetext={`Photo A ${Math.round(sliderPosition)}%, Photo B ${Math.round(100 - sliderPosition)}%`}
-      style={{ height: '100%', width: '100%', position: 'relative', cursor: 'ew-resize', touchAction: 'none' }}
+      aria-valuenow={roundedPosition}
+      aria-valuetext={valueText(roundedPosition)}
+      style={{ '--compare-position': `${sliderPosition}%` } as React.CSSProperties}
     >
-      <img src={imgB} className="image-slider-bg" alt={altB} draggable={false} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }} />
+      <img src={imgB} className="image-slider-bg" alt={altB} draggable={false} onError={() => onImageError('B')} />
       
       <img 
         src={imgA} 
         className="image-slider-fg" 
         alt={altA}
         draggable={false}
-        style={{ 
-          position: 'absolute', 
-          top: 0, 
-          left: 0, 
-          width: '100%', 
-          height: '100%', 
-          objectFit: 'contain',
-          clipPath: `inset(0 ${100 - sliderPosition}% 0 0)`
-        }} 
+        onError={() => onImageError('A')}
       />
 
-      <div 
-        className="image-slider-handle" 
-        style={{ position: 'absolute', top: 0, bottom: 0, left: `${sliderPosition}%`, width: '2px', background: 'var(--accent)', transform: 'translateX(-50%)', transition: 'none' }}
-      >
+      <div className="image-slider-handle">
         <div className="handle-button">
           <MoveHorizontal size={16} aria-hidden="true" />
         </div>
