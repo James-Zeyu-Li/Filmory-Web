@@ -109,14 +109,14 @@ export const ResetPasswordView: React.FC = () => {
       ) : undefined}
     >
       {errorMsg && (
-        <div className="alert-box error">
+        <div className="alert-box error" role="alert" aria-live="assertive">
           <AlertCircle size={16} />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {successMsg && (
-        <div className="alert-box success">
+        <div className="alert-box success" role="status" aria-live="polite">
           <CheckCircle2 size={16} />
           <span>{successMsg}</span>
         </div>

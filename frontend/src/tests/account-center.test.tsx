@@ -144,7 +144,7 @@ describe('AccountCenterModal', () => {
     fireEvent.click(screen.getByRole('button', { name: '免费注册并开启云同步' }));
 
     expect(mockOnClose).toHaveBeenCalled();
-    expect(screen.getByTestId('location')).toHaveTextContent('/login?mode=signup&trial=1');
+    expect(screen.getByTestId('location')).toHaveTextContent('/auth/signup?trial=1');
   });
 
   it('shows account details and logs out a signed-in user', async () => {
@@ -159,7 +159,7 @@ describe('AccountCenterModal', () => {
 
     await waitFor(() => expect(mockLogout).toHaveBeenCalled());
     expect(mockOnClose).toHaveBeenCalled();
-    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/login'));
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/auth/login'));
   });
 
   it('does not render account deletion inside AccountCenterModal', () => {

@@ -10,6 +10,7 @@ interface AuthShellProps {
   footer?: React.ReactNode;
   backTo?: string;
   backLabel?: string;
+  cardClassName?: string;
 }
 
 export const AuthShell: React.FC<AuthShellProps> = ({
@@ -19,12 +20,13 @@ export const AuthShell: React.FC<AuthShellProps> = ({
   footer,
   backTo = '/',
   backLabel,
+  cardClassName,
 }) => {
   const { t } = useLanguage();
 
   return (
-    <div className="login-container">
-      <div className="login-glass-card auth-glass-card">
+    <main className="login-container">
+      <div className={['login-glass-card', 'auth-glass-card', cardClassName].filter(Boolean).join(' ')}>
         <Link to={backTo} className="auth-back-link">
           <ArrowLeft size={16} />
           {backLabel || t('auth.home')}
@@ -33,17 +35,16 @@ export const AuthShell: React.FC<AuthShellProps> = ({
         <div className="login-header auth-header">
           <img
             src="/logo.png"
-            alt="Grainfolio Logo"
-            className="login-logo-img"
-            style={{ width: '64px', height: '64px', objectFit: 'contain', margin: '0 auto', display: 'block' }}
+            alt={t('auth.logoAlt')}
+            className="login-logo-img auth-shell-logo"
           />
-          <h2>{title}</h2>
+          <h1>{title}</h1>
           <p>{subtitle}</p>
         </div>
 
         {children}
         {footer && <div className="auth-footer-block">{footer}</div>}
       </div>
-    </div>
+    </main>
   );
 };

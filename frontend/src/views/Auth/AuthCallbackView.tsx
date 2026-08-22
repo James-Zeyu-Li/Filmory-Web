@@ -111,7 +111,7 @@ export const AuthCallbackView: React.FC = () => {
     >
       {errorMsg ? (
         <div className="auth-state-panel">
-          <div className="alert-box error">
+          <div className="alert-box error" role="alert" aria-live="assertive">
             <AlertCircle size={16} />
             <span>{errorMsg}</span>
           </div>

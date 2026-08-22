@@ -26,7 +26,7 @@ describe('TrialBanner', () => {
 
     const cta = screen.getByRole('link', { name: '免费注册并开启云同步' });
     expect(cta).toBeInTheDocument();
-    expect(cta).toHaveAttribute('href', '/login?mode=signup&trial=1');
+    expect(cta).toHaveAttribute('href', '/auth/signup?trial=1');
   });
 
   it('persists dismiss state for the current browser session', () => {

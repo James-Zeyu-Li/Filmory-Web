@@ -13,7 +13,7 @@ test('trial users can still find signup after dismissing the trial banner', asyn
 
   await page.getByRole('button', { name: '免费注册并开启云同步' }).click();
 
-  await expect(page).toHaveURL(/\/login\?mode=signup&trial=1/);
+  await expect(page).toHaveURL(/\/auth\/signup\?trial=1/);
 });
 
 test('developer bypass account is labeled separately from a real account', async ({ page }) => {

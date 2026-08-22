@@ -75,12 +75,16 @@ cp frontend/.env.example frontend/.env.local
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=sb_publishable_your_key
 VITE_ENABLE_SUPABASE_SYNC=false
+VITE_ENABLE_GOOGLE_OAUTH=false
+VITE_ENABLE_GITHUB_OAUTH=false
 ```
 
 Keep `.env.local`, service-role keys, and other credentials out of Git. Cloud synchronization is opt-in:
 
 - `false`: the app remains local-first and does not automatically start Cloud sync.
 - `true`: an authenticated session can push and pull the user’s data through Supabase.
+
+OAuth buttons are also opt-in. Set the matching flag to `true` only after that provider is enabled in Supabase Auth and its callback URL has been verified; disabled providers are not rendered in the login or signup UI.
 
 When a browser has no local sync watermark, the first Cloud sync protects the local profile by pulling the Cloud profile before normal synchronization. Later cycles use the regular push/pull path. Trial mode does not start Cloud sync.
 

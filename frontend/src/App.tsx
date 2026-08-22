@@ -126,6 +126,8 @@ function AppContent() {
   const publicPaths = new Set([
     '/',
     AUTH_ROUTES.login,
+    AUTH_ROUTES.signup,
+    AUTH_ROUTES.legacyLogin,
     AUTH_ROUTES.callback,
     AUTH_ROUTES.forgotPassword,
     AUTH_ROUTES.resetPassword,
@@ -135,7 +137,11 @@ function AppContent() {
   const isPublicRoute = publicPaths.has(location.pathname);
 
   if (isPublicRoute) {
-    if (user && authMode !== 'trial' && location.pathname === AUTH_ROUTES.login) {
+    if (user && authMode !== 'trial' && (
+      location.pathname === AUTH_ROUTES.login ||
+      location.pathname === AUTH_ROUTES.signup ||
+      location.pathname === AUTH_ROUTES.legacyLogin
+    )) {
       return <Navigate to="/dashboard" replace />;
     }
 
@@ -144,6 +150,8 @@ function AppContent() {
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={<LandingView />} />
           <Route path={AUTH_ROUTES.login} element={<LoginView />} />
+          <Route path={AUTH_ROUTES.signup} element={<LoginView />} />
+          <Route path={AUTH_ROUTES.legacyLogin} element={<LegacyLoginRedirect />} />
           <Route path={AUTH_ROUTES.forgotPassword} element={<ForgotPasswordView />} />
           <Route path={AUTH_ROUTES.resetPassword} element={<ResetPasswordView />} />
           <Route path={AUTH_ROUTES.callback} element={<AuthCallbackView />} />
@@ -155,7 +163,7 @@ function AppContent() {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={AUTH_ROUTES.login} replace />;
   }
 
   return (
@@ -208,6 +216,16 @@ function AppContent() {
       </AnimatePresence>
     </div>
   );
+}
+
+function LegacyLoginRedirect() {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const target = searchParams.get('mode') === 'signup' ? AUTH_ROUTES.signup : AUTH_ROUTES.login;
+  const nextSearch = new URLSearchParams(location.search);
+  nextSearch.delete('mode');
+  const search = nextSearch.toString();
+  return <Navigate to={`${target}${search ? `?${search}` : ''}`} replace />;
 }
 
 function App() {

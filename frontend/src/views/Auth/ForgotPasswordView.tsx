@@ -46,7 +46,6 @@ export const ForgotPasswordView: React.FC = () => {
 
       startCooldown(AUTH_EMAIL_SEND_COOLDOWN_MS);
       setSuccessMsg(t('auth.forgotSuccess', {
-        email: normalizedEmail,
         hint: t('auth.mailpitHint'),
       }));
     } catch (error) {
@@ -67,20 +66,20 @@ export const ForgotPasswordView: React.FC = () => {
       backLabel={t('auth.backToLogin')}
       footer={(
         <div className="toggle-mode auth-centered-footer">
-          <span style={{ color: 'var(--text-muted)' }}>{t('auth.forgotRemembered')}</span>
+          <span className="auth-muted-text">{t('auth.forgotRemembered')}</span>
           <Link to={AUTH_ROUTES.login} className="auth-inline-link">{t('auth.backToLogin')}</Link>
         </div>
       )}
     >
       {errorMsg && (
-        <div className="alert-box error">
+        <div className="alert-box error" role="alert" aria-live="assertive">
           <Mail size={16} />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {successMsg && (
-        <div className="alert-box success">
+        <div className="alert-box success" role="status" aria-live="polite">
           <Send size={16} />
           <span>{successMsg}</span>
         </div>

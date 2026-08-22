@@ -74,7 +74,7 @@ export const AccountCenterModal: React.FC<AccountCenterModalProps> = ({ isOpen, 
 
   const goToSignup = () => {
     onClose();
-    navigate(`${AUTH_ROUTES.login}?mode=signup&trial=1`);
+    navigate(`${AUTH_ROUTES.signup}?trial=1`);
   };
 
   const handleDisplayNameSave = async (event: React.FormEvent) => {

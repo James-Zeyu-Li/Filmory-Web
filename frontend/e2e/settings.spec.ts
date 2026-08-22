@@ -5,7 +5,7 @@ test.describe('Settings flows', () => {
   test('redirects unauthenticated private routes to login', async ({ page }) => {
     await resetBrowserData(page);
     await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
-    await expect(page).toHaveURL(/\/login$/);
+    await expect(page).toHaveURL(/\/auth\/login$/);
   });
 
   test('keeps settings focused and removes unsafe local reset from normal UI', async ({ page }) => {
@@ -28,9 +28,9 @@ test.describe('Settings flows', () => {
     await page.getByRole('button', { name: /偏好设置/ }).click();
     await page.locator('.modal-content').filter({ hasText: '设置与数据保护' }).getByRole('button', { name: '退出登录' }).click();
 
-    await expect(page).toHaveURL(/\/login$/);
+    await expect(page).toHaveURL(/\/auth\/login$/);
     await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
-    await expect(page).toHaveURL(/\/login$/);
+    await expect(page).toHaveURL(/\/auth\/login$/);
   });
 
   test('resets rolls tab selection after logout and login', async ({ page }) => {
@@ -42,7 +42,7 @@ test.describe('Settings flows', () => {
 
     await page.getByRole('button', { name: /偏好设置/ }).click();
     await page.locator('.modal-content').filter({ hasText: '设置与数据保护' }).getByRole('button', { name: '退出登录' }).click();
-    await expect(page).toHaveURL(/\/login$/);
+    await expect(page).toHaveURL(/\/auth\/login$/);
 
     await page.getByRole('button', { name: /本机测试登录/ }).click();
     await expect(page).toHaveURL(/\/dashboard$/);

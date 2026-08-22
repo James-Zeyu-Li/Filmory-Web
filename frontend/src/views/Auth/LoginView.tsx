@@ -1,10 +1,13 @@
-import React, { useMemo, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useAuth } from '../../contexts/useAuth';
 import { supabase } from '../../services/supabaseClient';
-import type { Provider } from '@supabase/supabase-js';
-import { LogIn, UserPlus, AlertCircle, ArrowLeft, MailPlus, ShieldCheck } from 'lucide-react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { isDevBypassEnabled } from '../../services/authMode';
+import { LogIn, UserPlus, AlertCircle, MailPlus, ShieldCheck } from 'lucide-react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  getEnabledOAuthProviders,
+  isDevBypassEnabled,
+  type EnabledOAuthProvider,
+} from '../../services/authMode';
 import {
   AUTH_ROUTES,
   buildCheckEmailUrl,
@@ -25,20 +28,31 @@ import {
   normalizeDisplayName,
 } from '../../services/userProfile';
 import { useAuthEmailCooldown } from '../../hooks/useAuthEmailCooldown';
+import { AuthShell } from './AuthShell';
+import { OAuthButtons } from './OAuthButtons';
 import {
   AUTH_EMAIL_RATE_LIMIT_COOLDOWN_MS,
   AUTH_EMAIL_SEND_COOLDOWN_MS,
 } from '../../services/authEmailCooldown';
 import './LoginView.css';
 
+type AuthFieldName = 'displayName' | 'email' | 'password' | 'confirmPassword';
+
+interface AuthFieldError {
+  field: AuthFieldName;
+  message: string;
+}
+
 export const LoginView: React.FC = () => {
   const { signInMock } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const showDevBypass = isDevBypassEnabled();
+  const enabledOAuthProviders = getEnabledOAuthProviders();
   const isTrialSignupIntent = searchParams.get('trial') === '1';
-  const [isRegister, setIsRegister] = useState(searchParams.get('mode') === 'signup');
+  const isRegister = location.pathname === AUTH_ROUTES.signup || searchParams.get('mode') === 'signup';
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -51,23 +65,46 @@ export const LoginView: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState('');
   const [needsEmailVerification, setNeedsEmailVerification] = useState(false);
   const [isResendingVerification, setIsResendingVerification] = useState(false);
+  const [fieldError, setFieldError] = useState<AuthFieldError | null>(null);
+  const displayNameRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const confirmPasswordRef = useRef<HTMLInputElement>(null);
   const normalizedEmail = email.trim().toLowerCase();
   const {
     remainingSeconds: resendCooldownSeconds,
     isCoolingDown: isResendCoolingDown,
     startCooldown: startResendCooldown,
   } = useAuthEmailCooldown('signup-confirmation', normalizedEmail);
-  const prefixedMessage = useMemo(() => searchParams.get('message') || '', [searchParams]);
+  const prefixedMessage = searchParams.get('message') || '';
   const authTitle = isRegister ? t('auth.titleSignup') : t('auth.titleLogin');
   const authSubtitle = isRegister
     ? t('auth.subtitleSignup')
     : t('auth.subtitleLogin');
   const shouldShowPasswordHint = isRegister && (isPasswordFocused || password.length > 0);
 
+  const focusField = (field: AuthFieldName) => {
+    if (field === 'displayName') displayNameRef.current?.focus();
+    if (field === 'email') emailRef.current?.focus();
+    if (field === 'password') passwordRef.current?.focus();
+    if (field === 'confirmPassword') confirmPasswordRef.current?.focus();
+  };
+
+  const showFieldError = (field: AuthFieldName, message: string) => {
+    setErrorMsg('');
+    setFieldError({ field, message });
+    focusField(field);
+  };
+
+  const clearFieldError = (field: AuthFieldName) => {
+    setFieldError(current => current?.field === field ? null : current);
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setErrorMsg('');
+    setFieldError(null);
     setSuccessMsg('');
     setNeedsEmailVerification(false);
 
@@ -78,18 +115,18 @@ export const LoginView: React.FC = () => {
         const normalizedDisplayName = normalizeDisplayName(displayName);
         const displayNameValidationMessage = getDisplayNameValidationMessage(normalizedDisplayName, t);
         if (displayNameValidationMessage) {
-          setErrorMsg(displayNameValidationMessage);
+          showFieldError('displayName', displayNameValidationMessage);
           return;
         }
 
         const passwordValidationMessage = getPasswordValidationMessage(password, t);
         if (passwordValidationMessage) {
-          setErrorMsg(passwordValidationMessage);
+          showFieldError('password', passwordValidationMessage);
           return;
         }
 
         if (password !== confirmPassword) {
-          setErrorMsg(t('auth.passwordMismatch'));
+          showFieldError('confirmPassword', t('auth.passwordMismatch'));
           return;
         }
 
@@ -122,7 +159,11 @@ export const LoginView: React.FC = () => {
       );
       if (!isRegister && (errorKey === 'auth.emailNotConfirmed' || isEmailNotConfirmedError(message))) {
         setNeedsEmailVerification(true);
-        setErrorMsg(t('auth.emailNotConfirmed'));
+        showFieldError('email', t('auth.emailNotConfirmed'));
+      } else if (errorKey === 'auth.invalidCredentials') {
+        showFieldError('password', message);
+      } else if (errorKey === 'auth.alreadyRegistered') {
+        showFieldError('email', message);
       } else {
         setErrorMsg(message);
       }
@@ -131,9 +172,10 @@ export const LoginView: React.FC = () => {
     }
   };
 
-  const handleOAuth = async (provider: Provider) => {
+  const handleOAuth = async (provider: EnabledOAuthProvider) => {
     setLoading(true);
     setErrorMsg('');
+    setFieldError(null);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
@@ -150,7 +192,7 @@ export const LoginView: React.FC = () => {
 
   const handleResendVerification = async () => {
     if (!normalizedEmail) {
-      setErrorMsg(t('auth.emptyEmailForResend'));
+      showFieldError('email', t('auth.emptyEmailForResend'));
       return;
     }
 
@@ -158,6 +200,7 @@ export const LoginView: React.FC = () => {
 
     setIsResendingVerification(true);
     setErrorMsg('');
+    setFieldError(null);
     setSuccessMsg('');
 
     try {
@@ -183,25 +226,20 @@ export const LoginView: React.FC = () => {
   };
 
   return (
-    <div className="login-container">
-      <div className={`login-glass-card auth-glass-card ${isRegister ? 'register-mode' : ''}`}>
-        <Link to="/" className="auth-back-link">
-          <ArrowLeft size={16} /> {t('auth.home')}
-        </Link>
-        <div className="login-header">
-          <img src="/logo.png" alt="Grainfolio Logo" className="login-logo-img" />
-          <h2>{authTitle}</h2>
-          <p>{authSubtitle}</p>
-        </div>
+    <AuthShell
+      title={authTitle}
+      subtitle={authSubtitle}
+      cardClassName={isRegister ? 'register-mode' : undefined}
+    >
 
         {prefixedMessage && (
-          <div className="alert-box success">
+          <div className="alert-box success" role="status" aria-live="polite">
             <span>{prefixedMessage}</span>
           </div>
         )}
 
         {isTrialSignupIntent && isRegister && (
-          <div className="alert-box success">
+          <div className="alert-box success" role="status" aria-live="polite">
             <span>{t('auth.trialSignupNotice')}</span>
           </div>
         )}
@@ -214,7 +252,7 @@ export const LoginView: React.FC = () => {
         )}
 
         {successMsg && (
-          <div className="alert-box success">
+          <div className="alert-box success" role="status" aria-live="polite">
             <span>{successMsg}</span>
           </div>
         )}
@@ -253,37 +291,62 @@ export const LoginView: React.FC = () => {
             <div className="form-group">
               <label htmlFor="login-display-name">{t('auth.displayNameLabel')}</label>
               <input
+                ref={displayNameRef}
                 id="login-display-name"
                 type="text"
                 className="form-control"
                 placeholder={t('auth.displayNamePlaceholder')}
                 value={displayName}
-                onChange={e => setDisplayName(e.target.value)}
+                onChange={e => {
+                  setDisplayName(e.target.value);
+                  clearFieldError('displayName');
+                }}
                 maxLength={40}
                 autoComplete="nickname"
                 required
+                aria-invalid={fieldError?.field === 'displayName' ? 'true' : undefined}
+                aria-describedby={fieldError?.field === 'displayName' ? 'login-display-name-error' : undefined}
               />
+              {fieldError?.field === 'displayName' && (
+                <p id="login-display-name-error" className="auth-field-error" role="alert" aria-live="assertive">
+                  {fieldError.message}
+                </p>
+              )}
             </div>
           )}
 
           <div className="form-group">
             <label htmlFor="login-email">{t('auth.emailLabel')}</label>
             <input 
+              ref={emailRef}
               id="login-email"
               type="email" 
               className="form-control" 
               placeholder={t('auth.emailPlaceholder')}
               value={email}
-              onChange={e => setEmail(e.target.value)}
+              onChange={e => {
+                setEmail(e.target.value);
+                clearFieldError('email');
+              }}
               autoComplete="email"
-              required 
+              required
+              aria-invalid={fieldError?.field === 'email' ? 'true' : undefined}
+              aria-describedby={fieldError?.field === 'email' ? 'login-email-error' : undefined}
             />
+            {fieldError?.field === 'email' && (
+              <p id="login-email-error" className="auth-field-error" role="alert" aria-live="assertive">
+                {fieldError.message}
+              </p>
+            )}
           </div>
           <AuthPasswordField
             id="login-password"
             label={t('auth.passwordLabel')}
             value={password}
-            onChange={setPassword}
+            onChange={value => {
+              setPassword(value);
+              clearFieldError('password');
+            }}
             placeholder={isRegister ? t('auth.passwordSignupPlaceholder') : t('auth.passwordLoginPlaceholder')}
             visible={showPassword}
             onToggleVisibility={() => setShowPassword(current => !current)}
@@ -291,6 +354,8 @@ export const LoginView: React.FC = () => {
             autoComplete={isRegister ? 'new-password' : 'current-password'}
             onFocus={() => setIsPasswordFocused(true)}
             onBlur={() => setIsPasswordFocused(false)}
+            inputRef={passwordRef}
+            errorMessage={fieldError?.field === 'password' ? fieldError.message : undefined}
           />
 
           {isRegister && (
@@ -299,12 +364,17 @@ export const LoginView: React.FC = () => {
                 id="login-password-confirm"
                 label={t('auth.confirmPasswordLabel')}
                 value={confirmPassword}
-                onChange={setConfirmPassword}
+                onChange={value => {
+                  setConfirmPassword(value);
+                  clearFieldError('confirmPassword');
+                }}
                 placeholder={t('auth.confirmPasswordPlaceholder')}
                 visible={showConfirmPassword}
                 onToggleVisibility={() => setShowConfirmPassword(current => !current)}
                 minLength={PASSWORD_POLICY.minLength}
                 autoComplete="new-password"
+                inputRef={confirmPasswordRef}
+                errorMessage={fieldError?.field === 'confirmPassword' ? fieldError.message : undefined}
               />
               {shouldShowPasswordHint && <PasswordPolicyHint password={password} />}
               <div className="auth-helper-note">
@@ -320,21 +390,27 @@ export const LoginView: React.FC = () => {
           </button>
         </form>
 
-        <div className="toggle-mode" style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px' }}>
-          <span style={{ color: 'var(--text-muted)' }}>
+        <div className="toggle-mode auth-mode-toggle">
+          <span className="auth-muted-text">
             {isRegister ? t('auth.hasAccount') : t('auth.noAccount')}
           </span>
           <button 
             type="button" 
-            style={{ background: 'none', border: 'none', color: 'var(--accent)', fontWeight: 600, cursor: 'pointer', marginLeft: '8px' }}
+            className="auth-mode-button"
             onClick={() => {
-              setIsRegister(!isRegister);
+              const nextPath = isRegister ? AUTH_ROUTES.login : AUTH_ROUTES.signup;
+              const nextParams = new URLSearchParams(searchParams);
+              nextParams.delete('mode');
+              if (isRegister) nextParams.delete('trial');
+              const nextSearch = nextParams.toString();
+              navigate(`${nextPath}${nextSearch ? `?${nextSearch}` : ''}`);
               setDisplayName('');
               setPassword('');
               setConfirmPassword('');
               setShowPassword(false);
               setShowConfirmPassword(false);
               setErrorMsg('');
+              setFieldError(null);
               setSuccessMsg('');
               setNeedsEmailVerification(false);
             }}
@@ -351,53 +427,25 @@ export const LoginView: React.FC = () => {
           </div>
         )}
 
-        <div className="login-divider">
-          <span>{t('auth.socialDivider')}</span>
-        </div>
-
-        <div className="login-social-actions auth-social-actions-compact">
-          <button 
-            type="button" 
-            className="btn-social" 
-            onClick={() => handleOAuth('google')}
-            disabled={loading}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-            </svg>
-            <span>Google</span>
-          </button>
-          
-          <button 
-            type="button" 
-            className="btn-social" 
-            onClick={() => handleOAuth('github')}
-            disabled={loading}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.379.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z" fill="currentColor"/>
-            </svg>
-            <span>GitHub</span>
-          </button>
-        </div>
+        <OAuthButtons
+          providers={enabledOAuthProviders}
+          disabled={loading}
+          onSelect={handleOAuth}
+        />
 
         {showDevBypass && (
           <>
-            <div className="login-divider" style={{ marginTop: '24px' }}>
+            <div className="login-divider auth-dev-divider">
               <span>{t('auth.devDivider')}</span>
             </div>
 
             <div className="login-social-actions">
-              <button type="button" className="btn-social" onClick={signInMock} style={{ opacity: 0.6 }}>
+              <button type="button" className="btn-social auth-dev-button" onClick={signInMock}>
                 <span>{t('auth.devLogin')}</span>
               </button>
             </div>
           </>
         )}
-      </div>
-    </div>
+    </AuthShell>
   );
 };

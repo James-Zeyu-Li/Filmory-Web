@@ -22,7 +22,7 @@ test.describe('Trial mode conversion flow', () => {
     await expect(registerPrompt.getByText(/相机 最多可以创建 1 个/)).toBeVisible();
 
     await registerPrompt.getByRole('button', { name: '注册并保留试用数据' }).click();
-    await expect(page).toHaveURL(/\/login\?mode=signup&trial=1/);
+    await expect(page).toHaveURL(/\/auth\/signup\?trial=1/);
     await expect(page.getByRole('heading', { name: '创建账号' })).toBeVisible();
     await expect(page.getByText('创建账号后，可以继续把这台设备上的试用记录保存到你的账号。')).toBeVisible();
   });

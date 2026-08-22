@@ -84,7 +84,7 @@ export const TrialGateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 className="primary"
                 onClick={() => {
                   closeModal();
-                  navigate(`${AUTH_ROUTES.login}?mode=signup&trial=1&resource=${encodeURIComponent(resourceLabel)}`);
+                  navigate(`${AUTH_ROUTES.signup}?trial=1&resource=${encodeURIComponent(resourceLabel)}`);
                 }}
               >
                 {t('trial.signupKeepData')}

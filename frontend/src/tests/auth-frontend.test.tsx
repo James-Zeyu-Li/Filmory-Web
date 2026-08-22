@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BrowserRouter, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { LoginView } from '../views/Auth/LoginView';
 import { ForgotPasswordView } from '../views/Auth/ForgotPasswordView';
@@ -45,6 +45,8 @@ const mockedAuth = supabase.auth as unknown as {
 
 describe('Auth frontend closure', () => {
   beforeEach(() => {
+    vi.stubEnv('VITE_ENABLE_GOOGLE_OAUTH', 'true');
+    vi.stubEnv('VITE_ENABLE_GITHUB_OAUTH', 'true');
     mockUseAuthState.user = null;
     mockUseAuthState.session = null;
     mockUseAuthState.logout.mockClear();
@@ -70,6 +72,61 @@ describe('Auth frontend closure', () => {
     mockedAuth.getSession.mockResolvedValue({ data: { session: null }, error: null });
   });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('keeps the canonical auth routes on one shared accessible shell', () => {
+    render(
+      <MemoryRouter initialEntries={[AUTH_ROUTES.login]}>
+        <Routes>
+          <Route path={AUTH_ROUTES.login} element={<LoginView />} />
+          <Route path={AUTH_ROUTES.signup} element={<LoginView />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('main')).toHaveClass('login-container');
+    expect(screen.getByAltText('Grainfolio 标志')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '欢迎回来' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Google' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'GitHub' })).toBeInTheDocument();
+
+    const passwordToggle = screen.getByRole('button', { name: '显示密码' });
+    expect(passwordToggle).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(passwordToggle);
+    expect(passwordToggle).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(screen.getByRole('button', { name: '立即注册' }));
+
+    expect(screen.getByRole('heading', { name: '创建账号' })).toBeInTheDocument();
+    expect(screen.getByLabelText('显示名称')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '返回登录' })).toBeInTheDocument();
+
+    const signupPassword = screen.getByLabelText('密码');
+    fireEvent.focus(signupPassword);
+    fireEvent.change(signupPassword, { target: { value: 'Strongpass1' } });
+    expect(screen.getByLabelText('至少 8 位: 已满足')).toBeInTheDocument();
+    expect(screen.getByLabelText('大写字母: 已满足')).toBeInTheDocument();
+  });
+
+  it('only renders OAuth providers enabled by the public build configuration', () => {
+    vi.stubEnv('VITE_ENABLE_GOOGLE_OAUTH', 'false');
+    vi.stubEnv('VITE_ENABLE_GITHUB_OAUTH', 'false');
+
+    render(
+      <MemoryRouter initialEntries={[AUTH_ROUTES.login]}>
+        <Routes>
+          <Route path={AUTH_ROUTES.login} element={<LoginView />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByRole('button', { name: 'Google' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'GitHub' })).not.toBeInTheDocument();
+    expect(screen.queryByText('或继续使用以下方式')).not.toBeInTheDocument();
+  });
+
   it('announces login failures to assistive technology', async () => {
     mockedAuth.signInWithPassword.mockResolvedValue({ data: {}, error: new Error('Invalid login credentials') });
 
@@ -77,6 +134,7 @@ describe('Auth frontend closure', () => {
       <MemoryRouter initialEntries={[AUTH_ROUTES.login]}>
         <Routes>
           <Route path={AUTH_ROUTES.login} element={<LoginView />} />
+          <Route path={AUTH_ROUTES.signup} element={<LoginView />} />
         </Routes>
       </MemoryRouter>
     );
@@ -93,6 +151,7 @@ describe('Auth frontend closure', () => {
       <MemoryRouter initialEntries={[AUTH_ROUTES.login]}>
         <Routes>
           <Route path={AUTH_ROUTES.login} element={<LoginView />} />
+          <Route path={AUTH_ROUTES.signup} element={<LoginView />} />
           <Route path={AUTH_ROUTES.checkEmail} element={<AuthStatusView mode="check-email" />} />
         </Routes>
       </MemoryRouter>
@@ -129,6 +188,7 @@ describe('Auth frontend closure', () => {
       <MemoryRouter initialEntries={[AUTH_ROUTES.login]}>
         <Routes>
           <Route path={AUTH_ROUTES.login} element={<LoginView />} />
+          <Route path={AUTH_ROUTES.signup} element={<LoginView />} />
         </Routes>
       </MemoryRouter>
     );
@@ -136,12 +196,16 @@ describe('Auth frontend closure', () => {
     fireEvent.click(screen.getByRole('button', { name: '立即注册' }));
     fireEvent.change(screen.getByLabelText('显示名称'), { target: { value: 'Weak Case' } });
     fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'weak@grainfolio.app' } });
-    fireEvent.change(screen.getByLabelText('密码'), { target: { value: 'weakpass' } });
+    const passwordInput = screen.getByLabelText('密码');
+    fireEvent.change(passwordInput, { target: { value: 'weakpass' } });
     fireEvent.change(screen.getByLabelText('确认密码'), { target: { value: 'weakpass' } });
     fireEvent.click(screen.getByRole('button', { name: '创建账号' }));
 
     await waitFor(() => {
       expect(screen.getByText('密码至少 8 位，且必须包含大写字母、小写字母和数字。')).toBeInTheDocument();
+      expect(passwordInput).toHaveFocus();
+      expect(passwordInput).toHaveAttribute('aria-invalid', 'true');
+      expect(passwordInput).toHaveAttribute('aria-describedby', 'login-password-error');
     });
 
     expect(mockedAuth.signUp).not.toHaveBeenCalled();
@@ -152,12 +216,14 @@ describe('Auth frontend closure', () => {
       <MemoryRouter initialEntries={[AUTH_ROUTES.login]}>
         <Routes>
           <Route path={AUTH_ROUTES.login} element={<LoginView />} />
+          <Route path={AUTH_ROUTES.signup} element={<LoginView />} />
         </Routes>
       </MemoryRouter>
     );
 
     fireEvent.click(screen.getByRole('button', { name: '立即注册' }));
-    fireEvent.change(screen.getByLabelText('显示名称'), { target: { value: '   ' } });
+    const displayNameInput = screen.getByLabelText('显示名称');
+    fireEvent.change(displayNameInput, { target: { value: '   ' } });
     fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'empty-name@grainfolio.app' } });
     fireEvent.change(screen.getByLabelText('密码'), { target: { value: 'Strongpass1' } });
     fireEvent.change(screen.getByLabelText('确认密码'), { target: { value: 'Strongpass1' } });
@@ -165,8 +231,35 @@ describe('Auth frontend closure', () => {
 
     await waitFor(() => {
       expect(screen.getByText('请填写一个显示名称，用来标记这是谁的 Grainfolio 工作区。')).toBeInTheDocument();
+      expect(displayNameInput).toHaveFocus();
+      expect(displayNameInput).toHaveAttribute('aria-invalid', 'true');
+      expect(displayNameInput).toHaveAttribute('aria-describedby', 'login-display-name-error');
     });
 
+    expect(mockedAuth.signUp).not.toHaveBeenCalled();
+  });
+
+  it('focuses and describes the confirmation field when signup passwords differ', async () => {
+    render(
+      <MemoryRouter initialEntries={[AUTH_ROUTES.signup]}>
+        <Routes>
+          <Route path={AUTH_ROUTES.signup} element={<LoginView />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    fireEvent.change(screen.getByLabelText('显示名称'), { target: { value: 'Mismatch Case' } });
+    fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'mismatch@grainfolio.app' } });
+    fireEvent.change(screen.getByLabelText('密码'), { target: { value: 'Strongpass1' } });
+    const confirmInput = screen.getByLabelText('确认密码');
+    fireEvent.change(confirmInput, { target: { value: 'Strongpass2' } });
+    fireEvent.click(screen.getByRole('button', { name: '创建账号' }));
+
+    await waitFor(() => {
+      expect(confirmInput).toHaveFocus();
+      expect(confirmInput).toHaveAttribute('aria-invalid', 'true');
+      expect(confirmInput).toHaveAccessibleDescription('两次输入的密码不一致，请重新确认。');
+    });
     expect(mockedAuth.signUp).not.toHaveBeenCalled();
   });
 
@@ -180,6 +273,7 @@ describe('Auth frontend closure', () => {
       <MemoryRouter initialEntries={[AUTH_ROUTES.login]}>
         <Routes>
           <Route path={AUTH_ROUTES.login} element={<LoginView />} />
+          <Route path={AUTH_ROUTES.signup} element={<LoginView />} />
         </Routes>
       </MemoryRouter>
     );
@@ -215,6 +309,7 @@ describe('Auth frontend closure', () => {
       <MemoryRouter initialEntries={[AUTH_ROUTES.login]}>
         <Routes>
           <Route path={AUTH_ROUTES.login} element={<LoginView />} />
+          <Route path={AUTH_ROUTES.signup} element={<LoginView />} />
         </Routes>
       </MemoryRouter>
     );
@@ -247,7 +342,8 @@ describe('Auth frontend closure', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/重设密码邮件已发送到 reset@grainfolio\.app/)).toBeInTheDocument();
+      expect(screen.getByText(/如果该邮箱对应账号，我们已发送重设密码邮件/)).toBeInTheDocument();
+      expect(screen.queryByText(/reset@grainfolio\.app/)).not.toBeInTheDocument();
     });
   });
 

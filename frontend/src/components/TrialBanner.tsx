@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Info, X, CloudUpload } from 'lucide-react';
 import { useAuth } from '../contexts/useAuth';
+import { AUTH_ROUTES } from '../services/authFlow';
 import { useLanguage } from '../contexts/useLanguage';
 import './TrialBanner.css';
 
@@ -33,7 +34,7 @@ export const TrialBanner: React.FC = () => {
         </span>
       </div>
       <div className="trial-banner-actions">
-        <Link to="/login?mode=signup&trial=1" className="trial-banner-btn">
+        <Link to={`${AUTH_ROUTES.signup}?trial=1`} className="trial-banner-btn">
           <CloudUpload size={14} />
           <span>{t('trial.signupCloud')}</span>
         </Link>

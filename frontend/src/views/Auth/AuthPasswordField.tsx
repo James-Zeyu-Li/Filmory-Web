@@ -13,6 +13,8 @@ interface AuthPasswordFieldProps {
   autoComplete?: string;
   onFocus?: () => void;
   onBlur?: () => void;
+  inputRef?: React.Ref<HTMLInputElement>;
+  errorMessage?: string;
 }
 
 export const AuthPasswordField: React.FC<AuthPasswordFieldProps> = ({
@@ -27,14 +29,18 @@ export const AuthPasswordField: React.FC<AuthPasswordFieldProps> = ({
   autoComplete,
   onFocus,
   onBlur,
+  inputRef,
+  errorMessage,
 }) => {
   const { t } = useLanguage();
+  const errorId = `${id}-error`;
 
   return (
     <div className="form-group">
       <label htmlFor={id}>{label}</label>
       <div className="auth-password-row">
         <input
+          ref={inputRef}
           id={id}
           type={visible ? 'text' : 'password'}
           className="form-control auth-password-input"
@@ -46,16 +52,25 @@ export const AuthPasswordField: React.FC<AuthPasswordFieldProps> = ({
           autoComplete={autoComplete}
           onFocus={onFocus}
           onBlur={onBlur}
+          aria-invalid={errorMessage ? 'true' : undefined}
+          aria-describedby={errorMessage ? errorId : undefined}
         />
         <button
           type="button"
           className="auth-password-toggle"
           onClick={onToggleVisibility}
           aria-label={visible ? t('auth.hidePassword', { label }) : t('auth.showPassword', { label })}
+          aria-pressed={visible}
+          aria-controls={id}
         >
           {visible ? t('auth.hide') : t('auth.show')}
         </button>
       </div>
+      {errorMessage && (
+        <p id={errorId} className="auth-field-error" role="alert" aria-live="assertive">
+          {errorMessage}
+        </p>
+      )}
     </div>
   );
 };

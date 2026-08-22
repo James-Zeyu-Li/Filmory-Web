@@ -5,6 +5,7 @@ import { ArrowRight, Camera, Image, Layers, Wallet } from 'lucide-react';
 import { useAuth } from '../../contexts/useAuth';
 import { useLanguage } from '../../contexts/useLanguage';
 import { LANGUAGE_OPTIONS, type LanguageCode } from '../../i18n/translations';
+import { AUTH_ROUTES } from '../../services/authFlow';
 import './LandingView.css';
 
 const containerVariants = {
@@ -55,8 +56,8 @@ export const LandingView: React.FC = () => {
           <button type="button" className="btn-ghost-trial" onClick={handleStartTrial}>
             {t('landing.trial')}
           </button>
-          <Link to="/login" className="btn-secondary">{t('landing.login')}</Link>
-          <Link to="/login?mode=signup" className="btn-primary">{t('landing.signup')}</Link>
+          <Link to={AUTH_ROUTES.login} className="btn-secondary">{t('landing.login')}</Link>
+          <Link to={AUTH_ROUTES.signup} className="btn-primary">{t('landing.signup')}</Link>
         </div>
       </nav>
 
@@ -84,7 +85,7 @@ export const LandingView: React.FC = () => {
             <button type="button" className="btn-primary large" onClick={handleStartTrial}>
               {t('landing.tryNow')} <ArrowRight size={18} />
             </button>
-            <Link to="/login?mode=signup" className="btn-secondary large">
+            <Link to={AUTH_ROUTES.signup} className="btn-secondary large">
               {t('landing.saveLongTerm')}
             </Link>
           </motion.div>

@@ -3,7 +3,9 @@ import type { TranslationKey } from '../i18n/translations';
 type AuthTranslator = (key: TranslationKey, values?: Record<string, string | number>) => string;
 
 export const AUTH_ROUTES = {
-  login: '/login',
+  login: '/auth/login',
+  signup: '/auth/signup',
+  legacyLogin: '/login',
   callback: '/auth/callback',
   forgotPassword: '/auth/forgot-password',
   resetPassword: '/auth/reset-password',

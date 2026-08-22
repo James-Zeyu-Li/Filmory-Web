@@ -3,6 +3,7 @@ import { TRIAL_USER_EMAIL, TRIAL_USER_ID } from './trialPolicy';
 
 export type AuthMode = 'supabase' | 'dev-bypass' | 'trial';
 export type AccountRole = 'user' | 'admin';
+export type EnabledOAuthProvider = 'google' | 'github';
 
 export const DEV_BYPASS_USER_ID = 'mock_uid_123';
 export const DEV_BYPASS_EMAIL = 'developer@grainfolio.app';
@@ -10,6 +11,13 @@ export const DEV_BYPASS_EMAIL = 'developer@grainfolio.app';
 export const isDevBypassEnabled = () => (
   import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEV_AUTH !== 'false'
 );
+
+export const getEnabledOAuthProviders = (): EnabledOAuthProvider[] => {
+  const providers: EnabledOAuthProvider[] = [];
+  if (import.meta.env.VITE_ENABLE_GOOGLE_OAUTH === 'true') providers.push('google');
+  if (import.meta.env.VITE_ENABLE_GITHUB_OAUTH === 'true') providers.push('github');
+  return providers;
+};
 
 export const createDevBypassUser = () => ({
   id: DEV_BYPASS_USER_ID,
