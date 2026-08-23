@@ -77,8 +77,9 @@
 
 **当前状态（2026-08-22）**
 
-- 已完成：Settings 只在存在待补上传图片时显示修复入口，并提供成功、部分成功和失败反馈；`photoUploadRecoveryService` 的本地保留、重试、用户隔离及同用户 in-flight 去重测试均通过。
-- 未完成：拍摄记录封面在压缩或 Dexie 写入失败时仍只进入 `console.error`，尚未提供用户可见反馈，也缺少覆盖这些失败路径的组件测试；因此本 UI 任务和真实 Cloud 最终验证均不能打勾。
+- 已完成：Settings 在存在待补上传图片或待清理旧对象时显示修复入口，并提供成功、部分成功和失败反馈；本地保留、重试、用户隔离、同用户 in-flight 去重与旧对象清理测试均通过。
+- 已完成：拍摄记录封面在压缩、元数据构建或 Dexie 写入失败时进入统一双语错误反馈；组件测试覆盖压缩失败及上传后本地提交失败的 Storage 回滚。
+- 未完成：真实 Cloud 双设备、object/metadata 对照和响应丢失重试尚未验收，因此 Cloud 最终验证仍不能打勾。
 
 **实现要求**
 
@@ -348,3 +349,208 @@
 - 覆盖拍摄记录、相机、镜头、胶卷库存、其他器材、无封面、旧数据、取消/重置、同步 pull/push、试用迁移和账号切换。
 - 覆盖 `320 / 375 / 430 / 768 / 1024px`、中英文、明暗主题、reduced-motion、键盘和触控；无横向溢出、无被遮挡的控制项。
 - 单测覆盖范围约束、默认中心、键盘调整、取消/保存与 mapper；E2E 覆盖上传后调整、刷新恢复和跨设备/Cloud 条件 smoke。
+
+<a id="ui-settings-responsive-density"></a>
+### UI-12 Settings 设置项密度与窄屏布局收口
+
+**当前状态（2026-08-22，已完成）**
+
+- 已完成：语言选择依据容器空间渐进响应，在 `>360px` 时保持标题与选择器同排，极窄容器才使用全宽下一行；货币、导出、图片修复和危险操作继续按控件需求换行。胶片模式 toggle 使用明确的 `40px` flex basis，不再被高优先级 `width: auto` 压缩并裁切；主题 segmented control 继续整组适配窄屏。
+- 已完成：响应式由 `settings-group` 的实际可用宽度驱动，不再只依赖 viewport；纵向布局会显式解除 `.settings-item-content` 的 `200px` 横向 flex 基准，行高回归内容驱动。中窄容器中的复合操作保持完整宽度，极窄容器再切为单列。
+- 已完成：语言与外观移除重复说明，`Pro film mode` 收口为“胶片工作流”，拍摄记录布局和货币提示改为更直接的双语摄影师文案；货币选择器保留双语可访问名称。
+- 已验证：Settings focused component test `7 passed`；Settings responsive E2E 覆盖 `320 / 375 / 390 / 430 / 540 / 568 / 600 / 620 / 768 / 1024px`，按真实分组宽度断言布局方向，并确认展开侧栏后无横向溢出；lint 与 production build 通过。
+
+**已解决的根因（2026-08-22 审计）**
+
+- Settings Modal 当前使用 `max-width: 620px`、`width: 92%`，该外层宽度本身不是截图中大块留白的直接原因。
+- 桌面横向设置行的 `.settings-item-content` 使用 `flex: 1 1 200px`。横向主轴下，`200px` 是合理的内容宽度基准；最初切换为纵向布局时，同一个 `flex-basis: 200px` 随主轴改变成为约 `200px` 的高度基准，因此说明文字与下方控件之间被撑出大块空白。
+- 最初的断点把语言选择、主题 segmented control、胶片模式开关等不同类型的设置全部采用同一种纵向策略。现已按控件类型区分：语言/货币及复合操作在窄容器进入下一行，开关类设置继续保持“说明在左、控制在右”。
+- `.settings-list-group` 已声明 container，但最初的响应式行为仍主要由 viewport `@media` 决定。Modal 内容宽度与浏览器宽度并不始终相同，现已由 `settings-group` container query 按实际可用宽度处理行布局。
+
+**实施边界**
+
+- 本项只调整 Settings/Preferences 的布局、间距、控件排列与相邻测试；不改变语言、主题、胶片模式、拍摄记录 tab、货币、导出、图片恢复或账号相关业务逻辑。
+- 不通过增加固定 `height` / `min-height`、隐藏说明文字、缩小到低于可读字号，或再叠加单页随机断点解决问题。
+- 不改变共享 `Modal` 的全局尺寸规则，除非复核证明问题也影响其他 Modal；Settings 专属问题优先在 Settings 的行级布局契约中解决。
+
+**推荐实现方式**
+
+1. 在设置行转为纵向主轴时显式重置内容区的 flex 高度语义，例如让 `.settings-item-content` 使用内容驱动的 `flex-basis: auto` / `flex: 0 1 auto`，防止桌面宽度基准变成手机高度基准。
+2. 按控件类型定义响应式模式：语言、货币和较长复合操作在空间不足时移动到下一行并占满；主题选择保持整组可读；胶片模式及其他 compact toggle 优先保持同一行右对齐，只有在真实碰撞时才降级。
+3. 使用现有 spacing token 统一行内 `padding`、内容与控件间 `gap`、section 间距；不能用大固定高度制造表面整齐。说明换成两行时，行高应由内容自然增长。
+4. 如采用 container query，复用现有 `settings-group` 容器并建立一个明确阈值；删除与其竞争的重复 viewport override，避免相同宽度在全屏页面和 Modal 中得到不同结果。
+5. 保持 header 固定、body 单一滚动容器和底部 safe-area 行为；不能形成 Modal 外层与 Settings body 的双层滚动。
+
+**无障碍与视觉要求**
+
+- select、segmented control、toggle 和 disclosure button 保持可见 focus；手机触控目标至少 `44px`。
+- 说明文字不能因压缩而覆盖控件，也不能只靠 placeholder 解释设置含义。
+- 明暗主题均使用现有 token；分组边界、分隔线和 focus 对比清晰，不新增渐变、玻璃拟态或装饰性阴影。
+- 中英文切换后布局应自然增高而不是产生裁切；用户无需横向滚动才能操作任何设置。
+
+**自动与手工验收**
+
+- 组件测试覆盖语言、主题和胶片模式三种代表行，验证窄屏 class/结构下控件仍可操作且业务 handler 不变。
+- 响应式 E2E 覆盖 `320 / 375 / 390 / 430 / 540 / 768 / 1024px`、中英文、明暗主题与 `200%` zoom；断言无横向溢出、无异常大空白、无双层滚动。
+- 手工检查短窗口和 iPhone safe-area：header/关闭按钮始终可操作，滚动到底可访问所有设置，toggle 不被说明文字挤出可视区域。
+- 关闭条件：focused tests、响应式 E2E、`npm run lint` 和 production build 全部通过；上述条件已满足，Roadmap 已标记完成。
+
+<a id="ui-landing-brand-navigation"></a>
+### UI-13 Landing 品牌 Logo 与导航响应式防重叠
+
+**当前状态（2026-08-22，已完成）**
+
+- 已完成：`<=768px` 隐藏与 Hero 重复的顶栏试用入口，`<=560px` 隐藏 wordmark，仅保留 compact mark；语言、登录和注册入口保持可用。
+- 已完成：品牌容器增加可预测的 flex 收缩边界，Logo 外框改为 solid surface，移除新增渐变和强光晕；compact mark 作为装饰性图片处理，避免屏幕阅读器重复朗读品牌名称。
+- 已验证：Landing E2E 覆盖 `320 / 375 / 390 / 430 / 480 / 540 / 640 / 768 / 1024 / 1280 / 1440px`，断言品牌区与操作区 bounding boxes 不相交、页面无横向溢出，并确认窄屏隐藏重复试用入口；lint 与 production build 通过。
+
+**当前问题与根因（2026-08-22 审计）**
+
+- Landing 顶栏是两个 flex item：左侧品牌由 compact mark + wordmark 组成，右侧同时放置语言切换、试用、登录和注册。右侧 `.landing-nav-actions` 使用 `flex-shrink: 0`，在空间不足时不会缩小；左侧品牌虽然允许收缩，但其图片内容没有与操作区建立明确的最小安全间距，因此右侧会绘制到品牌区域上方。
+- 当前只有 `<=420px` 才隐藏 wordmark，而实际碰撞会在更宽的中窄屏提前发生，具体阈值还受中文/英文按钮长度、浏览器缩放和系统字体影响。`421-768px` 缺少 tablet/小窗口专用的渐进降级规则，是截图中 Logo 与语言按钮重叠的主要原因。
+- 新品牌结构同时渲染 `compact-logo.webp` 和 `word-logo.webp`，资产本身可以保留；问题不在图片尺寸文件，而在导航的总宽度预算和收缩优先级。
+- 新 Logo 外框使用 `linear-gradient`、inset glow 和额外 drop shadow，与项目“实色、克制、现代、禁止新增渐变装饰”的全局视觉基线不一致，也会在深色顶栏中过度突出。
+
+**实施边界**
+
+- 本项只处理 Landing 顶栏和 footer 的品牌展示、导航空间分配及响应式状态；不改变 Auth 路由、试用流程、语言状态、CTA 文案或登录注册行为。
+- 不通过绝对定位、负 margin、提高 z-index 相互覆盖，或仅针对截图宽度添加单点 media query 修补。
+- 不把完整导航改成新的汉堡菜单，除非现有操作经过产品确认需要重构；首轮优先使用渐进式压缩和隐藏低优先级重复入口。
+
+**推荐实现方式**
+
+1. 明确导航空间优先级：品牌 mark 与核心注册操作不可被裁切；wordmark、重复的顶栏试用入口和次级登录入口按产品优先级逐步降级。不要让任意 flex item 在未知空间下覆盖相邻区域。
+2. 为品牌容器设置可预测的收缩边界和 `overflow` 行为，并为 actions 保留安全 gap。wordmark 应在“即将碰撞”之前隐藏，而不是等到 `420px` 后才处理。
+3. 建立连续的桌面、tablet、中窄屏和手机状态。阈值应由真实中英文内容的总宽度验证得出；`421-768px` 至少需要一个明确状态，避免从完整桌面导航直接跳到极窄手机规则。
+4. 将 Logo 外框改为 solid surface + 单层边框，使用主题/landing token 保证深色背景中的可见度；移除新增渐变和强光晕。wordmark 继续保持正确宽高比，不用 CSS 拉伸或永久裁切资产。
+5. footer 可复用相同品牌资产与实色视觉语言，但尺寸独立；不要让 header 的收缩规则意外隐藏 footer wordmark。
+
+**响应式与无障碍要求**
+
+- 品牌链接应具有单一、准确的可访问名称；装饰性重复图片应避免让屏幕阅读器重复朗读“Grainfolio”。
+- 语言切换、试用、登录和注册的可见状态变化不能改变对应路由或操作语义；保留的触控目标至少 `44px`。
+- 中英文、系统字体放大和 `200%` zoom 下不得发生覆盖、裁切或页面横向滚动。
+- 顶栏固定时必须保持明确背景和边界，页面滚动内容不能穿透影响 Logo/操作可读性；不新增渐变背景。
+
+**自动与手工验收**
+
+- 组件测试确认品牌资产、语言切换与可见 CTA 保持正确语义；响应式隐藏只影响视觉重复项，不移除必要的可访问入口。
+- Playwright 覆盖 `320 / 375 / 390 / 430 / 480 / 540 / 640 / 768 / 1024 / 1280px`，中文和英文分别断言 Logo、语言和 CTA bounding boxes 不相交，页面无横向溢出。
+- 补 `200%` zoom、长本地化文案、键盘 focus、reduced-motion 和深色 Landing 的视觉 smoke；确认 Logo 在固定顶栏和 footer 中均清晰。
+- 关闭条件：focused tests、响应式 E2E、`npm run lint` 和 production build 全部通过；上述条件已满足，Roadmap 已标记完成。
+
+<a id="ui-auth-theme-branding"></a>
+### UI-14 公开认证页主题与品牌层级收口
+
+**当前状态（2026-08-22，已完成）**
+
+- 已完成：新增不持久化的 Auth 首次访问主题解析；没有已保存主题时 `/auth/*` 与旧 `/login` 使用深色，已有 Light/Dark/System 继续优先。
+- 已完成：共享 `AuthShell` 只保留一个具有可访问名称的 wordmark，移除 compact mark、渐变灯箱、径向光晕和多层品牌阴影；登录、注册、忘记密码、重设密码和 callback 自动复用。
+- 已验证：Auth/主题组件测试 `27 passed`；Auth E2E `7 passed`，覆盖首次深色、明确主题、单一 Logo、320-768px、键盘顺序和 44px 控件；lint 与 production build 通过。
+
+**审计结论（2026-08-22）**
+
+- Landing 使用固定深色视觉；`ThemeProvider` 在没有本地偏好时使用 `system`，因此浅色系统中的 `/auth/login`、`/auth/signup`、忘记密码和重设密码会显示浅色，形成明显硬切。`ensureTrialDefaultTheme()` 只在进入试用后设置深色，不能解决 Landing -> Auth 的入口连续性。
+- Auth 页面并非通常“不需要 Logo”。独立认证路由需要最低限度的品牌确认和返回上下文；真正的问题是当前 `AuthShell` 同时展示 compact mark、wordmark、渐变灯箱、光晕和阴影，视觉重量高于表单标题，并违反项目禁止新增渐变装饰的基线。
+- 已完成的 Auth 路由、安全 guard、OAuth 条件渲染和表单结构不需要重做；本项只处理公开入口的默认主题与品牌层级。
+
+**推荐实现**
+
+1. 用户已有明确主题偏好时始终尊重该偏好；只有没有明确偏好的首次公开访问才使用深色 Auth 外观，与 Landing 连续。登录和注册不得覆盖返回用户保存的主题，也不得把页面展示默认值错误写成用户偏好。
+2. Auth 卡片保留一个克制品牌入口：优先使用单一 wordmark，或小尺寸 compact mark + 文本二选一；不要完全移除品牌，也不要同时展示两个等权 Logo。
+3. 移除 Auth Logo 的渐变、径向光晕和多层发光阴影，改为主题 token 驱动的实色表面、单层边框和正确留白。品牌区不得挤压登录/注册标题。
+4. Landing -> 登录、Landing -> 注册、登录 <-> 注册、退出登录 -> 登录保持 `150-200ms` 颜色过渡并支持 reduced-motion；禁止通过整页 opacity 动画延迟表单可用性。
+
+**验收**
+
+- 覆盖无主题偏好、明确浅色、明确深色、System 浅色和 System 深色；明确偏好永远优先，首次入口没有黑白硬切。
+- 覆盖登录、注册、忘记密码、重设密码和 Auth callback；Logo 只有一个可访问品牌名称，返回首页和表单焦点顺序不变。
+- 覆盖 `320 / 375 / 430 / 768 / 1024px`、中英文、200% zoom、明暗主题和 reduced-motion；无渐变装饰、无 Logo/标题重叠、无横向溢出。
+
+<a id="ui-sidebar-density-alignment"></a>
+### UI-15 桌面 Sidebar 密度与折叠控制对齐
+
+**状态：已完成（2026-08-22）**
+
+- 桌面展开宽度采用 `240px`；折叠栏继续使用 `72px`，`<=1024px` Drawer 显式固定为 `280px`，不再意外继承桌面宽度。
+- 品牌与所有 `.nav-item` 使用统一水平节奏；Footer 控制保留共享透明边框，消除 Account、Preferences、Collapse 与主导航之间的 1px 轴线偏移。
+- Collapse control 的可见文字、`aria-label` 和 title 均随展开状态切换，隐藏的旧文字不再表达错误动作。
+- 自动化验证包含 `1025 / 1100 / 1249 / 1250 / 1440px` 桌面边界、390px 移动 Drawer、真实几何轴线、折叠语义与 44px 控件契约；Sidebar 单元测试 `2 passed`、E2E `3 passed`、lint 和 build 已通过。中英文、明暗主题、200% zoom 与 reduced-motion 仍属于发布前人工检查矩阵。
+
+**审计结论（2026-08-22）**
+
+- 展开 Sidebar 原固定 `260px`，属于常见的 `240-280px` 范围，并非功能错误；但 Grainfolio 导航标签较短、层级较少，260px 留白偏多，因此在不压缩文字的前提下收敛为 `240px`。
+- 折叠态 `72px` 与移动 Drawer `280px` 分别承担图标轨和触控抽屉职责，不应跟随桌面展开宽度一起缩小。
+- 导航和折叠按钮复用 `.nav-item`，ARIA/title 已按展开状态切换；剩余问题是品牌、导航、Footer 与 collapse control 的视觉轴线和文字起点没有形成一个显式契约，折叠动画期间还会同时改变宽度、padding、文字 max-width 和 Logo 状态。
+
+**推荐实现**
+
+1. 先以中英文最长导航文案、125%/200% zoom 测量最小安全宽度，再在 `232-240px` 中选择一个 token；不要仅凭截图设任意像素值。
+2. 为展开栏定义统一 icon column 和 label start：品牌、主导航、Account、Preferences、Collapse sidebar 使用同一水平节奏。Logo 可有独立尺寸，但可见内容起点必须与导航层级一致。
+3. Collapse control 保留动态 `aria-label` / title；展开态显示“收起侧边栏”，折叠态只显示向右图标和“展开侧边栏”tooltip，不让隐藏的旧文字参与宽度计算。
+4. 保持 `1250px` 抢跑折叠、`1024px` 移动 Drawer、手动展开/收起和 resize 时禁用过渡的现有行为，不改导航路由或权限。
+
+**验收**
+
+- 覆盖 1025、1100、1249、1250、1440px，中英文、明暗主题、200% zoom；主内容宽度增加但导航不截断。
+- 展开、折叠及移动 Drawer 中所有图标轴线稳定，Account/Preferences/Collapse 不跳位；键盘 focus、tooltip 和可访问名称与当前动作一致。
+- Sidebar 动画不引起主内容水平抖动或断点闪现；reduced-motion 下立即稳定到最终状态。
+
+<a id="ui-settings-disclosure-alignment"></a>
+### UI-16 Settings 拍摄记录布局行视觉对齐
+
+**状态：已完成（2026-08-22）**
+
+- 标题与“当前顺序”已合并为一个信息列，并与 32px 图标整体居中；移除了独立 summary 行和固定 `62px` 缩进。
+- 容器宽度不足时仅 disclosure button 进入下一行并占满可用宽度，图标与标题不会拆成纵向；按钮保留 `44px` 最小触控高度。
+- 展开内容使用语义化 icon-size/gap 变量计算缩进，窄容器自动取消缩进；默认折叠、Collections 开关、排序与 localStorage 行为均未改变。
+- Settings 组件测试 `7 passed`；`320 / 375 / 390 / 430 / 540 / 568 / 600 / 620 / 768 / 1024px` 响应式 E2E `10 passed`；lint 和 build 已通过。200% zoom、双主题视觉对比继续保留在发布前人工检查矩阵。
+
+**审计结论（2026-08-22）**
+
+- 普通设置行使用居中对齐；拍摄记录布局使用 `.settings-sub-card-header { align-items: flex-start; }`，内部 copy 也为顶部对齐，并把“当前顺序”作为 `padding-left: 62px` 的独立行。移除标题说明后，这种结构不再有足够内容支撑，图标和标题看起来明显上浮。
+- 当前窄容器规则还会让 `.settings-sub-card-copy` 切成纵向，可能把图标与标题拆成上下排列；这与其余设置项的“图标 + 标题”结构不一致。
+- 本项只调整视觉结构，不改变默认折叠、Collections 开关、tab 排序、锁定规则或 localStorage 偏好。
+
+**推荐实现**
+
+1. 折叠状态使用与普通设置行相同的中心轴：左侧图标 + 标题，中间/下方显示紧凑的当前顺序，右侧为至少 `44px` 的 disclosure button。
+2. “当前顺序”保持次级信息，可放在标题下方并与标题文字起点对齐；不要依赖固定 `62px` magic number，也不要把图标推到顶部。
+3. 中窄容器允许 summary 自然换行，操作按钮进入下一行时占满可用宽度；图标与标题始终保持同一行，不在 container query 中拆开。
+4. 展开后的排序列表继续使用现有边框、主题 token 和上下移动按钮；折叠/展开过渡只表达状态，不动画高度到不可预测值。
+
+**验收**
+
+- 与语言、外观、胶片工作流和货币行逐项比较图标中心、标题基线、左右 padding 与 divider；明暗主题边界清晰一致。
+- 覆盖折叠/展开、Collections 开关、胶片模式锁定、长中英文顺序、`320 / 375 / 430 / 568 / 620 / 768px` 和 200% zoom。
+- 键盘可展开、`aria-expanded`/`aria-controls` 保持正确；排序操作和持久化测试不得回归。
+
+<a id="ui-roll-cover-rendition"></a>
+### UI-17 拍摄记录封面清晰度与竖图显示源收口
+
+**状态：已完成（2026-08-22）**
+
+- 拍摄记录列表不再把全部照片交给 thumbnail-only URL map；卡片通过 IntersectionObserver 在接近视口时登记封面，仅为已见封面与当前打开详情解析高质量源。
+- 高质量源优先级为本地 1920px Blob、Cloud signed URL、thumbnail/旧 preview fallback；signed URL 或图片解码失败时保留本地缩略图，不产生空白封面。
+- Grid/List 卡片已由 CSS background 改为 `loading="lazy" decoding="async"` 的语义 `<img>`，卡片保持 `object-fit: cover`；详情封面与完整预览复用高质量 URL，完整预览保持 `contain`。
+- Blob URL 在 effect 取消、照片集合变化和卸载时统一 revoke；异步解析晚于卸载完成时也会立即清理，避免 URL 泄漏。
+- URL 优先级、可见请求、失败 fallback、lazy 属性和清理均有组件/Hook 测试；2:3 竖图 E2E 覆盖 IndexedDB Blob、刷新、卡片与完整预览。完整测试 `271 passed / 5 skipped`，lint 和 build 已通过。12MP 实拍图在 1x/2x/3x DPR 的主观锐度仍属于发布前真机检查，不影响本项代码完成状态。
+
+**审计结论（2026-08-22）**
+
+- 上传主文件会等比压缩为最长边 `1920px`、WebP quality `0.8`，不会永久裁切，通常足以支持当前卡片和完整预览。
+- Cloud 上传同时生成最长边 `400px`、quality `0.6` 的 Base64 thumbnail；`usePhotoUrlMap()` 默认优先返回该 thumbnail。横图尚可覆盖小卡片，但常见 2:3 竖图只有约 `267px` 宽，在 280px 以上卡片和 2x/3x DPR 屏幕会被放大，因此模糊主要来自错误的显示 rendition，而不是 1920px 主压缩。
+- 卡片使用 `background-size: cover; background-position: center`。竖图主体还可能被大幅裁切；清晰度属于本项，主体位置由后续 [`UI-11`](#ui-cover-focal-point) 处理，不能混为一次永久裁切。
+
+**推荐实现**
+
+1. 保留 400px thumbnail 作为快速占位和离线 fallback，不通过继续增大 Base64 数据把数据库变成图片仓库。
+2. 拍摄记录可见封面优先使用本地 1920px blob 或 Cloud signed preview；thumbnail 只在完整显示源尚未可用或请求失败时显示。长列表必须按可见封面请求并复用 URL，不能打开页面就为全部记录请求完整图。
+3. 优先把卡片封面从 CSS background 收口为语义化 `<img loading="lazy" decoding="async">` 或等价的可观察加载组件，以支持 progressive source、错误 fallback 和后续 `object-position`；不得破坏卡片主打开按钮和封面更换按钮的独立语义。
+4. 完整预览继续使用 `contain` 和高质量显示源；卡片保持 `cover`，随后由 UI-11 增加非破坏焦点位置。不得重新上传原图、永久裁切或引入全局照片库。
+
+**验收**
+
+- 使用至少 12MP 的横图、2:3 竖图、方图和高颗粒扫描图，对比 1x/2x/3x DPR；卡片在 280-600px 宽度不明显像素化，完整预览不使用 400px thumbnail。
+- 覆盖本地 blob、Cloud signed URL、thumbnail-only 历史数据、离线、signed URL 失败、账号切换和 URL revoke；渐进加载不得闪白或造成 CLS。
+- 组件/Hook 测试验证显示源优先级、失败 fallback、lazy 行为和 Blob URL 清理；E2E 覆盖竖图上传后卡片、刷新、离线 fallback 与完整预览。

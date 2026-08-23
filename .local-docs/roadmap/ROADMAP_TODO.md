@@ -22,10 +22,10 @@ Cloud/backend 的 Supabase、Auth/SMTP、Storage、RLS、migration/backfill、�
 - 核心产品：Dashboard、拍摄记录/项目集、器材库、财务/统计/对比、标签和 Excel 导入/导出已覆盖当前胶片工作流；导入已逐行校验，Photos/Albums 已隐藏，统计已改为胶片用户优先。
 - 器材与记录：相机/镜头/胶卷采用推荐 + 手动 fallback；120 后背、共享后背、固定后背、卷级镜头、装载冲突和封面刷新恢复已完成并有测试覆盖。Gear 已拆为独立 Tabs、领域表单、共享封面编辑器和 `useGearActions`，持久化仍复用原 Dexie transaction、库存 RPC 与 SyncService 路径。
 - 认证、会员与试用：Dev Bypass 已隔离到开发环境；注册、验证、登录、恢复密码和账号删除的前端流程，以及 RLS/private Storage、会员限制、试用入口/限制、Upgrade Modal 和 Account Center 已完成。正式域 OAuth、密码策略和观测仍按 P1 保持未完成。
-- UI 与 i18n：Landing、Settings、tab 偏好、响应式/CSS 收口、图片压缩和核心界面中英文已完成；PWA 更新提示和危险操作取消态测试已完成。架构文档仍需按最新同步、图片恢复和 Gear 拆分状态更新，不再将文档同步笼统标为完成。
+- UI 与 i18n：Landing、Settings、tab 偏好、响应式/CSS 收口、图片压缩和核心界面中英文已完成；本轮 Settings 密度与 Landing 品牌导航的窄屏细化已分别由 UI-12/UI-13 完成。PWA 更新提示和危险操作取消态测试已完成。架构文档仍需按最新同步、图片恢复和 Gear 拆分状态更新，不再将文档同步笼统标为完成。
 - 同步与验证：Dexie transaction queue、500ms 防抖、明确提交立即同步、Realtime/fallback、队列失败恢复、Cloud DB migration 和双设备 smoke 已完成；库存 RPC 使用 operation outbox + 幂等 `operationId`，不再由 LWW 覆盖库存数。`lint`、同步相关测试与 `npm run build` 已通过；仅保留非阻塞 bundle chunk size warning。Cloud sync 仍由 `VITE_ENABLE_SUPABASE_SYNC` 控制。
 - 邮件认证：Resend 发信域/发件人、真实注册与 recovery、900 秒 OTP、recovery intent、站内回跳 allowlist 已完成；正式 HTTPS、OAuth 和观测仍待完成。
-- Cloud Storage：`grainfolio-assets` private、owner signed URL、跨用户拒绝、`delete_user()` 权限和 cascade 已验证；上传失败不会再把空图片 metadata 推到 Cloud，本地 blob 补上传服务与 Settings 修复入口已实现。`photo-upload-recovery` 的同用户 in-flight 去重回归已恢复通过；2026-08-22 全量 Vitest 为 `58 passed / 3 skipped` 文件、`255 passed / 5 skipped` 测试。剩余阻塞仅为真实 Cloud 跨设备与 object/metadata 验收。
+- Cloud Storage：`grainfolio-assets` private、owner signed URL、跨用户拒绝、`delete_user()` 权限和 cascade 已验证；上传失败不会再把空图片 metadata 推到 Cloud。本地 blob 补上传、稳定对象路径、封面/关系原子提交、旧对象持久化清理与 Settings 修复入口已实现；2026-08-22 全量 Vitest 为 `59 passed / 3 skipped` 文件、`262 passed / 5 skipped` 测试。剩余阻塞仅为真实 Cloud 双设备与 object/metadata 验收。
 
 ## Next Up
 
@@ -55,7 +55,7 @@ Cloud/backend 的 Supabase、Auth/SMTP、Storage、RLS、migration/backfill、�
   - 建立不记录密码/token/完整敏感 URL 的统一 telemetry 边界，覆盖 Auth、Sync、Storage、ErrorBoundary 和人工排查路径；详见 [`CLD-04`](./CLOUD_TODO.md#cld-04-observability)。
 
 - [x] **Cloud Storage 图片完整性实现**
-  - Deferred metadata 防护、历史 blob 补上传服务、Settings 入口及同用户 in-flight repair 去重已实现并通过本地回归；真实 Cloud 完整验收见 [`CLD-01`](./CLOUD_TODO.md#cld-01-photo-integrity)。
+  - Deferred metadata 防护、历史 blob 补上传、稳定 object key、封面与 `coverPhotoId` 原子提交、旧封面清理重试、Settings 入口及组件失败测试均已通过本地回归；真实 Cloud 完整验收见 [`CLD-01`](./CLOUD_TODO.md#cld-01-photo-integrity)。
 
 - [ ] **Cloud Storage 图片完整性最终验证**
   - 完成跨设备 signed URL、object/metadata 对照、失败重试和重复对象保护；Cloud 步骤见 [`CLD-01`](./CLOUD_TODO.md#cld-01-photo-integrity)，界面验收见 [`UI-02`](./UI_UX_TODO.md#ui-cloud-photo-recovery)。此项关闭后，才可开始为封面图新增可同步的焦点位置元数据；不得并行实施 [`UI-11`](./UI_UX_TODO.md#ui-cover-focal-point)。
@@ -133,6 +133,24 @@ Cloud/backend 的 Supabase、Auth/SMTP、Storage、RLS、migration/backfill、�
 
 - [x] **跨页面长文案、页头操作与工具栏窄屏收口**
   - 已完成移动页头两行说明、主操作保护、Gear/Shooting Log 的 `<=360px` 整行降级，以及共享 Tabs、搜索与排序工具栏的固定宽度清理。`320 / 375 / 390 / 430 / 768 / 1024 / 1280px` 中英文 E2E 均确认无横向溢出；当前代码事实和验收见 [`UI-10`](./UI_UX_TODO.md#ui-responsive-copy-actions)。
+
+- [x] **Settings 设置项密度与窄屏布局收口**
+  - 已按控件类型拆分手机布局，并改为依据 Settings 分组的实际容器宽度响应；Language 在容器宽于 `360px` 时保持同排，极窄屏才换行，Film workflow toggle 固定保留完整 `40px` 宽度。Settings focused test、`320 / 375 / 390 / 430 / 540 / 568 / 600 / 620 / 768 / 1024px` E2E、lint 和 build 已验证；完整根因与回归契约见 [`UI-12`](./UI_UX_TODO.md#ui-settings-responsive-density)。
+
+- [x] **Landing 品牌 Logo 与导航响应式防重叠**
+  - 已建立 `<=768px` 的导航优先级、`<=560px` 的 wordmark 降级和 solid Logo surface，保留语言/登录/注册语义；`320 / 375 / 390 / 430 / 480 / 540 / 640 / 768 / 1024 / 1280 / 1440px` Landing E2E 已验证无横向溢出及品牌/操作区重叠，详细契约见 [`UI-13`](./UI_UX_TODO.md#ui-landing-brand-navigation)。
+
+- [x] **公开认证页主题与品牌层级收口**
+  - 无已保存主题时，公开 Auth 默认使用与 Landing 连续的深色外观且不写入用户偏好；已有 Light/Dark/System 继续优先。认证页已收敛为单一 wordmark，移除 compact mark、渐变灯箱与光晕。Auth 组件测试 `27 passed`、Auth E2E `7 passed`、lint 和 build 已通过；详细契约见 [`UI-14`](./UI_UX_TODO.md#ui-auth-theme-branding)。
+
+- [x] **桌面 Sidebar 密度与折叠控制对齐**
+  - 展开 Sidebar 已由 `260px` 收敛为 `240px`，品牌、主导航、账号/设置与折叠控制使用统一水平节奏；保留 `72px` 折叠栏并显式固定移动 Drawer 为 `280px`。折叠控制的可见文字和可访问名称会随状态同步更新；Sidebar 单元测试 `2 passed`、响应式 E2E `3 passed`、lint 和 build 已通过。详细契约见 [`UI-15`](./UI_UX_TODO.md#ui-sidebar-density-alignment)。
+
+- [x] **Settings 拍摄记录布局行视觉对齐**
+  - `Shooting record layout` 已改为图标与“标题 + 当前顺序”信息块居中对齐，移除独立 `62px` summary 缩进；窄容器只让 44px disclosure 按钮进入全宽下一行，图标与标题始终保持横排。折叠、排序和持久化逻辑未改变；组件测试 `7 passed`、10 个响应宽度 E2E、lint 和 build 已通过。详细契约见 [`UI-16`](./UI_UX_TODO.md#ui-settings-disclosure-alignment)。
+
+- [x] **拍摄记录封面清晰度与竖图显示源收口**
+  - 拍摄记录卡片现仅在封面进入视口附近时解析高质量源，本地 1920px Blob 优先于 Cloud signed URL，400px thumbnail 只承担渐进占位与失败回退。卡片改为 lazy/async 语义图片并保持 `cover`，详情与完整预览使用同一高质量源且完整预览保持 `contain`；Blob URL 会在取消或卸载时清理。完整单元测试 `271 passed / 5 skipped`、2:3 竖图刷新 E2E、lint 和 build 已通过；焦点位置仍由后续 UI-11 处理。详细契约见 [`UI-17`](./UI_UX_TODO.md#ui-roll-cover-rendition)。
 
 - [ ] **封面图非破坏焦点调整（P2，图片 Cloud 完整性后）**
   - 保留当前等比 WebP 压缩与卡片 `cover` 展示；为拍摄记录和器材封面保存可同步的焦点位置，不永久裁切图片、不引入原图相册或新照片库。完整产品、数据、无障碍与验收边界见 [`UI-11`](./UI_UX_TODO.md#ui-cover-focal-point)。

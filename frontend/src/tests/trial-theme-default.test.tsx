@@ -19,6 +19,7 @@ const ThemeProbe = () => {
 describe('trial theme default', () => {
   beforeEach(() => {
     storage.clear();
+    window.history.replaceState({}, '', '/');
 
     vi.mocked(localStorage.getItem).mockImplementation((key: string) => storage.get(key) ?? null);
     vi.mocked(localStorage.setItem).mockImplementation((key: string, value: string) => {
@@ -29,6 +30,42 @@ describe('trial theme default', () => {
     });
     vi.mocked(localStorage.clear).mockImplementation(() => {
       storage.clear();
+    });
+  });
+
+  it('defaults public auth routes to dark without persisting a user preference', async () => {
+    window.history.replaceState({}, '', '/auth/login');
+
+    render(
+      <ThemeProvider>
+        <ThemeProbe />
+      </ThemeProvider>
+    );
+
+    expect(screen.getByTestId('theme')).toHaveTextContent('dark');
+    await waitFor(() => {
+      expect(screen.getByTestId('actual-theme')).toHaveTextContent('dark');
+      expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
+    });
+    expect(storage.has('grainfolio-theme')).toBe(false);
+    expect(storage.has('grainfolio-theme-explicit')).toBe(false);
+  });
+
+  it('keeps a saved light theme on public auth routes', async () => {
+    storage.set('grainfolio-theme', 'light');
+    storage.set('grainfolio-theme-explicit', 'true');
+    window.history.replaceState({}, '', '/auth/signup');
+
+    render(
+      <ThemeProvider>
+        <ThemeProbe />
+      </ThemeProvider>
+    );
+
+    expect(screen.getByTestId('theme')).toHaveTextContent('light');
+    await waitFor(() => {
+      expect(screen.getByTestId('actual-theme')).toHaveTextContent('light');
+      expect(document.documentElement).toHaveAttribute('data-theme', 'light');
     });
   });
 

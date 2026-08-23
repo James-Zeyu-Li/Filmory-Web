@@ -2,6 +2,16 @@ import { expect, test } from '@playwright/test';
 import { resetBrowserData } from './helpers';
 
 test.describe('Auth public UI flows', () => {
+  test('uses a dark first-visit auth surface with one restrained brand mark', async ({ page }) => {
+    await resetBrowserData(page);
+    await page.goto('/auth/login', { waitUntil: 'domcontentloaded' });
+
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await expect(page.locator('.auth-brand-lockup img')).toHaveCount(1);
+    await expect(page.getByAltText(/Grainfolio 标志|Grainfolio logo/)).toBeVisible();
+    await expect(page.locator('.auth-brand-mark')).toHaveCount(0);
+  });
+
   test('navigates to forgot-password and renders reset/check-email fallback states', async ({ page }) => {
     await resetBrowserData(page);
 

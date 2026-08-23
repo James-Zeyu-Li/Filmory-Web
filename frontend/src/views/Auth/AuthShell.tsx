@@ -33,11 +33,9 @@ export const AuthShell: React.FC<AuthShellProps> = ({
         </Link>
 
         <div className="login-header auth-header">
-          <img
-            src="/logo.png"
-            alt={t('auth.logoAlt')}
-            className="login-logo-img auth-shell-logo"
-          />
+          <div className="auth-brand-lockup">
+            <img src="/word-logo.webp" alt={t('auth.logoAlt')} className="auth-brand-wordmark" />
+          </div>
           <h1>{title}</h1>
           <p>{subtitle}</p>
         </div>

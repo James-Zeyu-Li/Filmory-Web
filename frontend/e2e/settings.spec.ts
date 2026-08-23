@@ -2,6 +2,84 @@ import { test, expect } from '@playwright/test';
 import { resetAndLogin, resetBrowserData } from './helpers';
 
 test.describe('Settings flows', () => {
+  for (const width of [320, 375, 390, 430, 540, 568, 600, 620, 768, 1024]) {
+    test(`keeps settings rows usable without overflow at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await resetAndLogin(page);
+
+      const expandSidebar = page.getByRole('button', { name: /展开侧边栏|Expand sidebar/ });
+      if (await expandSidebar.isVisible().catch(() => false)) {
+        await expandSidebar.click();
+      }
+
+      const preferencesButton = page.locator('button').filter({ hasText: /偏好设置|Preferences/ }).first();
+      await expect(preferencesButton).toBeVisible();
+      await preferencesButton.click();
+      const settingsModal = page.locator('.modal-content').filter({ hasText: /设置与数据保护|Settings & Data Protection/ });
+      const languageRow = settingsModal.locator('.settings-language-item');
+      const filmModeRow = settingsModal.locator('.settings-film-mode-item');
+      const settingsGroup = settingsModal.locator('.settings-list-group').first();
+      const currencyRow = settingsModal.locator('.settings-currency-item');
+      const recordLayout = settingsModal.locator('.settings-sub-card');
+
+      await expect(settingsModal).toBeVisible();
+      const groupWidth = await settingsGroup.evaluate(element => element.getBoundingClientRect().width);
+      await expect(languageRow).toHaveCSS('flex-direction', groupWidth <= 360 ? 'column' : 'row');
+      await expect(filmModeRow).toHaveCSS('flex-direction', 'row');
+      await expect(filmModeRow.locator('.compact-toggle')).toHaveCSS('width', '40px');
+
+      const filmModeBox = await filmModeRow.boundingBox();
+      const filmToggleBox = await filmModeRow.locator('.compact-toggle').boundingBox();
+      expect(filmModeBox).not.toBeNull();
+      expect(filmToggleBox).not.toBeNull();
+      expect(filmToggleBox!.x + filmToggleBox!.width).toBeLessThanOrEqual(filmModeBox!.x + filmModeBox!.width);
+
+      const layoutIcon = await recordLayout.locator('.settings-item-icon').boundingBox();
+      const layoutCopy = await recordLayout.locator('.settings-sub-card-copy').boundingBox();
+      const layoutText = recordLayout.locator('.settings-item-text');
+      const disclosure = recordLayout.getByRole('button', { name: /展开|Expand/ });
+      const disclosureBox = await disclosure.boundingBox();
+      expect(layoutIcon).not.toBeNull();
+      expect(layoutCopy).not.toBeNull();
+      expect(disclosureBox).not.toBeNull();
+      await expect(recordLayout.locator('.settings-sub-card-copy')).toHaveCSS('flex-direction', 'row');
+      await expect(layoutText).toContainText(/拍摄记录布局|Shooting record layout/);
+      await expect(layoutText).toContainText(/当前顺序|Current order/);
+      expect(Math.abs((layoutIcon!.y + layoutIcon!.height / 2) - (layoutCopy!.y + layoutCopy!.height / 2)))
+        .toBeLessThanOrEqual(2);
+      await expect(disclosure).toHaveCSS('min-height', '44px');
+
+      if (groupWidth <= 540) {
+        expect(disclosureBox!.y).toBeGreaterThanOrEqual(layoutCopy!.y + layoutCopy!.height);
+        const stackedWidths = await recordLayout.locator('.settings-sub-card-header').evaluate(header => ({
+          copy: (header.querySelector('.settings-sub-card-copy') as HTMLElement).offsetWidth,
+          disclosure: (header.querySelector('.settings-disclosure-button') as HTMLElement).offsetWidth,
+        }));
+        expect(stackedWidths.disclosure).toBe(stackedWidths.copy);
+      } else {
+        expect(disclosureBox!.y).toBeLessThan(layoutCopy!.y + layoutCopy!.height);
+      }
+
+      if (groupWidth <= 540) {
+        const copyBox = await currencyRow.locator('.settings-item-content').boundingBox();
+        const actionBox = await currencyRow.locator('.settings-item-action').boundingBox();
+        expect(copyBox).not.toBeNull();
+        expect(actionBox).not.toBeNull();
+        expect(actionBox!.y).toBeGreaterThanOrEqual(copyBox!.y + copyBox!.height);
+      }
+
+      const metrics = await page.evaluate(() => ({
+        documentWidth: document.documentElement.clientWidth,
+        documentScrollWidth: document.documentElement.scrollWidth,
+        bodyWidth: document.body.clientWidth,
+        bodyScrollWidth: document.body.scrollWidth,
+      }));
+
+      expect(metrics.documentScrollWidth).toBeLessThanOrEqual(metrics.documentWidth + 1);
+      expect(metrics.bodyScrollWidth).toBeLessThanOrEqual(metrics.bodyWidth + 1);
+    });
+  }
+
   test('redirects unauthenticated private routes to login', async ({ page }) => {
     await resetBrowserData(page);
     await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
@@ -16,7 +94,7 @@ test.describe('Settings flows', () => {
 
     await expect(settingsModal.getByRole('heading', { name: '设置与数据保护' })).toBeVisible();
     await expect(settingsModal.getByText('测试管理员')).toBeVisible();
-    await expect(settingsModal.getByText('色彩主题')).toBeVisible();
+    await expect(settingsModal.getByText('外观')).toBeVisible();
     await expect(settingsModal.getByText('记账货币')).toBeVisible();
     await expect(settingsModal.getByRole('button', { name: '立即导出记录' })).toBeVisible();
     await expect(settingsModal.getByRole('button', { name: '重置数据库' })).toHaveCount(0);

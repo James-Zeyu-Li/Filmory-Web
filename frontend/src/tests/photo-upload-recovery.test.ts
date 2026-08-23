@@ -1,14 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '../db/schema';
 import {
+  cleanupPendingPhotoDeletes,
+  commitUploadedRollCover,
+  countPendingPhotoRepairs,
   findPendingPhotoUploads,
   repairPendingPhotoUploads,
   saveDeferredPhotoUpload,
 } from '../services/photoUploadRecoveryService';
-import { uploadPhotoToCloud } from '../services/storageService';
+import { deletePhotoFromCloud, uploadPhotoToCloud } from '../services/storageService';
 
 vi.mock('../services/storageService', () => ({
   uploadPhotoToCloud: vi.fn(),
+  deletePhotoFromCloud: vi.fn(),
 }));
 
 const USER_ID = 'photo-user';
@@ -22,13 +26,14 @@ const clearPhotoData = async () => {
   ]);
 };
 
-const addRoll = async () => {
+const addRoll = async (coverPhotoId?: string) => {
   await db.rolls.add({
     id: ROLL_ID,
     userId: USER_ID,
     name: 'Recovered cover',
     cameraIds: [],
     status: 'active',
+    coverPhotoId,
   });
 };
 
@@ -45,9 +50,22 @@ const createDeferredPhoto = (id = 'deferred-photo') => ({
   isPinned: 1,
 });
 
+const createCloudPhoto = (id: string, storageKey = `${USER_ID}/${ROLL_ID}/${id}.webp`) => ({
+  id,
+  userId: USER_ID,
+  rollId: ROLL_ID,
+  originalFileName: `${id}.webp`,
+  fileSize: 8,
+  storageKey,
+  thumbnailUrl: `data:image/webp;base64,${id}`,
+  addedAt: 1,
+  isPinned: 1,
+});
+
 describe('photo upload recovery service', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    vi.mocked(deletePhotoFromCloud).mockResolvedValue(undefined);
     localStorage.setItem('grainfolio_user_id', USER_ID);
     await clearPhotoData();
   });
@@ -78,7 +96,7 @@ describe('photo upload recovery service', () => {
       thumbnailUrl: 'data:image/webp;base64,thumb',
     });
 
-    await expect(repairPendingPhotoUploads(USER_ID)).resolves.toEqual({ found: 1, uploaded: 1, failed: 0 });
+    await expect(repairPendingPhotoUploads(USER_ID)).resolves.toEqual({ found: 1, uploaded: 1, cleaned: 0, failed: 0 });
 
     const uploadedPhoto = await db.photoAssets.get('deferred-photo');
     expect(uploadedPhoto).toMatchObject({
@@ -96,7 +114,7 @@ describe('photo upload recovery service', () => {
     expect(queuedPhoto?.payload).toMatchObject({ storageKey: `${USER_ID}/${ROLL_ID}/cover.webp` });
     expect(queuedPhoto?.payload?.blob).toBeUndefined();
 
-    await expect(repairPendingPhotoUploads(USER_ID)).resolves.toEqual({ found: 0, uploaded: 0, failed: 0 });
+    await expect(repairPendingPhotoUploads(USER_ID)).resolves.toEqual({ found: 0, uploaded: 0, cleaned: 0, failed: 0 });
     expect(uploadPhotoToCloud).toHaveBeenCalledTimes(1);
   });
 
@@ -104,25 +122,20 @@ describe('photo upload recovery service', () => {
     await addRoll();
     await saveDeferredPhotoUpload(createDeferredPhoto());
 
-    let finishUpload: ((value: { storageKey: string; previewUrl: string; thumbnailUrl: string }) => void) | undefined;
     vi.mocked(uploadPhotoToCloud).mockImplementation(() => new Promise(resolve => {
-      finishUpload = resolve;
+      queueMicrotask(() => resolve({
+        storageKey: `${USER_ID}/${ROLL_ID}/cover.webp`,
+        previewUrl: 'https://signed.example/preview',
+        thumbnailUrl: 'data:image/webp;base64,thumb',
+      }));
     }));
 
     const firstRepair = repairPendingPhotoUploads(USER_ID);
     const secondRepair = repairPendingPhotoUploads(USER_ID);
-    await new Promise(resolve => setTimeout(resolve, 0));
-    expect(uploadPhotoToCloud).toHaveBeenCalledTimes(1);
-
-    finishUpload?.({
-      storageKey: `${USER_ID}/${ROLL_ID}/cover.webp`,
-      previewUrl: 'https://signed.example/preview',
-      thumbnailUrl: 'data:image/webp;base64,thumb',
-    });
 
     await expect(Promise.all([firstRepair, secondRepair])).resolves.toEqual([
-      { found: 1, uploaded: 1, failed: 0 },
-      { found: 1, uploaded: 1, failed: 0 },
+      { found: 1, uploaded: 1, cleaned: 0, failed: 0 },
+      { found: 1, uploaded: 1, cleaned: 0, failed: 0 },
     ]);
     expect(uploadPhotoToCloud).toHaveBeenCalledTimes(1);
   });
@@ -133,7 +146,7 @@ describe('photo upload recovery service', () => {
     await db.syncQueue.clear();
     vi.mocked(uploadPhotoToCloud).mockRejectedValue(new Error('Storage unavailable'));
 
-    await expect(repairPendingPhotoUploads(USER_ID)).resolves.toEqual({ found: 1, uploaded: 0, failed: 1 });
+    await expect(repairPendingPhotoUploads(USER_ID)).resolves.toEqual({ found: 1, uploaded: 0, cleaned: 0, failed: 1 });
 
     const failedPhoto = await db.photoAssets.get('deferred-photo');
     expect(failedPhoto).toMatchObject({
@@ -149,7 +162,7 @@ describe('photo upload recovery service', () => {
     await db.photoAssets.add(createDeferredPhoto());
     await db.syncQueue.clear();
 
-    await expect(repairPendingPhotoUploads(USER_ID)).resolves.toEqual({ found: 1, uploaded: 0, failed: 1 });
+    await expect(repairPendingPhotoUploads(USER_ID)).resolves.toEqual({ found: 1, uploaded: 0, cleaned: 0, failed: 1 });
     expect(uploadPhotoToCloud).not.toHaveBeenCalled();
     await expect(db.photoAssets.get('deferred-photo')).resolves.toMatchObject({
       cloudUploadPending: true,
@@ -167,5 +180,86 @@ describe('photo upload recovery service', () => {
     await expect(findPendingPhotoUploads(USER_ID)).resolves.toMatchObject([
       { id: 'current-user-photo' },
     ]);
+  });
+
+  it('atomically replaces only the active cover and cleans its Cloud object', async () => {
+    await db.photoAssets.bulkAdd([
+      createCloudPhoto('old-cover'),
+      createCloudPhoto('unrelated-photo'),
+    ]);
+    await addRoll('old-cover');
+
+    await expect(commitUploadedRollCover(createCloudPhoto('new-cover'))).resolves.toEqual({
+      found: 1,
+      cleaned: 1,
+      failed: 0,
+    });
+
+    await expect(db.rolls.get(ROLL_ID)).resolves.toMatchObject({ coverPhotoId: 'new-cover' });
+    await expect(db.photoAssets.get('new-cover')).resolves.toMatchObject({ storageKey: `${USER_ID}/${ROLL_ID}/new-cover.webp` });
+    await expect(db.photoAssets.get('old-cover')).resolves.toBeUndefined();
+    await expect(db.photoAssets.get('unrelated-photo')).resolves.toBeDefined();
+    expect(deletePhotoFromCloud).toHaveBeenCalledWith(`${USER_ID}/${ROLL_ID}/old-cover.webp`);
+  });
+
+  it('keeps a failed previous-cover deletion durable and retries without replacing the new cover', async () => {
+    await db.photoAssets.add(createCloudPhoto('old-cover'));
+    await addRoll('old-cover');
+    vi.mocked(deletePhotoFromCloud).mockRejectedValueOnce(new Error('Storage unavailable'));
+
+    await expect(commitUploadedRollCover(createCloudPhoto('new-cover'))).resolves.toEqual({
+      found: 1,
+      cleaned: 0,
+      failed: 1,
+    });
+    await expect(db.rolls.get(ROLL_ID)).resolves.toMatchObject({ coverPhotoId: 'new-cover' });
+    await expect(db.photoAssets.get('old-cover')).resolves.toMatchObject({
+      cloudDeletePending: true,
+      cloudDeleteError: 'Storage unavailable',
+    });
+
+    vi.mocked(deletePhotoFromCloud).mockResolvedValue(undefined);
+    await expect(cleanupPendingPhotoDeletes(USER_ID)).resolves.toEqual({ found: 1, cleaned: 1, failed: 0 });
+    await expect(db.photoAssets.get('old-cover')).resolves.toBeUndefined();
+    await expect(db.rolls.get(ROLL_ID)).resolves.toMatchObject({ coverPhotoId: 'new-cover' });
+  });
+
+  it('keeps the previous Cloud cover until a deferred replacement is uploaded', async () => {
+    await db.photoAssets.add(createCloudPhoto('old-cover'));
+    await addRoll('old-cover');
+    await saveDeferredPhotoUpload(createDeferredPhoto());
+    await db.syncQueue.clear();
+
+    await expect(db.photoAssets.get('old-cover')).resolves.toBeDefined();
+    await expect(db.photoAssets.get('deferred-photo')).resolves.toMatchObject({ replacesPhotoId: 'old-cover' });
+    vi.mocked(uploadPhotoToCloud).mockResolvedValue({
+      storageKey: `${USER_ID}/${ROLL_ID}/deferred-photo_cover.webp`,
+      previewUrl: 'https://signed.example/preview',
+      thumbnailUrl: 'data:image/webp;base64,thumb',
+    });
+
+    await expect(repairPendingPhotoUploads(USER_ID)).resolves.toEqual({
+      found: 1,
+      uploaded: 1,
+      cleaned: 1,
+      failed: 0,
+    });
+    expect(uploadPhotoToCloud).toHaveBeenCalledWith(
+      expect.any(File),
+      USER_ID,
+      ROLL_ID,
+      undefined,
+      'deferred-photo',
+    );
+    await expect(db.photoAssets.get('old-cover')).resolves.toBeUndefined();
+    await expect(db.rolls.get(ROLL_ID)).resolves.toMatchObject({ coverPhotoId: 'deferred-photo' });
+  });
+
+  it('counts pending uploads and pending Cloud cleanup without including complete photos', () => {
+    expect(countPendingPhotoRepairs([
+      createDeferredPhoto('local-upload'),
+      { ...createCloudPhoto('cleanup'), cloudDeletePending: true },
+      createCloudPhoto('complete'),
+    ])).toBe(2);
   });
 });

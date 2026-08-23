@@ -58,7 +58,8 @@ export const uploadPhotoToCloud = async (
   file: File, 
   userId: string, 
   rollId: string,
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number) => void,
+  objectId?: string,
 ): Promise<UploadResult> => {
   
   try {
@@ -68,7 +69,8 @@ export const uploadPhotoToCloud = async (
     // 2. 构造绝对防冲撞的云端隔离路径: {userId}/{rollId}/{timestamp}_{filename}
     // 过滤掉文件名中可能引起 URL 解析错误的特殊字符
     const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const storageKey = `${userId}/${rollId}/${Date.now()}_${safeFileName}`;
+    const stableObjectId = objectId || crypto.randomUUID();
+    const storageKey = `${userId}/${rollId}/${stableObjectId}_${safeFileName}`;
 
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token || '';
@@ -150,6 +152,6 @@ export const getSignedPhotoUrl = async (
 export const deletePhotoFromCloud = async (storageKey: string): Promise<void> => {
   const { error } = await supabase.storage.from(PHOTO_BUCKET).remove([storageKey]);
   if (error) {
-    console.error('[Supabase Delete Failed]', error.message);
+    throw new Error(`[Supabase Delete Failed] ${error.message}`);
   }
 };

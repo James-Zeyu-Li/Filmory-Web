@@ -6,9 +6,12 @@ import { useFeedback } from '../../contexts/useFeedback';
 import { useCurrency } from '../../contexts/useCurrency';
 import { useTrialGate } from '../../contexts/useTrialGate';
 import { useLanguage } from '../../contexts/useLanguage';
-import { uploadPhotoToCloud } from '../../services/storageService';
+import { deletePhotoFromCloud, uploadPhotoToCloud } from '../../services/storageService';
 import { SyncService } from '../../services/syncService';
-import { saveDeferredPhotoUpload } from '../../services/photoUploadRecoveryService';
+import {
+  commitUploadedRollCover,
+  saveDeferredPhotoUpload,
+} from '../../services/photoUploadRecoveryService';
 import { Folder, Search, LayoutGrid, List, Trash2, Film, Plus, Camera, ArrowLeft, CheckCircle, X, Upload, Star, Sparkles, Package, Aperture, ChevronDown, Eye } from 'lucide-react';
 import { IconButton } from '../../components/ui/IconButton';
 import { motion, useReducedMotion } from 'framer-motion';
@@ -44,6 +47,7 @@ import { requestImmediateSync } from '../../services/syncEvents';
 import { adjustFilmStock, createRollWithInventory } from '../../services/inventoryOperationService';
 
 import { CollectionsTab } from './CollectionsTab';
+import { RollCoverImage } from './RollCoverImage';
 import type { CameraTransfer, Roll } from '../../db/schema';
 
 interface RollsViewProps {
@@ -92,7 +96,6 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   const photos = usePhotoAssets();
 
   const collections = useCollections();
-  const photoUrlMap = usePhotoUrlMap(photos);
   const initialSearchParams = new URLSearchParams(location.search);
   const shouldOpenNewRoll = initialSearchParams.get('newRoll') === '1';
   const openRollId = initialSearchParams.get('openRoll');
@@ -192,7 +195,17 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadingCoverRollId, setUploadingCoverRollId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [visibleCoverPhotoIds, setVisibleCoverPhotoIds] = useState<Set<string>>(() => new Set());
   const hydratedDrawerRollIdRef = useRef<string | null>(null);
+
+  const registerVisibleCover = (photoId: string) => {
+    setVisibleCoverPhotoIds(current => {
+      if (current.has(photoId)) return current;
+      const next = new Set(current);
+      next.add(photoId);
+      return next;
+    });
+  };
 
   const visibleFilmStocks = filmStocks.filter(f => f.isSystem === 0);
   const selectedCameras = selectedCameraIds
@@ -740,6 +753,9 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     setUploadingCoverRollId(targetRollId);
     setUploadProgress(0);
     
+    let uploadedStorageKey: string | undefined;
+    let cloudAssetCommitted = false;
+
     try {
         const webpFile = await compressImageToWebP(
           file,
@@ -754,7 +770,14 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
         let isDeferredCloudUpload = false;
         if (user) {
           try {
-            uploadResult = await uploadPhotoToCloud(webpFile, user.id, targetRollId, (pct) => setUploadProgress(pct));
+            uploadResult = await uploadPhotoToCloud(
+              webpFile,
+              user.id,
+              targetRollId,
+              (pct) => setUploadProgress(pct),
+              photoId,
+            );
+            uploadedStorageKey = uploadResult.storageKey;
           } catch (err) {
             isDeferredCloudUpload = cloudUploadPending;
             if (isDeferredCloudUpload) {
@@ -785,29 +808,34 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
           orderIndex: 0
         };
 
-        if (isDeferredCloudUpload) {
+        if (!uploadResult) {
           await saveDeferredPhotoUpload(photoAsset);
         } else {
-          await db.transaction('rw', db.photoAssets, db.rolls, async () => {
-            await db.photoAssets.add(photoAsset);
-            await db.rolls.update(targetRollId, { coverPhotoId: photoId });
-          });
-        }
-
-        if (uploadResult) {
-          await db.transaction('rw', db.photoAssets, async () => {
-            // Do not remove the previous cloud cover until the replacement uploaded.
-            if (targetRoll.coverPhotoId) {
-              const oldPhotos = await db.photoAssets.where('rollId').equals(targetRollId).toArray();
-              for (const p of oldPhotos) {
-                if (p.id !== photoId && p.id) await db.photoAssets.delete(p.id);
-              }
-            }
-          });
+          const cleanup = await commitUploadedRollCover(photoAsset);
+          cloudAssetCommitted = true;
+          if (cleanup.failed > 0) {
+            notify({
+              type: 'info',
+              title: t('rolls.coverCleanupPendingTitle'),
+              message: t('rolls.coverCleanupPendingMessage'),
+            });
+          }
           requestImmediateSync('roll-cover-upload');
         }
     } catch(e) {
         console.error(e);
+        if (uploadedStorageKey && !cloudAssetCommitted) {
+          try {
+            await deletePhotoFromCloud(uploadedStorageKey);
+          } catch (cleanupError) {
+            console.error('Failed to roll back an uncommitted cover upload:', cleanupError);
+          }
+        }
+        notify({
+          type: 'error',
+          title: t('rolls.coverUploadProcessingFailedTitle'),
+          message: t('rolls.coverUploadProcessingFailedMessage'),
+        });
     } finally {
       setIsUploading(false);
       setUploadingCoverRollId(null);
@@ -907,21 +935,41 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     
     return result;
   }, [rolls, libraryView, searchQuery, sortBy, cameras, filmStocks]);
+
+  const photoById = useMemo(
+    () => new Map(photos.flatMap(photo => photo.id ? [[photo.id, photo] as const] : [])),
+    [photos],
+  );
+  const selectedCoverPhotoId = selectedRoll?.coverPhotoId;
+  const coverPhotosToResolve = useMemo(() => {
+    const ids = new Set(visibleCoverPhotoIds);
+    if (selectedCoverPhotoId) ids.add(selectedCoverPhotoId);
+    return Array.from(ids).flatMap(id => {
+      const photo = photoById.get(id);
+      return photo ? [photo] : [];
+    });
+  }, [photoById, selectedCoverPhotoId, visibleCoverPhotoIds]);
+  const photoUrlMap = usePhotoUrlMap(coverPhotosToResolve, { preferFull: true });
   
-  // Find cover photo url for a roll
+  const getCoverPhoto = (roll: Roll) => roll.coverPhotoId ? photoById.get(roll.coverPhotoId) : undefined;
+
   const getCoverUrl = (roll: Roll) => {
-      if (!roll.coverPhotoId) return undefined;
-      const p = photos.find(ph => ph.id === roll.coverPhotoId);
-      if (!p) return undefined;
-      return p.id ? photoUrlMap[p.id] : undefined;
+    const photo = getCoverPhoto(roll);
+    return photo?.id ? photoUrlMap[photo.id] : undefined;
   };
 
+  const selectedRollCoverPhoto = selectedRoll ? getCoverPhoto(selectedRoll) : undefined;
   const selectedRollCoverUrl = selectedRoll ? getCoverUrl(selectedRoll) : undefined;
+  const selectedRollCoverDisplayUrl = selectedRollCoverUrl
+    || selectedRollCoverPhoto?.thumbnailUrl
+    || selectedRollCoverPhoto?.previewUrl;
 
 
 
   const renderRollCard = (roll: Roll) => {
+    const coverPhoto = getCoverPhoto(roll);
     const coverUrl = getCoverUrl(roll);
+    const coverFallbackUrl = coverPhoto?.thumbnailUrl || coverPhoto?.previewUrl;
     const collectionName = roll.collectionId ? collections.find(c => c.id === roll.collectionId)?.name : null;
     const collectionActionId = viewLayout === 'list' ? undefined : (libraryView === 'collections' ? activeCollectionId : undefined);
 
@@ -951,8 +999,14 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
         >
           <button type="button" className="record-card-open-action" onClick={(event) => { event.stopPropagation(); openRollDrawer(roll); }} aria-label={t('rolls.openDetails', { name: roll.name })} />
           <div className="roll-card-row-thumb-wrapper">
-            {coverUrl ? (
-              <div className="roll-card-row-thumb" style={{ backgroundImage: `url(${coverUrl})` }} />
+            {coverPhoto?.id ? (
+              <RollCoverImage
+                photoId={coverPhoto.id}
+                src={coverUrl}
+                fallbackSrc={coverFallbackUrl}
+                className="roll-card-row-thumb"
+                onVisible={registerVisibleCover}
+              />
             ) : (
               <div className="roll-card-row-thumb roll-card-placeholder" style={placeholderStyle}><Film size={28} /></div>
             )}
@@ -967,10 +1021,10 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
               className="roll-card-cover-action"
               onClick={event => openQuickCoverPicker(event, roll)}
               disabled={isUploading}
-              aria-label={`${coverUrl ? t('rolls.changeCover') : t('rolls.uploadCover')}: ${roll.name}`}
+              aria-label={`${coverPhoto ? t('rolls.changeCover') : t('rolls.uploadCover')}: ${roll.name}`}
             >
               <Upload size={16} />
-              <span>{uploadingCoverRollId === roll.id ? t('rolls.uploadingCover') : coverUrl ? t('rolls.changeCover') : t('rolls.uploadCover')}</span>
+              <span>{uploadingCoverRollId === roll.id ? t('rolls.uploadingCover') : coverPhoto ? t('rolls.changeCover') : t('rolls.uploadCover')}</span>
             </button>
           </div>
 
@@ -1035,11 +1089,16 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
       >
         <button type="button" className="record-card-open-action" onClick={(event) => { event.stopPropagation(); openRollDrawer(roll); }} aria-label={t('rolls.openDetails', { name: roll.name })} />
         {/* Image Zone */}
-        <div 
-          className="roll-card-cover" 
-          style={coverUrl ? { backgroundImage: `url(${coverUrl})` } : placeholderStyle}
-        >
-          {!coverUrl && <div className="roll-card-placeholder"><Film size={28} /></div>}
+        <div className="roll-card-cover" style={coverPhoto ? undefined : placeholderStyle}>
+          {coverPhoto?.id ? (
+            <RollCoverImage
+              photoId={coverPhoto.id}
+              src={coverUrl}
+              fallbackSrc={coverFallbackUrl}
+              className="roll-card-cover-image-frame"
+              onVisible={registerVisibleCover}
+            />
+          ) : <div className="roll-card-placeholder"><Film size={28} /></div>}
           
           <div className="roll-card-status">
             {roll.status === 'active' 
@@ -1057,10 +1116,10 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
             className="roll-card-cover-action"
             onClick={event => openQuickCoverPicker(event, roll)}
             disabled={isUploading}
-            aria-label={`${coverUrl ? t('rolls.changeCover') : t('rolls.uploadCover')}: ${roll.name}`}
+            aria-label={`${coverPhoto ? t('rolls.changeCover') : t('rolls.uploadCover')}: ${roll.name}`}
           >
             <Upload size={18} />
-            <span>{uploadingCoverRollId === roll.id ? t('rolls.uploadingCover') : coverUrl ? t('rolls.changeCover') : t('rolls.uploadCover')}</span>
+            <span>{uploadingCoverRollId === roll.id ? t('rolls.uploadingCover') : coverPhoto ? t('rolls.changeCover') : t('rolls.uploadCover')}</span>
           </button>
         </div>
 
@@ -1487,15 +1546,17 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                          onDragLeave={() => setIsDragOver(false)}
                          onDrop={isUploading ? undefined : handleDrop}
                     >
-                      {selectedRollCoverUrl && !isUploading ? (
+                      {selectedRollCoverDisplayUrl && !isUploading ? (
                         <button
                           type="button"
                           className="cover-preview roll-cover-preview-button"
-                          style={{ backgroundImage: `url(${selectedRollCoverUrl})` }}
-                          onClick={() => setCoverPreviewUrl(selectedRollCoverUrl)}
+                          onClick={() => selectedRollCoverUrl && setCoverPreviewUrl(selectedRollCoverUrl)}
                           aria-label={t('rolls.viewCover')}
                           title={t('rolls.viewCover')}
-                        />
+                          disabled={!selectedRollCoverUrl}
+                        >
+                          <img src={selectedRollCoverDisplayUrl} alt="" decoding="async" />
+                        </button>
                       ) : isUploading ? (
                         <div className="roll-cover-uploading">
                           <span>{uploadProgress}%</span>
@@ -1511,7 +1572,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                     </div>
                   </div>
                   <div className="roll-cover-editor-content">
-                    <p>{selectedRollCoverUrl ? t('rolls.coverCustom') : t('rolls.uploadCoverHint')}</p>
+                    <p>{selectedRollCoverPhoto ? t('rolls.coverCustom') : t('rolls.uploadCoverHint')}</p>
                     <div className="roll-cover-actions">
                       {selectedRollCoverUrl && (
                         <button type="button" className="secondary roll-cover-action" onClick={() => setCoverPreviewUrl(selectedRollCoverUrl)}>
@@ -1526,7 +1587,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                       >
                         {isUploading
                           ? t('rolls.uploadingCover')
-                          : selectedRollCoverUrl
+                          : selectedRollCoverPhoto
                             ? t('rolls.changeCover')
                             : t('rolls.uploadCover')}
                       </button>

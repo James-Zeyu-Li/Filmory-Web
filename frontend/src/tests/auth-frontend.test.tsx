@@ -88,6 +88,7 @@ describe('Auth frontend closure', () => {
 
     expect(screen.getByRole('main')).toHaveClass('login-container');
     expect(screen.getByAltText('Grainfolio 标志')).toBeInTheDocument();
+    expect(screen.getAllByRole('img')).toHaveLength(1);
     expect(screen.getByRole('heading', { name: '欢迎回来' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Google' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'GitHub' })).toBeInTheDocument();

@@ -1,15 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ThemeContext, type Theme } from './themeContextCore';
 import {
+  getInitialTheme,
   getStoredTheme,
   persistThemePreference,
   THEME_SYNC_EVENT,
 } from '../services/themePreference';
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    return getStoredTheme() ?? 'system';
-  });
+  const [theme, setThemeState] = useState<Theme>(() => getInitialTheme());
 
   const [actualTheme, setActualTheme] = useState<'dark' | 'light'>('dark');
   const themeTransitionTimeoutRef = useRef<number | null>(null);

@@ -12,7 +12,10 @@ import { CURRENCY_OPTIONS, type CurrencyCode } from '../../contexts/currencyCont
 import { useLanguage } from '../../contexts/useLanguage';
 import { LANGUAGE_OPTIONS, type LanguageCode } from '../../i18n/translations';
 import { convertCurrentUserMoney } from '../../services/currencyConversionService';
-import { repairPendingPhotoUploads } from '../../services/photoUploadRecoveryService';
+import {
+  countPendingPhotoRepairs,
+  repairPendingPhotoUploads,
+} from '../../services/photoUploadRecoveryService';
 import { SyncService } from '../../services/syncService';
 import { requestImmediateSync } from '../../services/syncEvents';
 import { usePhotoAssets } from '../../hooks/useData';
@@ -55,8 +58,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
   const [deleteError, setDeleteError] = useState('');
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
-  const pendingPhotoUploadCount = user && SyncService.isAutoSyncEnabled()
-    ? photoAssets.filter(photo => Boolean(photo.id && photo.blob && !photo.storageKey)).length
+  const pendingPhotoRepairCount = user && SyncService.isAutoSyncEnabled()
+    ? countPendingPhotoRepairs(photoAssets)
     : 0;
 
   const rollsTabLabels: Record<RollsTabId, string> = {
@@ -109,23 +112,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
   };
 
   const handleRepairPendingPhotos = async () => {
-    if (!user || pendingPhotoUploadCount === 0) return;
+    if (!user || pendingPhotoRepairCount === 0) return;
 
     try {
       setIsProcessing(true);
       setProcessMessage(t('settings.repairingPhotos'));
       const result = await repairPendingPhotoUploads(user.id);
+      const completed = result.uploaded + result.cleaned;
 
-      if (result.uploaded > 0) {
+      if (completed > 0) {
         requestImmediateSync('photo-upload-recovery');
       }
 
       if (result.failed > 0) {
         notify({
-          type: result.uploaded > 0 ? 'info' : 'error',
-          title: t(result.uploaded > 0 ? 'settings.repairPhotosPartialTitle' : 'settings.repairPhotosFailedTitle'),
-          message: result.uploaded > 0
-            ? t('settings.repairPhotosPartialMessage', { uploaded: result.uploaded, failed: result.failed })
+          type: completed > 0 ? 'info' : 'error',
+          title: t(completed > 0 ? 'settings.repairPhotosPartialTitle' : 'settings.repairPhotosFailedTitle'),
+          message: completed > 0
+            ? t('settings.repairPhotosPartialMessage', { completed, failed: result.failed })
             : t('settings.repairPhotosFailedMessage'),
         });
         return;
@@ -134,7 +138,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
       notify({
         type: 'success',
         title: t('settings.repairPhotosDoneTitle'),
-        message: t('settings.repairPhotosDoneMessage', { uploaded: result.uploaded }),
+        message: t('settings.repairPhotosDoneMessage', { completed }),
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : t('settings.unknownError');
@@ -284,12 +288,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
             <h3>{t('settings.uiPreferences')}</h3>
           </div>
           <div className="settings-list-group">
-            <div className="settings-list-item">
+            <div className="settings-list-item settings-language-item">
               <div className="settings-item-content">
                 <div className="settings-item-icon safe"><Languages size={18} /></div>
                 <div className="settings-item-text">
                   <h4>{t('settings.language')}</h4>
-                  <p>{t('settings.languageDesc')}</p>
                 </div>
               </div>
               <div className="settings-item-action settings-inline-actions">
@@ -313,7 +316,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
                 <div className="settings-item-icon safe"><Sun size={18} /></div>
                 <div className="settings-item-text">
                   <h4>{t('settings.theme')}</h4>
-                  <p>{t('settings.themeDesc')}</p>
                 </div>
               </div>
               <div className="settings-item-action">
@@ -346,7 +348,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
               </div>
             </div>
 
-            <div className="settings-list-item">
+            <div className="settings-list-item settings-film-mode-item">
               <div className="settings-item-content">
                 <div className="settings-item-icon safe"><Film size={18} /></div>
                 <div className="settings-item-text">
@@ -372,7 +374,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
                   <div className="settings-item-icon safe"><Folder size={16} /></div>
                   <div className="settings-item-text">
                     <h4>{t('settings.rollTabLayout')}</h4>
-                    <p>{t('settings.rollTabLayoutDesc')}</p>
+                    <div className="settings-sub-card-summary">
+                      <span>{t('settings.currentRollTabOrder')}</span>
+                      <strong>{visibleRollTabSummary}</strong>
+                    </div>
                   </div>
                 </div>
                 <button
@@ -385,10 +390,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
                   <span>{isRollTabLayoutExpanded ? t('settings.collapseSection') : t('settings.expandSection')}</span>
                   <ChevronDown size={14} />
                 </button>
-              </div>
-              <div className="settings-sub-card-summary">
-                <span>{t('settings.currentRollTabOrder')}</span>
-                <strong>{visibleRollTabSummary}</strong>
               </div>
               {isRollTabLayoutExpanded && (
               <div className="settings-sub-card-body" id="settings-roll-tab-layout-panel">
@@ -449,7 +450,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
               )}
             </div>
 
-            <div className="settings-list-item settings-currency-item">
+            <div className="settings-list-item settings-stack-on-mobile settings-currency-item">
               <div className="settings-item-content">
                 <div className="settings-item-icon safe"><Coins size={18} /></div>
                 <div className="settings-item-text">
@@ -462,6 +463,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
                   className="form-control"
                   value={currency}
                   onChange={e => setCurrency(e.target.value as CurrencyCode)}
+                  aria-label={t('settings.currency')}
                 >
                   {CURRENCY_OPTIONS.map(option => (
                     <option key={option.code} value={option.code}>
@@ -482,13 +484,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
                 </button>
               </div>
             </div>
-            {pendingPhotoUploadCount > 0 && (
-              <div className="settings-list-item">
+            {pendingPhotoRepairCount > 0 && (
+              <div className="settings-list-item settings-stack-on-mobile">
                 <div className="settings-item-content">
                   <div className="settings-item-icon safe"><CloudUpload size={18} /></div>
                   <div className="settings-item-text">
                     <h4>{t('settings.repairPhotosTitle')}</h4>
-                    <p>{t('settings.repairPhotosDesc', { count: pendingPhotoUploadCount })}</p>
+                    <p>{t('settings.repairPhotosDesc', { count: pendingPhotoRepairCount })}</p>
                   </div>
                 </div>
                 <div className="settings-item-action">
@@ -498,7 +500,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
                     onClick={handleRepairPendingPhotos}
                     disabled={isProcessing}
                   >
-                    {t('settings.repairPhotosAction', { count: pendingPhotoUploadCount })}
+                    {t('settings.repairPhotosAction', { count: pendingPhotoRepairCount })}
                   </button>
                 </div>
               </div>
@@ -511,7 +513,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
             <h3>{t('settings.dataOwnership')}</h3>
           </div>
           <div className="settings-list-group">
-            <div className="settings-list-item">
+            <div className="settings-list-item settings-stack-on-mobile">
               <div className="settings-item-content">
                 <div className="settings-item-icon safe"><Download size={18} /></div>
                 <div className="settings-item-text">
@@ -538,7 +540,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
               <h3>{t('settings.accountSecurity')}</h3>
             </div>
             <div className="settings-list-group">
-              <div className="settings-list-item danger-zone">
+              <div className="settings-list-item settings-stack-on-mobile danger-zone">
                 <div className="settings-item-content">
                   <div className="settings-item-icon danger"><UserX size={18} /></div>
                   <div className="settings-item-text">

@@ -64,17 +64,25 @@
   gap: 10px;
 }
 
-.login-logo-img {
-  width: 52px;
-  height: 52px;
-  object-fit: contain;
-  margin: 0 auto;
-  display: block;
+.auth-brand-lockup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 32px;
+  margin: 0 auto 4px;
 }
 
-.auth-shell-logo {
-  width: 64px;
-  height: 64px;
+.auth-brand-wordmark {
+  display: block;
+  width: auto;
+  height: 26px;
+  max-width: min(180px, 48vw);
+  object-fit: contain;
+}
+
+[data-theme='dark'] .auth-brand-wordmark {
+  filter: invert(1) grayscale(1) brightness(1.2);
 }
 
 .login-header h1 {

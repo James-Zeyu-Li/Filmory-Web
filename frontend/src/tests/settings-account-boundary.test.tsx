@@ -10,7 +10,7 @@ const mockSetCurrency = vi.fn();
 const mockSetLanguage = vi.fn();
 const mockConfirm = vi.fn();
 const mockSetEnableFilmMode = vi.fn();
-let photoAssets: Array<{ id?: string; blob?: Blob; storageKey?: string }> = [];
+let photoAssets: Array<{ id?: string; blob?: Blob; storageKey?: string; cloudDeletePending?: boolean }> = [];
 let currentLanguage: 'zh-CN' | 'en-US' = 'zh-CN';
 
 const mockAuthState = {
@@ -77,6 +77,9 @@ vi.mock('../services/accountService', () => ({
 }));
 
 vi.mock('../services/photoUploadRecoveryService', () => ({
+  countPendingPhotoRepairs: (photos: typeof photoAssets) => photos.filter(photo => (
+    Boolean((photo.blob && !photo.storageKey) || (photo.storageKey && photo.cloudDeletePending))
+  )).length,
   repairPendingPhotoUploads: vi.fn(),
 }));
 
@@ -104,7 +107,7 @@ describe('SettingsView account boundary', () => {
     mockAuthState.completeSignedOutTransition.mockReset();
     vi.mocked(deleteCurrentAccount).mockReset();
     vi.mocked(deleteCurrentAccount).mockResolvedValue(undefined);
-    vi.mocked(repairPendingPhotoUploads).mockResolvedValue({ found: 0, uploaded: 0, failed: 0 });
+    vi.mocked(repairPendingPhotoUploads).mockResolvedValue({ found: 0, uploaded: 0, cleaned: 0, failed: 0 });
     vi.mocked(requestImmediateSync).mockReset();
   });
 
@@ -137,7 +140,7 @@ describe('SettingsView account boundary', () => {
       />
     );
 
-    expect(screen.getByRole('group', { name: '色彩主题' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: '外观' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '跟随系统' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: '浅色' })).toHaveAttribute('aria-pressed', 'false');
   });
@@ -154,9 +157,33 @@ describe('SettingsView account boundary', () => {
     expect(screen.getByText('当前顺序')).toBeInTheDocument();
     expect(screen.queryByText('显示项目集与独立记录视图')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '展开' }));
+    const disclosure = screen.getByRole('button', { name: '展开' });
+    expect(disclosure).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByText('当前顺序').closest('.settings-item-text')).toContainElement(
+      screen.getByText('拍摄记录布局')
+    );
 
+    fireEvent.click(disclosure);
+
+    expect(disclosure).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByText('显示项目集与独立记录视图')).toBeInTheDocument();
+  });
+
+  it('uses compact and stacked layout contracts for mobile settings rows', () => {
+    render(
+      <SettingsView
+        enableFilmMode={true}
+        setEnableFilmMode={mockSetEnableFilmMode}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole('checkbox', { name: '胶片工作流' }).closest('.settings-list-item'))
+      .toHaveClass('settings-film-mode-item');
+    expect(screen.getByRole('combobox', { name: '界面语言' }).closest('.settings-list-item'))
+      .toHaveClass('settings-language-item');
+    expect(screen.getByRole('combobox', { name: '记账货币' }).closest('.settings-list-item'))
+      .toHaveClass('settings-stack-on-mobile');
   });
 
   it('renders preferences, data ownership, and account security copy in English', () => {
@@ -177,6 +204,12 @@ describe('SettingsView account boundary', () => {
     expect(screen.getByText('Export metadata as Excel')).toBeInTheDocument();
     expect(screen.getByText('Export cameras, lenses, film stock, roll records, and ledger entries. Original images are not bundled.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Export records now' })).toBeInTheDocument();
+    expect(screen.getByText('Appearance')).toBeInTheDocument();
+    expect(screen.getByText('Film workflow')).toBeInTheDocument();
+    expect(screen.getByText('Shooting record layout')).toBeInTheDocument();
+    expect(screen.getByText('Changing currency updates labels only. Use Batch convert to update existing amounts.')).toBeInTheDocument();
+    expect(screen.queryByText('Switch Grainfolio interface text. Your gear names, film stocks, and notes are not translated.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Choose a workspace appearance or follow the system setting.')).not.toBeInTheDocument();
   });
 
   it('offers to repair only local photos and immediately syncs confirmed uploads', async () => {
@@ -185,7 +218,7 @@ describe('SettingsView account boundary', () => {
       { id: 'local-photo', blob: new Blob(['photo']), storageKey: undefined },
       { id: 'cloud-photo', storageKey: 'user-1/roll/photo.webp' },
     ];
-    vi.mocked(repairPendingPhotoUploads).mockResolvedValue({ found: 1, uploaded: 1, failed: 0 });
+    vi.mocked(repairPendingPhotoUploads).mockResolvedValue({ found: 1, uploaded: 1, cleaned: 0, failed: 0 });
 
     render(
       <SettingsView
@@ -195,10 +228,28 @@ describe('SettingsView account boundary', () => {
       />
     );
 
-    const repairButton = screen.getByRole('button', { name: 'Upload 1 images' });
+    const repairButton = screen.getByRole('button', { name: 'Process 1 items' });
     fireEvent.click(repairButton);
 
     await waitFor(() => expect(repairPendingPhotoUploads).toHaveBeenCalledWith('user-1'));
     expect(requestImmediateSync).toHaveBeenCalledWith('photo-upload-recovery');
+  });
+
+  it('offers the same repair entry for a previous cover awaiting Cloud cleanup', () => {
+    currentLanguage = 'en-US';
+    photoAssets = [
+      { id: 'old-cover', storageKey: 'user-1/roll/old.webp', cloudDeletePending: true },
+    ];
+
+    render(
+      <SettingsView
+        enableFilmMode={true}
+        setEnableFilmMode={mockSetEnableFilmMode}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Finish cloud photo sync')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Process 1 items' })).toBeInTheDocument();
   });
 });

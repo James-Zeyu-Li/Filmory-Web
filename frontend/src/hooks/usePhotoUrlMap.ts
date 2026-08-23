@@ -11,8 +11,15 @@ const createLocalObjectUrl = (photo: PhotoAsset): string | undefined => {
 };
 
 const resolvePhotoUrl = async (photo: PhotoAsset, preferFull: boolean): Promise<string | undefined> => {
-  if (preferFull && photo.storageKey) {
-    return getSignedPhotoUrl(photo.storageKey);
+  if (preferFull) {
+    const localObjectUrl = createLocalObjectUrl(photo);
+    if (localObjectUrl) {
+      return localObjectUrl;
+    }
+
+    if (photo.storageKey) {
+      return getSignedPhotoUrl(photo.storageKey);
+    }
   }
 
   if (!preferFull && photo.thumbnailUrl) {
@@ -48,24 +55,27 @@ export const usePhotoUrlMap = (
           try {
             const url = await resolvePhotoUrl(photo, preferFull);
             if (!url) return null;
-            if (url.startsWith('blob:')) {
-              localObjectUrls.push(url);
-            }
             return [photo.id, url] as const;
           } catch {
             const fallbackUrl = photo.thumbnailUrl || createLocalObjectUrl(photo);
             if (!fallbackUrl) return null;
-            if (fallbackUrl.startsWith('blob:')) {
-              localObjectUrls.push(fallbackUrl);
-            }
             return [photo.id, fallbackUrl] as const;
           }
         })
       );
 
-      if (isActive) {
-        setPhotoUrls(Object.fromEntries(entries.filter(Boolean) as Array<readonly [string, string]>));
+      const resolvedEntries = entries.filter(Boolean) as Array<readonly [string, string]>;
+      const resolvedObjectUrls = resolvedEntries
+        .map(([, url]) => url)
+        .filter(url => url.startsWith('blob:'));
+
+      if (!isActive) {
+        resolvedObjectUrls.forEach(url => URL.revokeObjectURL(url));
+        return;
       }
+
+      localObjectUrls.push(...resolvedObjectUrls);
+      setPhotoUrls(Object.fromEntries(resolvedEntries));
     };
 
     void loadUrls();

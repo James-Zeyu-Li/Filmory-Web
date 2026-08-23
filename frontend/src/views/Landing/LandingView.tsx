@@ -36,8 +36,10 @@ export const LandingView: React.FC = () => {
       {/* Navbar */}
       <nav className="landing-nav">
         <div className="landing-brand">
-          <img src="/logo.png" alt="Grainfolio Logo" />
-          <span>Grainfolio</span>
+          <span className="landing-brand-mark">
+            <img src="/compact-logo.webp" alt="" aria-hidden="true" />
+          </span>
+          <img src="/word-logo.webp" alt="Grainfolio" className="landing-brand-wordmark" />
         </div>
         <div className="landing-nav-actions">
           <div className="landing-language-switch" aria-label={t('landing.languageSwitch')}>
@@ -143,8 +145,10 @@ export const LandingView: React.FC = () => {
       <footer className="landing-footer">
         <div className="footer-content">
           <div className="footer-brand">
-            <img src="/logo.png" alt="Grainfolio Logo" />
-            <span>Grainfolio</span>
+            <span className="footer-brand-mark">
+              <img src="/compact-logo.webp" alt="" aria-hidden="true" />
+            </span>
+            <img src="/word-logo.webp" alt="Grainfolio" className="footer-brand-wordmark" />
           </div>
           <p className="footer-copyright">
             © {new Date().getFullYear()} Grainfolio · {t('landing.footerCopy')}

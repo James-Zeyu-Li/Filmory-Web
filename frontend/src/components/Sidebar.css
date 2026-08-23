@@ -1,5 +1,5 @@
 .sidebar {
-  width: 260px;
+  width: 240px;
   transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   background-color: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
@@ -16,7 +16,7 @@
   align-items: center;
   gap: 12px;
   margin-bottom: 28px;
-  padding-left: 8px;
+  padding-left: 10px;
   min-height: 42px;
   position: relative;
   transition: padding 0.3s cubic-bezier(0.16, 1, 0.3, 1), justify-content 0.3s ease;
@@ -56,7 +56,6 @@
   object-fit: contain;
 }
 
-/* Option 2: Expanded Wordmark Logo */
 .brand-logo-expanded {
   opacity: 1;
   transform: translateX(0) scale(1);
@@ -133,7 +132,6 @@
 
 .sidebar-footer .nav-item {
   width: 100%;
-  border: none;
   background: transparent;
   text-align: left;
 }
@@ -150,7 +148,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 12px 10px;
   min-height: 44px;
   box-sizing: border-box;
   border-radius: var(--radius-md);
@@ -187,6 +185,7 @@
 
 @media (max-width: 1024px) {
   .sidebar {
+    width: 280px;
     position: fixed;
     top: 0;
     left: 0;
@@ -331,12 +330,12 @@
     pointer-events: none;
   }
   .sidebar.collapsed .sidebar-brand {
-    padding-left: 8px;
+    padding-left: 10px;
     justify-content: flex-start;
   }
   .sidebar.collapsed .nav-item {
     justify-content: flex-start;
-    padding: 12px 14px;
+    padding: 12px 10px;
   }
   .collapse-btn {
     display: none !important; /* Hide collapse button on mobile */

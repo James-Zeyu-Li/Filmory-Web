@@ -210,6 +210,9 @@ export interface PhotoAsset {
   storageKey?: string; // S3 storage key
   cloudUploadPending?: boolean; // Local-only marker for a deferred cloud upload
   cloudUploadError?: string; // Local-only diagnostic for the last failed upload
+  cloudDeletePending?: boolean; // Local-only marker for a Storage object awaiting removal
+  cloudDeleteError?: string; // Local-only diagnostic for the last failed removal
+  replacesPhotoId?: string; // Local-only link to the previous cover until Cloud replacement succeeds
   addedAt: number;
   note?: string;
   focalLength?: number;

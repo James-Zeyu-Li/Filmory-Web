@@ -11,6 +11,14 @@ export const getStoredTheme = (): Theme | null => {
     : null;
 };
 
+export const getInitialTheme = (pathname = window.location.pathname): Theme => {
+  const savedTheme = getStoredTheme();
+  if (savedTheme) return savedTheme;
+
+  const isPublicAuthRoute = pathname === '/login' || pathname.startsWith('/auth/');
+  return isPublicAuthRoute ? 'dark' : 'system';
+};
+
 export const notifyThemeSync = () => {
   window.dispatchEvent(new Event(THEME_SYNC_EVENT));
 };

@@ -52,8 +52,11 @@
 
 - Cloud 上传失败时，`saveDeferredPhotoUpload()` 抑制不完整 metadata 入队，并把本地 blob 保留为可恢复资料。
 - `photoUploadRecoveryService` 扫描当前用户 `storageKey` 为空但 blob 存在的图片，上传成功后回填 `storageKey`、`thumbnailUrl` 和 `previewUrl`。
-- Settings 仅在存在待补上传图片时展示入口；同一用户的并发修复复用同一 in-flight repair，目标是不重复上传。
-- 本地阻塞已清除：in-flight repair 去重用例已恢复通过；2026-08-22 全量 Vitest 为 `58 passed / 3 skipped` 文件、`255 passed / 5 skipped` 测试。当前只剩下方真实 Cloud 跨设备与对象一致性验收。
+- 上传重试使用 `PhotoAsset.id` 生成稳定 object key；响应丢失或本地提交失败后的再次上传会覆盖同一路径，不创建第二个对象。
+- 新封面 metadata 与 `Roll.coverPhotoId` 在同一 Dexie transaction 中提交；仅旧的活动封面进入清理队列，同一拍摄记录下的其他图片不受影响。
+- 旧 Storage 对象删除失败会保留本地 `cloudDeletePending` 状态，由 Settings 统一重试；失败不会使新封面失效。
+- Settings 在存在待补上传或待清理对象时展示入口；同一用户的并发修复复用同一 in-flight repair。
+- 本地阻塞已清除：service 与组件失败路径测试通过；2026-08-22 全量 Vitest 为 `59 passed / 3 skipped` 文件、`262 passed / 5 skipped` 测试，lint/build 通过。当前只剩下方真实 Cloud 双设备与对象一致性验收。
 
 **Cloud 验收**
 
@@ -82,9 +85,14 @@ where bucket_id = 'grainfolio-assets'
 
 - 文件选择、错误反馈、Settings 状态和 `44px` 触控目标按 [`UI-02`](./UI_UX_TODO.md#ui-cloud-photo-recovery) 验收。
 - Cloud 验收完成前，Roadmap 的“图片完整性最终验证”保持未完成。
+- 2026-08-22 自动验收阻塞：当前执行环境无法解析 `grainfolio.com` / `app.grainfolio.com`，且未提供 Cloud live-test 密钥；必须由已配置生产域的浏览器和隔离测试账号按上方步骤完成。
 
 <a id="cld-02-production-auth-email"></a>
 ### CLD-02 生产域 Auth 与邮件最终验收
+
+**当前状态（2026-08-22）**
+
+- 未完成：本地代码与 Cloud 配置说明已准备，但生产域 DNS 在当前执行环境不可解析，因此尚未验证正式 HTTPS callback、邮件回跳和生产域登录。
 
 - 在正式 HTTPS hostname 配置 Supabase Site URL 与精确 Redirect URLs；生产 URL 不使用 wildcard 替代明确 callback。
 - 验证注册确认、recovery、已过期链接、已使用链接、重复点击和移动端邮件 App 回跳。

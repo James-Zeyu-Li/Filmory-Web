@@ -91,11 +91,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenAccountC
         }}
       >
       <div className="sidebar-brand">
-        {/* Collapsed State: GF Icon in White Card */}
+        {/* Collapsed state: compact brand mark. */}
         <div className="brand-logo-wrapper brand-logo-collapsed">
-          <img src="/compact-logo.webp" alt="GF Logo" className="brand-logo-img" />
+          <img src="/compact-logo.webp" alt="Grainfolio" className="brand-logo-img" />
         </div>
-        {/* Expanded State: Full Grainfolio Logo */}
+        {/* Expanded state: full wordmark. */}
         <div className="brand-logo-expanded">
           <img src="/word-logo.webp" alt="Grainfolio" className="brand-wordmark-img" />
         </div>
@@ -192,7 +192,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenAccountC
           aria-label={isCollapsed ? t('nav.expandTitle') : t('nav.collapseTitle')}
         >
           {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-          <span>{t('nav.collapse')}</span>
+          <span>{isCollapsed ? t('nav.expandTitle') : t('nav.collapse')}</span>
         </button>
       </div>
     </aside>

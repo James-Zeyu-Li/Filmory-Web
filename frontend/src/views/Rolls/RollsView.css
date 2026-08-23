@@ -50,6 +50,19 @@
   flex-shrink: 0;
 }
 
+.roll-card-cover-image-frame {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.roll-cover-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .roll-card-placeholder {
   position: absolute;
   inset: 0;
@@ -500,10 +513,9 @@
 }
 
 .roll-card-row-thumb {
+  display: block;
   width: 100%;
   height: 100%;
-  background-size: cover;
-  background-position: center;
   transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -1070,6 +1082,13 @@
   border: 0;
   padding: 0;
   cursor: zoom-in;
+}
+
+.roll-cover-preview-button img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .roll-cover-preview-button:hover,

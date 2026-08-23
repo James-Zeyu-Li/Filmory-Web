@@ -214,6 +214,8 @@
 /* ─── Sub-card (for complex settings blocks) ───────────────── */
 /* Sits INSIDE .settings-list-group as a standalone card row */
 .settings-sub-card {
+  --settings-sub-card-icon-size: 32px;
+  --settings-sub-card-gap: 14px;
   border-bottom: 1px solid var(--border-color);
   transition: background-color var(--transition-fast);
 }
@@ -223,20 +225,21 @@
 }
 
 .settings-sub-card-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 16px 16px 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--settings-sub-card-gap);
+  padding: 16px;
 }
 
 .settings-sub-card-header-collapsible {
-  justify-content: space-between;
+  justify-content: normal;
 }
 
 .settings-sub-card-copy {
   display: flex;
-  align-items: flex-start;
-  gap: 14px;
+  align-items: center;
+  gap: var(--settings-sub-card-gap);
   min-width: 0;
 }
 
@@ -252,6 +255,7 @@
   font-size: 12px;
   font-weight: 600;
   flex-shrink: 0;
+  min-height: 44px;
 }
 
 .settings-disclosure-button:hover {
@@ -270,8 +274,9 @@
 .settings-sub-card-summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 10px;
-  padding: 12px 16px 16px 62px;
+  gap: 3px 8px;
+  margin-top: 4px;
+  min-width: 0;
 }
 
 .settings-sub-card-summary span {
@@ -292,7 +297,8 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 0 16px 16px 62px;
+  margin: 0 16px 16px;
+  padding-left: calc(var(--settings-sub-card-icon-size) + var(--settings-sub-card-gap));
 }
 
 /* ─── Account Role Badge ───────────────────────────────────── */
@@ -584,24 +590,26 @@
   opacity: 0.5;
 }
 
-/* ─── Responsive ───────────────────────────────────────────── */
-@media (max-width: 540px) {
-  .settings-modal-header {
-    padding: 14px 16px;
+/* Settings rows respond to the modal's usable width, not the viewport. */
+@container settings-group (max-width: 540px) {
+  .settings-list-item {
+    align-items: center;
+    flex-direction: row;
   }
 
-  .settings-modal-subtitle {
-    display: none;
-  }
-
-  .settings-body {
-    padding: 16px !important;
-  }
-
-  .settings-list-item,
-  .settings-list-item-vertical {
+  .settings-list-item.settings-stack-on-mobile,
+  .settings-list-item.settings-theme-item,
+  .settings-list-item.settings-currency-item,
+  .settings-list-item.settings-list-item-vertical {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .settings-list-item.settings-stack-on-mobile .settings-item-content,
+  .settings-list-item.settings-theme-item .settings-item-content,
+  .settings-list-item.settings-currency-item .settings-item-content,
+  .settings-list-item.settings-list-item-vertical .settings-item-content {
+    flex: 0 1 auto;
   }
 
   .settings-theme-item .settings-item-content,
@@ -609,25 +617,43 @@
     flex: 0 0 auto;
   }
 
-  .settings-item-action,
-  .settings-inline-actions,
-  .settings-danger-action {
+  .settings-list-item.settings-stack-on-mobile .settings-item-action,
+  .settings-list-item.settings-theme-item .settings-item-action,
+  .settings-list-item.settings-currency-item .settings-item-action,
+  .settings-list-item.settings-list-item-vertical .settings-item-action,
+  .settings-list-item.settings-stack-on-mobile .settings-inline-actions,
+  .settings-list-item.settings-theme-item .settings-inline-actions,
+  .settings-list-item.settings-currency-item .settings-inline-actions,
+  .settings-list-item.settings-list-item-vertical .settings-inline-actions,
+  .settings-list-item.settings-stack-on-mobile .settings-danger-action {
     width: 100%;
     justify-content: flex-start;
   }
 
-  .settings-inline-actions .form-control,
-  .settings-item-action button,
-  .settings-inline-actions button {
+  .settings-list-item.settings-stack-on-mobile .settings-inline-actions .form-control,
+  .settings-list-item.settings-theme-item .settings-item-action button,
+  .settings-list-item.settings-stack-on-mobile .settings-item-action button,
+  .settings-list-item.settings-stack-on-mobile .settings-inline-actions button,
+  .settings-list-item.settings-currency-item .settings-inline-actions .form-control,
+  .settings-list-item.settings-currency-item .settings-inline-actions button,
+  .settings-list-item.settings-list-item-vertical .settings-item-action button {
     width: 100%;
   }
 
-  .delete-account-confirm-panel {
+  .settings-list-item.settings-currency-item .settings-inline-actions .form-control,
+  .settings-list-item.settings-currency-item .settings-inline-actions button {
+    flex: 1 1 160px;
+    width: auto;
     max-width: none;
   }
 
-  .delete-account-confirm-actions button {
-    flex: 1;
+  .settings-film-mode-item .settings-item-content {
+    flex: 1 1 auto;
+  }
+
+  .settings-film-mode-item .settings-item-action {
+    width: 40px;
+    flex: 0 0 40px;
   }
 
   .theme-segmented-control {
@@ -649,13 +675,8 @@
     flex-direction: column;
   }
 
-  .settings-sub-card-header-collapsible,
-  .settings-sub-card-copy {
-    flex-direction: column;
-  }
-
-  .settings-sub-card-summary {
-    padding-left: 16px;
+  .settings-sub-card-header-collapsible {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .settings-disclosure-button {
@@ -663,7 +684,58 @@
     justify-content: center;
   }
 
+  .settings-sub-card-body {
+    padding-left: 0;
+  }
+
   .settings-rolls-order-actions {
     width: 100%;
+  }
+}
+
+@container settings-group (max-width: 360px) {
+  .settings-list-item.settings-language-item {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .settings-language-item .settings-item-content {
+    flex: 0 1 auto;
+  }
+
+  .settings-language-item .settings-inline-actions,
+  .settings-language-item .settings-inline-actions .form-control {
+    width: 100%;
+    max-width: none;
+    justify-content: flex-start;
+  }
+
+  .settings-list-item.settings-currency-item .settings-inline-actions .form-control,
+  .settings-list-item.settings-currency-item .settings-inline-actions button {
+    flex-basis: 100%;
+    width: 100%;
+  }
+}
+
+/* ─── Responsive ───────────────────────────────────────────── */
+@media (max-width: 540px) {
+  .settings-modal-header {
+    padding: 14px 16px;
+  }
+
+  .settings-modal-subtitle {
+    display: none;
+  }
+
+  .settings-body {
+    padding: 16px !important;
+  }
+
+  .delete-account-confirm-panel {
+    max-width: none;
+  }
+
+  .delete-account-confirm-actions button {
+    flex: 1;
   }
 }
