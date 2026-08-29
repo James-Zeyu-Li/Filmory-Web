@@ -40,24 +40,26 @@ Cloud/backend 的 Supabase、Auth/SMTP、Storage、RLS、migration/backfill、�
 - UI 与 i18n：Landing、Settings、tab 偏好、响应式/CSS 收口、图片压缩和核心界面中英文已完成；本轮 Settings 密度与 Landing 品牌导航的窄屏细化已分别由 UI-12/UI-13 完成。PWA 更新提示和危险操作取消态测试已完成。架构文档仍需按最新同步、图片恢复和 Gear 拆分状态更新，不再将文档同步笼统标为完成。
 - 同步与验证：Dexie transaction queue、500ms 防抖、明确提交立即同步、Realtime/fallback、队列失败恢复、Cloud DB migration 和双设备 smoke 已完成；库存 RPC 使用 operation outbox + 幂等 `operationId`，不再由 LWW 覆盖库存数。`lint`、同步相关测试与 `npm run build` 已通过；仅保留非阻塞 bundle chunk size warning。Cloud sync 仍由 `VITE_ENABLE_SUPABASE_SYNC` 控制。
 - 邮件认证：Resend 发信域/发件人、真实注册与 recovery、900 秒 OTP、recovery intent、站内回跳 allowlist 已完成；正式 HTTPS、OAuth 和观测仍待完成。
-- Cloud Storage：`grainfolio-assets` private、owner signed URL、跨用户拒绝、`delete_user()` 权限和 cascade 已验证；上传失败不会再把空图片 metadata 推到 Cloud。本地 blob 补上传、稳定对象路径、封面/关系原子提交、旧对象持久化清理与 Settings 修复入口已实现。2026-08-25 当前全量基线为 `62 passed / 3 skipped` 文件、`271 passed / 5 skipped` 测试，lint/build 通过；剩余阻塞仅为真实 Cloud 双设备与 object/metadata 验收。
+- Cloud Storage：`grainfolio-assets` private、owner signed URL、跨用户拒绝、`delete_user()` 权限和 cascade 已验证；上传失败不会再把空图片 metadata 推到 Cloud。本地 blob 补上传、稳定对象路径、封面/关系原子提交、旧对象持久化清理与 Settings 修复入口已实现。剩余阻塞仅为真实 Cloud 双设备与 object/metadata 验收。
+- 器材/胶卷履历：相机与胶卷卡片默认打开只读拍摄履历（总记录/进行中/已完成/涉及项目/未归入项目），编辑降为明确次级操作；聚合逻辑落在纯函数 `gearHistoryService`、共享 `rollCollectionGrouping`，并扩展现有 `filmInsightsService` 复用 Film Insights Drawer，不新增 Cloud schema。2026-08-29 全量基线为 `68 passed / 3 skipped` 文件、`304 passed / 5 skipped` 测试，lint/build 通过；真实浏览器手工验证了创建相机/胶卷/拍摄记录、履历统计、项目分组与未归入项目、点击记录复用现有 Roll Drawer（`/rolls?tab=all&openRoll=<id>`）等桌面端全链路，并修复了一个连带发现的窄屏工具栏/空状态留白回归。键盘 Enter/Space 激活由组件测试覆盖，未能在本地浏览器自动化中逐项人工复核（工具对合成键盘事件的限制）。
 
 ## Next Up
 
 按此顺序实施；下方各任务保留实现细节和验收标准。
 
-1. **P1 器材与胶卷拍摄履历：** 从相机或胶卷进入其实际参与的拍摄记录与项目集，复用现有 Roll/Collection/Film Insights 数据，不新增 Cloud schema；完整契约见 [`UI-18`](./UI_UX_TODO.md#ui-gear-shoot-history)。
-2. **P1 图片完整性 Cloud 收口：** 代码与本地测试已完成；补真实 Cloud 跨设备显示、失败重试和 object/metadata 对照验证。
-3. **P1 公开环境安全：** 正式域 Auth/邮件验收、密码策略与恢复链路、最小错误观测。
-4. **P1.5 导航可靠性：** 按阶段完成项目集详情 URL，再完成四类器材编辑 Modal URL；拍摄记录 Drawer 阶段已完成，不重复开发。
-5. **P1 Activation + Hero Archive：** 按单功能循环依次完成历史导入激活、Camera Passport、Roll Passport、Quick Capture、Photography Inbox 和 Year in Film 视觉原型；分别见 [`UI-23`](./UI_UX_TODO.md#ui-history-import-onboarding) 至 [`UI-27`](./UI_UX_TODO.md#ui-photography-inbox) 及 [`UI-30`](./UI_UX_TODO.md#ui-year-in-film-prototype)，不得一次打包重写。
-6. **P2 Archive Depth：** 继续 Dashboard/报告/花费职责和胶卷洞察；P1.5 项目集导航后升级 Project Workspace，再实现 Contact Sheet、Archive Completeness、Film Guide/个人经验、分享卡片、Year in Film 和冲扫状态时间线。Auth、Compare、Insights 降噪已完成，不再列入 Next Up。
-7. **P3 商业化：** 先确认“核心本地功能永久免费、Pro 承担持续 Cloud 成本”的 entitlement 合同、图片配额与 `MON-01` 转化时机，再接自动支付 webhook；公开分享链接晚于本地导出卡片。
-8. **P4 发布与条件任务：** Cloudflare 部署、Worker、bundle、命名迁移、机会型模块抽取与长尾 i18n；只在前置条件满足时开始。
+1. **P1 图片完整性 Cloud 收口：** 代码与本地测试已完成；补真实 Cloud 跨设备显示、失败重试和 object/metadata 对照验证。
+2. **P1 公开环境安全：** 正式域 Auth/邮件验收、密码策略与恢复链路、最小错误观测。
+3. **P1.5 导航可靠性：** 按阶段完成项目集详情 URL，再完成四类器材编辑 Modal URL；拍摄记录 Drawer 阶段已完成，不重复开发。
+4. **P1 Activation + Hero Archive：** 按单功能循环依次完成历史导入激活、Camera Passport、Roll Passport、Quick Capture、Photography Inbox 和 Year in Film 视觉原型；分别见 [`UI-23`](./UI_UX_TODO.md#ui-history-import-onboarding) 至 [`UI-27`](./UI_UX_TODO.md#ui-photography-inbox) 及 [`UI-30`](./UI_UX_TODO.md#ui-year-in-film-prototype)，不得一次打包重写。
+5. **P2 Archive Depth：** 继续 Dashboard/报告/花费职责和胶卷洞察；P1.5 项目集导航后升级 Project Workspace，再实现 Contact Sheet、Archive Completeness、Film Guide/个人经验、分享卡片、Year in Film 和冲扫状态时间线。Auth、Compare、Insights 降噪已完成，不再列入 Next Up。
+6. **P3 商业化：** 先确认“核心本地功能永久免费、Pro 承担持续 Cloud 成本”的 entitlement 合同、图片配额与 `MON-01` 转化时机，再接自动支付 webhook；公开分享链接晚于本地导出卡片。
+7. **P4 发布与条件任务：** Cloudflare 部署、Worker、bundle、命名迁移、机会型模块抽取与长尾 i18n；只在前置条件满足时开始。
+
+P1 器材与胶卷拍摄履历（原 Next Up 第 1 项）已完成，详见下方 P1 小节与已完成摘要，不再占用 Next Up 排位。
 
 ## P1：器材履历与产品激活
 
-- [ ] **从相机/胶卷追溯拍摄记录与项目集**
+- [x] **从相机/胶卷追溯拍摄记录与项目集（已完成，2026-08-29）**
   - 产品目标：器材库不只保存拥有的设备和库存，还能回答“这台相机拍过什么”和“这款胶卷参与过哪些拍摄”。相机与胶卷详情必须同时覆盖具体拍摄记录（Roll/Shooting record）和由这些记录归纳出的项目集（Collection/Project）；没有 `collectionId` 的记录统一进入“未归入项目”，不得被遗漏。
   - 当前数据已经足够，本任务不新增 Dexie store、Supabase table 或关系表：
     - 相机履历使用 `roll.cameraIds?.includes(camera.id)`，保留一卷多机身和换机历史；`currentCameraId` 只代表当前/最终机身，禁止单独用它推导完整历史。
@@ -77,6 +79,7 @@ Cloud/backend 的 Supabase、Auth/SMTP、Storage、RLS、migration/backfill、�
     - UI 测试覆盖相机和胶卷入口、统计数字、项目分组、空状态、打开指定 Roll/Collection、编辑与库存按钮不被卡片点击吞掉、键盘操作和中英文长文案。
     - 回归必须保证 Film Insights 现有排序/Drawer、Gear 新建编辑、库存原子 delta、120 后背、Roll 相机转移和封面处理不变。
     - 完成 focused tests 后运行全量 Vitest、`npm run lint`、`npm run build`，并在桌面与移动宽度手工验证；详细视觉与交互验收见 [`UI-18`](./UI_UX_TODO.md#ui-gear-shoot-history)。
+  - **完成情况（2026-08-29）：** 相机/胶卷卡片默认打开只读履历 Drawer，编辑降为次级操作；胶卷履历扩展现有 `FilmInsightsView` Drawer，未新建第二套报告页。真实浏览器手工验证桌面端全链路（创建相机/胶卷/拍摄记录 -> 履历统计 -> 项目分组/未归入项目 -> 点记录复用既有 Roll Drawer 深链接）；窄屏（320-768px）经修复后无横向溢出、无异常留白。全量 `68 passed / 3 skipped` 文件、`304 passed / 5 skipped` 测试，`lint`/`build` 通过。键盘 Enter/Space 由组件测试覆盖，未在真实浏览器逐项复核（自动化工具对合成键盘事件的已知限制，不影响原生 `<button>` 语义保证）；项目详情跳转目前仍只到 Collections 列表页，精确定位需 P1.5 阶段 2。
 
 - [ ] **Existing History Import：把现有 Excel 导入升级为新用户激活流程（Ready after P1.5）**
   - 复用现有类型化 Excel parser、行级校验和 Dexie transaction，增加官方模板、字段映射、预览、重复处理选择、导入报告和确定性的导入后摘要；不接 Notion/Google Sheets API，不用 AI 猜列，不允许跨用户导入。
@@ -156,7 +159,7 @@ Cloud/backend 的 Supabase、Auth/SMTP、Storage、RLS、migration/backfill、�
   - 优先级与时机：P1.5，位于 P1 Cloud 图片/公开环境安全验收之后、P2 产品体验之前。严格按 `拍摄记录 Drawer -> 项目集详情 -> 器材编辑 Modal` 三个独立阶段实施；每个阶段单独修改、测试和验收，不一次重构全部页面。
   - 当前事实：
     - 拍摄记录 Drawer 阶段已完成：`?tab=all&openRoll=<id>` 由 `RollsView` 派生详情，刷新可以恢复，列表打开使用 history entry，浏览器后退可以关闭 Drawer；相关 focused tests 和 Dashboard E2E 已更新。
-    - 项目集详情只由 `activeCollectionId` 本地 state 控制；URL、刷新和浏览器后退均不能恢复详情，进入详情后当前 PageTabs 还会被隐藏。
+    - 项目集详情阶段已完成：`?tab=collections&collectionId=<id>` 由 `RollsView` 派生详情，刷新可以恢复，列表打开使用 history entry，浏览器后退可以关闭详情并保留 PageTabs 可见；相关 focused tests 和新增 E2E 已覆盖。
     - 器材编辑只由 `editingCameraId / editingLensId / editingFilmId / editingEquipmentId` 与 Modal state 控制；刷新会关闭未保存表单，但不会丢失此前已经保存到 Dexie 的数据，因此当前主要是导航与编辑体验缺口，不作为数据丢失 P0 描述。
   - 目标 URL 契约：
     - 拍摄记录：`/rolls?tab=all&openRoll=<rollId>`；`tab` 只接受现有 `all | collections | loose`。
@@ -179,10 +182,15 @@ Cloud/backend 的 Supabase、Auth/SMTP、Storage、RLS、migration/backfill、�
     - Dashboard 深链接、刷新恢复、列表打开、Back、X/Esc/遮罩关闭、删除/归档后的 URL 清理均已覆盖；未找到记录时不会伪造内容。
     - 本阶段没有改变 Roll 保存 transaction、库存 RPC、封面上传、相机转移、SyncService、会员限制或 120 后背逻辑。
     - 后续只需在阶段 2/3 实施时复用同一 URL/history 规则，不要把整项任务重新标记为未完成。
-  - 阶段 2：项目集详情
-    1. 将 `activeCollectionId` 改为 `collectionId` query 派生，并保持 `tab=collections`；列表点击使用 `push`，返回箭头、浏览器后退和刷新遵循统一 History 规则。
-    2. 项目集详情打开时继续显示 PageTabs 与必要的页面上下文；返回动作只关闭详情，不把用户送出 `/rolls`。
-    3. 当设置关闭项目集/独立记录、项目集被删除或 URL ID 不属于当前用户时，清理无效 `collectionId` 并回退到允许的 canonical tab；不得影响项目集删除后清空关联 `Roll.collectionId` 的既有 transaction。
+  - 阶段 2：项目集详情（已完成，2026-08-29）
+    1. `activeCollectionId` 已改为从 `collectionId` query 派生（`RollsView.tsx`），并保持 `tab=collections`；列表点击使用 `push`（`openCollectionDetail`），返回箭头、浏览器后退（`closeCollectionDetail`）和刷新遵循统一 History 规则，与阶段 1 的 `openRollDrawer`/`closeRollDrawer` 完全同构。
+    2. 项目集详情打开时 PageTabs 与工具栏保持挂载（不再是与 library-view 互斥的顶层分支，而是 `collections` tab 面板内部的二选一渲染）；返回动作只关闭详情，不把用户送出 `/rolls`。
+    3. Canonicalize 合并进阶段 1 已有的单一 effect（未开第二个竞争 effect）：`collectionId` 缺 `tab` 时补齐是同步分支；`collectionId` 是否属于当前用户/项目集功能是否开启是异步分支，通过一次性 `db.collections.get()` 校验，避免 `useCollections()` 首次渲染返回空数组时把有效 ID 误判为无效。删除 Collection 与清空关联 `Roll.collectionId` 已改为同一个 `db.transaction`。
+    4. Gear 侧的 `CameraHistoryDrawer`/`FilmUsageDetailDrawer`「进入完整项目」已改为携带 `collectionId` 精确跳转到该项目详情，不再只能进入 Collections 列表页（此前 UI-18 手动测试发现的已知限制，本阶段解决）。
+    5. 修复代码审查发现的两处遗漏：详情内切换到「全部拍摄记录/独立记录」或在搜索框输入触发的 tab 自动切换，此前只改 `libraryView` 不清 URL 的 `collectionId`，刷新会把用户拉回已离开的项目详情——现由统一的 `handleLibraryViewChange` 在离开 `collections` tab 时一并清理。设置关闭 Collections 时的 canonicalize 清理此前硬编码回退到 `tab=collections`（该 tab 已不可见）——现按 `isCollectionsTabVisible` 回退到第一个实际可见的 tab。
+    6. 验证：`RollsView.tabs.test.tsx` 新增 5 个 focused test（开卡片/URL同步/PageTabs可见/Back关闭、非法及跨用户 collectionId 深链接清理、切 tab/搜索离开时清理 collectionId、设置关闭 Collections 时回退到可见 tab），新增 `e2e/collection-deep-link.spec.ts`（Chromium 真实浏览器，覆盖开卡片、刷新恢复、Back 关闭、非法深链接清理）。全量 Vitest `309 passed / 5 skipped`，`npm run lint`、`npm run build` 均通过。移动端行为通过既有 `.has-active-collection` CSS 类切换规则静态复核（本阶段未改动该规则，仅改变其挂载位置的 state 来源），未逐项人工复核真实移动设备。
+    7. 顺带修复一处连带发现的问题：Collections 网格卡片封面（`.roll-card-cover`）此前 `z-index` 高于卡片自身的无障碍「打开」按钮，导致精确点击/自动化按可访问名称点击会被封面拦截（鼠标用户不受影响，因为外层卡片的 onClick 仍会通过事件冒泡触发）；已加 `.collection-card .roll-card-cover { z-index: 0; }` 精确修正，不影响拍摄记录卡片封面本身需要更高层级以容纳上传/预览按钮的既有逻辑。同时给 `playwright.config.ts` 固定了 `locale: 'zh-CN'`，此前套件的中/英文断言完全依赖宿主机默认语言，不是确定性的。
+    8. 修复 `e2e/dashboard.spec.ts` 两处与本阶段无关的既有测试缺陷：「库存胶卷分组」按格式/彩黑分列的断言对应的 UI 元素已随 Insights 降噪一并移除（当前只剩单一聚合数字），种子数据本身未变（135 共 11 卷、彩色 8/黑白 3 计算依旧成立），断言已改为核对聚合后的「11 卷」；「keeps rolls tab and list layout after refresh」在从未点击「项目集」tab 的情况下就直接找「新建项目集」按钮（该按钮只在 `libraryView==='collections'` 时才会渲染成这个文案），且用 `role=button` 误选本应是 `role=tab` 的「全部拍摄记录」——均已修正。`npx playwright test e2e/dashboard.spec.ts` 4/4 通过。
   - 阶段 3：器材编辑 Modal（最后做）
     1. `tab` 决定实体表，`edit` 决定当前记录；只从对应当前用户数据集中解析实体，禁止在四张表间用同一个 ID 盲查或猜类型。
     2. 相机、镜头、胶卷、其他器材卡片打开编辑时写入 canonical URL；刷新恢复相同编辑 Modal，后退关闭并返回原 tab。新建入口继续兼容现有 query，除非另开任务统一创建 URL，不在本阶段顺手改名。
@@ -276,6 +284,10 @@ Cloud/backend 的 Supabase、Auth/SMTP、Storage、RLS、migration/backfill、�
     4. Cloud 与容量：当前 Supabase private Storage 路径先保持可用；只有整卷原图成为真实需求且完成容量/成本验证后，才评估 `Supabase Auth/Postgres + private R2 media`。浏览器不得持有 R2 secret，Cloud 边界、配额和对象清理按 [`CLD-06`](./CLOUD_TODO.md#cld-06-storage-quota) 单独验收。
   - 架构约束：边印预设作为独立、类型化的展示 catalog，不把装饰字段塞进 `FilmStock` 库存实体；匹配优先使用稳定 preset identity，现阶段没有 `catalogId` 时只能做可撤销的 UI 建议，禁止把规范化字符串当作永久关系。Contact Sheet 由独立 frame 缩略图实时排版，原图只在用户打开单帧时按需读取。
   - UI、响应式、无障碍、性能、测试和品牌边印契约详见 [`UI-19`](./UI_UX_TODO.md#ui-roll-contact-sheet)。四个阶段分别完成 focused tests、相关回归、lint/build 和手工 smoke；不得只完成静态视觉后就将整项标记完成。
+
+- [ ] **外部来源图片导入：本地设备 / 手机拍照 / Google Drive / OneDrive（Decision required；Ready after UI-19 阶段 2）**
+  - 本地文件选择与手机现场拍照已随标准文件选择控件天然具备，不需要额外开发；真正的新工作是接入 Google Drive（Google Picker API）和 OneDrive（OneDrive File Picker SDK）作为可选图片来源，需要用户先决定是否值得引入对应 OAuth 第三方依赖与运维成本。
+  - 网盘选择器只用于一次性挑选文件，选中后立即复用现有 UI-19/PhotoAsset 压缩、Dexie transaction 和 Cloud upload 路径；不做双向同步、不二次保存网盘 fileId、不把网盘变成第二个存储后端。完整产品边界、安全边界（OAuth client 配置、no secret in browser）、交互和测试见 [`UI-33`](./UI_UX_TODO.md#ui-external-photo-sources)。
 
 - [ ] **Archive Completeness：逐卷/逐项目的轻量归档完成感（Ready after UI-22 + UI-19 MVP）**
   - 只根据明确存在的拍摄、冲扫、费用、扫描和精选信息生成可解释 checklist；缺少可选资料不阻止归档，用户可以“保持现状并完成”。

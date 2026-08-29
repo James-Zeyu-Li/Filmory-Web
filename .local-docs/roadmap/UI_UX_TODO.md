@@ -184,7 +184,7 @@
 <a id="ui-gear-shoot-history"></a>
 ### UI-18 器材与胶卷拍摄履历
 
-**状态：未实现；作为 Roadmap 当前第一项，在真实 Cloud 验收前完成。**
+**状态：已完成（2026-08-29）。** 相机/胶卷卡片默认打开只读履历 Drawer（`CameraHistoryDrawer`/`FilmUsageDetailDrawer`），编辑保留为明确次级按钮；聚合逻辑落在纯函数 `gearHistoryService`、共享 `rollCollectionGrouping`，并扩展 `filmInsightsService` 复用现有 Film Insights Drawer，未新增 Cloud schema。真实浏览器手工验证了桌面端全链路（创建相机/胶卷/拍摄记录 -> 履历统计实时更新 -> 项目分组/未归入项目正确迁移 -> 点记录复用既有 `/rolls?tab=all&openRoll=<id>` 深链接）；同轮修复并验证了窄屏 `.rolls-toolbar` column+wrap 布局回归和 Gear 空状态 `50vh` 留白问题。键盘 Enter/Space 由组件测试覆盖，本地浏览器自动化对合成键盘事件的限制导致未能逐项人工复核。P1.5 阶段 2 已完成后，项目组内的「进入完整项目」会精确跳转到 `/rolls?tab=collections&collectionId=<id>`，保留刷新与 Back 语义。
 
 **用户问题与术语**
 
@@ -517,6 +517,7 @@
 - 本地压缩、缩略图、Dexie transaction、deferred Cloud upload 和修复入口必须复用现有图片服务。UI 依次表达“本机已保存 / 正在上传 / 已同步 / 需要处理”，不能因某一张上传失败让整卷照片消失。
 - 单张失败可重试或移除；重复选择同一文件不能仅靠文件名静默去重，至少结合 size/lastModified 或已有 checksum 策略并让用户确认。删除、替换和批量移除走现有确认与 Storage 清理边界。
 - frame 顺序优先复用 `PhotoAsset.orderIndex`；`coverPhotoId` 继续只表达封面。确需单独保存 frame number 或 Roll 级 preset override 时，先写最小 schema/migration 设计并保持 Dexie/Supabase parity，禁止复用 `note`、`tags` 等近义字段偷存结构化状态。
+- 本地设备文件选择与手机现场拍照已经隐含在标准 `<input type="file" accept="image/*" multiple>` 里，不需要额外开发；仅当需要在手机上默认直接打开相机而非相册时，才追加 `capture` 属性并另行验证。云端网盘来源（Google Drive、OneDrive）复杂度明显更高，独立见 [`UI-33`](#ui-external-photo-sources)，不在本任务默认范围内。
 
 **响应式、性能与动效**
 
@@ -1007,4 +1008,37 @@
 
 - 使用至少 12MP 的横图、2:3 竖图、方图和高颗粒扫描图，对比 1x/2x/3x DPR；卡片在 280-600px 宽度不明显像素化，完整预览不使用 400px thumbnail。
 - 覆盖本地 blob、Cloud signed URL、thumbnail-only 历史数据、离线、signed URL 失败、账号切换和 URL revoke；渐进加载不得闪白或造成 CLS。
+
+<a id="ui-external-photo-sources"></a>
+### UI-33 外部来源图片导入（本地设备 / 手机拍照 / Google Drive / OneDrive）
+
+**状态与范围**
+
+- 未实现；Decision required——是否接入 Google Drive、OneDrive 需要用户先确认，Agent 不得自行决定引入 OAuth 第三方依赖。依赖 [`UI-19`](#ui-roll-contact-sheet) 阶段 2（卷内多图导入与排序）先落地，本任务只扩展"选择图片"这一步的来源，不改变导入后的压缩、排序、封面、上传和恢复链路。
+- 已经免费获得、不需要额外开发的部分：本地设备文件选择与手机现场拍照，标准 `<input type="file" accept="image/*" multiple>` 在桌面打开系统文件选择器、在手机打开系统相册/相机选择面板，浏览器原生支持，UI-19 落地时已天然具备。如果产品需要手机上默认直接调起相机而非相册，才追加 `capture="environment"` 并单独验证。
+- 真正需要新工作的部分：云端网盘作为图片来源——Google Drive（Google Picker API）和 OneDrive（OneDrive File Picker SDK / Microsoft Graph）。两者都需要注册第三方开发者应用、申请 OAuth 客户端 ID、维护 Google/Microsoft 账号同意屏幕，复杂度和运维成本明显高于本地文件选择。参考 [`UI-23`](#ui-history-import-onboarding) 对 Excel 导入的既有立场（"首版不连接 Notion、Google Sheets、云盘"）：本任务同样建议先以本地文件选择覆盖 PMF 验证，网盘来源作为后续可选增强，不因为技术可行就默认排入 Next Up。
+
+**产品边界**
+
+- 网盘选择器只用于"挑选文件"，选中后立即下载文件内容到浏览器内存，随后完全复用现有 UI-19/PhotoAsset 压缩、Dexie transaction、封面和 deferred Cloud upload 路径；不得把 Google Drive/OneDrive 变成 Grainfolio 的第二个存储后端，不保存网盘 fileId 做二次同步，也不做双向同步或修改用户网盘中的原文件。
+- 每次选择都是一次性导入操作；断开授权、token 过期或文件被移动不影响已经导入到本地的照片，不能让照片"随网盘状态变化而消失"。
+- 不做自动扫描网盘相册、不做后台轮询新照片、不读取用户网盘中与本次选择无关的其他文件或目录列表。
+
+**架构与安全边界**
+
+- 新增 `frontend/src/services/externalPhotoSources/` 目录，按 provider 拆分（`googleDrivePicker.ts`、`oneDrivePicker.ts`），暴露统一的 `pickPhotos(): Promise<File[]>` 或等价类型化接口；UI 组件只依赖这个统一接口，不直接引入某个 provider 的 SDK 类型。
+- OAuth 客户端 ID 属于前端公开配置（类似现有 `VITE_ENABLE_GOOGLE_OAUTH`/`VITE_ENABLE_GITHUB_OAUTH` 模式），可以出现在浏览器 bundle 中；但任何 client secret、refresh token 长期存储或服务端 token 交换一律不进入前端，如果 provider 要求 confidential client 流程，需要一个可信后端/Edge Function 承担，不在浏览器直接持有。
+- 未启用对应 provider 时（无 client ID 配置或用户未在 Settings 打开），选择图片入口不显示该来源按钮，与现有 OAuth provider 条件渲染的模式一致；provider SDK 使用动态 `import()` 按需加载，不进入首屏 bundle。
+
+**交互**
+
+- 在 UI-19 的"添加扫描图"入口旁提供来源选择（本地文件、Google Drive、OneDrive），本地文件保持当前默认且始终可用；网盘入口仅在已配置且用户已完成一次性授权后可用。
+- 从网盘选择多个文件后，下载进度与压缩进度必须分别可见（网络下载和本地压缩是两个不同阶段，不能合并成一个不透明的加载条）；单个文件下载失败允许重试或跳过，不影响已成功下载的其他文件。
+- 大文件或弱网下载需要可取消；取消只丢弃尚未完成导入的文件，不影响已经写入 Dexie 的部分。
+
+**验收**
+
+- 单测覆盖每个 provider 的 `pickPhotos()` 适配层：授权成功、用户取消选择、下载失败、超大文件、非图片 MIME 类型拒绝。
+- 组件测试覆盖来源选择 UI 在未配置/未授权/已授权三种状态下的显隐、下载失败重试、取消行为、中英文文案。
+- 明确不在本任务覆盖范围：网盘账号管理、断开授权入口（复用 Settings 现有账号管理模式即可）、离线访问网盘缓存、以及把网盘作为 Cloud Storage 替代方案（该话题属于 [`CLD-06`](./CLOUD_TODO.md#cld-06-storage-quota) 的 R2 讨论，与本任务无关）。
 - 组件/Hook 测试验证显示源优先级、失败 fallback、lazy 行为和 Blob URL 清理；E2E 覆盖竖图上传后卡片、刷新、离线 fallback 与完整预览。
