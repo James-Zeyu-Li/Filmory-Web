@@ -33,7 +33,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { getCompatibleFilmBacks, getLoadedFilmBackIds, isInterchangeable120Camera } from '../../services/filmBackService';
 import {
   getVisibleRollsTabOrder,
-  readRollsCollectionsTabEnabled,
   ROLLS_LIBRARY_VIEW_KEY,
   ROLLS_COLLECTIONS_TAB_ENABLED_KEY,
   ROLLS_TAB_ORDER_KEY,
@@ -48,7 +47,7 @@ import { adjustFilmStock, createRollWithInventory } from '../../services/invento
 
 import { CollectionsTab } from './CollectionsTab';
 import { RollCoverImage } from './RollCoverImage';
-import type { CameraTransfer, Roll } from '../../db/schema';
+import type { CameraTransfer, Collection, Roll } from '../../db/schema';
 
 interface RollsViewProps {
   enableFilmMode: boolean;
@@ -99,17 +98,26 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   const initialSearchParams = new URLSearchParams(location.search);
   const shouldOpenNewRoll = initialSearchParams.get('newRoll') === '1';
   const openRollId = initialSearchParams.get('openRoll');
+  const collectionIdParam = initialSearchParams.get('collectionId');
   const initialVisibleTabOrder = getVisibleRollsTabOrder(enableFilmMode);
   const [visibleTabOrder, setVisibleTabOrder] = useState<RollsTabId[]>(initialVisibleTabOrder);
   const isCollectionsTabVisible = visibleTabOrder.includes('collections');
 
-  const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
-  const activeCollection = useMemo(() => collections.find(c => c.id === activeCollectionId), [collections, activeCollectionId]);
-  const activeCollectionRolls = useMemo(
-    () => activeCollectionId ? rolls.filter(roll => roll.collectionId === activeCollectionId) : [],
-    [activeCollectionId, rolls],
-  );
+  // Collection detail is URL-derived, not local state: `collectionIdParam` is the only
+  // source of truth. `activeCollection` only resolves once the (already user-scoped) live
+  // `collections` query has data for this id; while it's loading or the id is genuinely
+  // invalid, `activeCollection` stays null and the detail panel shows a loading/empty state
+  // rather than momentarily rendering another user's or a deleted collection's rolls.
+  const activeCollection = collectionIdParam && user?.id
+    ? collections.find(c => c.id === collectionIdParam && c.userId === user.id) ?? null
+    : null;
+  const activeCollectionId = activeCollection?.id ?? null;
+  const isCollectionDetailOpen = Boolean(collectionIdParam);
+  const activeCollectionRolls = activeCollectionId
+    ? rolls.filter(roll => roll.collectionId === activeCollectionId)
+    : [];
   const [libraryView, setLibraryView] = useState<'collections' | 'all' | 'loose'>(() => {
+    if (collectionIdParam && initialVisibleTabOrder.includes('collections')) return 'collections';
     const saved = localStorage.getItem(ROLLS_LIBRARY_VIEW_KEY);
     return getDefaultLibraryView(saved, initialVisibleTabOrder, shouldOpenNewRoll || Boolean(openRollId));
   });
@@ -278,6 +286,44 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     navigate({ pathname: '/rolls', search: params.toString() ? `?${params.toString()}` : '' }, { replace: true });
   };
 
+  const openCollectionDetail = (collection: Collection) => {
+    if (!collection.id) return;
+    const params = new URLSearchParams(location.search);
+    params.set('tab', 'collections');
+    params.set('collectionId', collection.id);
+    setLibraryView('collections');
+    navigate({ pathname: '/rolls', search: `?${params.toString()}` }, {
+      state: { ...location.state, grainfolioCollectionDetailOrigin: 'rolls-list' },
+    });
+  };
+
+  const closeCollectionDetail = () => {
+    if (!collectionIdParam) return;
+
+    if (location.state?.grainfolioCollectionDetailOrigin === 'rolls-list') {
+      navigate(-1);
+      return;
+    }
+
+    const params = new URLSearchParams(location.search);
+    params.delete('collectionId');
+    navigate({ pathname: '/rolls', search: params.toString() ? `?${params.toString()}` : '' }, { replace: true });
+  };
+
+  // Switching away from the Collections tab (via PageTabs or the search-triggered
+  // auto-switch) must also drop `collectionId`; otherwise the URL still points at a
+  // project detail the user just navigated away from, and a refresh would pull them
+  // straight back into it instead of the tab they were actually looking at.
+  const handleLibraryViewChange = (nextView: RollsTabId) => {
+    setLibraryView(nextView);
+    if (collectionIdParam && nextView !== 'collections') {
+      const params = new URLSearchParams(location.search);
+      params.delete('collectionId');
+      params.set('tab', nextView);
+      navigate({ pathname: '/rolls', search: `?${params.toString()}` }, { replace: true });
+    }
+  };
+
   const openCameraTransfer = () => {
     if (!selectedRoll || selectedRoll.status !== 'active' || !currentRollCameraId) return;
     setTransferCameraId('');
@@ -355,18 +401,54 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     const params = new URLSearchParams(location.search);
     const hasOpenRollWithoutTab = params.has('openRoll') && !params.has('tab');
     const hasTransientNewRoll = params.get('newRoll') === '1';
-    if (!hasOpenRollWithoutTab && !hasTransientNewRoll) return;
+    const hasCollectionWithoutTab = params.has('collectionId') && params.get('tab') !== 'collections';
 
+    let mutated = false;
     if (hasOpenRollWithoutTab) {
       params.set('tab', visibleTabOrder.includes(libraryView) ? libraryView : visibleTabOrder[0] || 'all');
+      mutated = true;
     }
-    if (hasTransientNewRoll) params.delete('newRoll');
+    if (hasTransientNewRoll) {
+      params.delete('newRoll');
+      mutated = true;
+    }
+    if (hasCollectionWithoutTab) {
+      params.set('tab', 'collections');
+      mutated = true;
+    }
 
-    navigate({ pathname: '/rolls', search: params.toString() ? `?${params.toString()}` : '' }, {
-      replace: true,
-      state: location.state,
-    });
-  }, [libraryView, location.search, location.state, navigate, visibleTabOrder]);
+    if (mutated) {
+      // Let this synchronous fixup land first; the effect re-runs against the
+      // corrected URL, and the async ownership check below runs on that next pass.
+      navigate({ pathname: '/rolls', search: params.toString() ? `?${params.toString()}` : '' }, {
+        replace: true,
+        state: location.state,
+      });
+      return;
+    }
+
+    const collectionIdToValidate = params.get('collectionId');
+    if (!collectionIdToValidate || !user?.id) return;
+
+    let cancelled = false;
+    void (async () => {
+      const record = await db.collections.get(collectionIdToValidate);
+      if (cancelled) return;
+      const isValid = Boolean(record) && record!.userId === user.id && isCollectionsTabVisible;
+      if (isValid) return;
+
+      const cleanupParams = new URLSearchParams(location.search);
+      cleanupParams.delete('collectionId');
+      // If Collections itself is off (settings toggle), don't strand the URL on a
+      // tab that no longer exists; fall back to whatever tab is actually visible.
+      cleanupParams.set('tab', isCollectionsTabVisible ? 'collections' : (visibleTabOrder[0] || 'all'));
+      navigate({ pathname: '/rolls', search: `?${cleanupParams.toString()}` }, {
+        replace: true,
+        state: location.state,
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [isCollectionsTabVisible, libraryView, location.search, location.state, navigate, user?.id, visibleTabOrder]);
 
   useEffect(() => {
     const nextVisibleTabOrder = getVisibleRollsTabOrder(enableFilmMode);
@@ -412,7 +494,6 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
 
   useEffect(() => {
     const nextVisibleTabOrder = getVisibleRollsTabOrder(enableFilmMode);
-    const collectionsVisible = !enableFilmMode || readRollsCollectionsTabEnabled();
 
     if (
       visibleTabOrder.length !== nextVisibleTabOrder.length ||
@@ -422,14 +503,13 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
       return;
     }
 
-    if (!collectionsVisible && activeCollectionId) {
-      queueMicrotask(() => setActiveCollectionId(null));
-    }
+    // Collection detail validity (including "collections tab disabled by settings") is
+    // handled by the URL canonicalize effect above, keyed off `isCollectionsTabVisible`.
 
     if (!nextVisibleTabOrder.includes(libraryView)) {
       queueMicrotask(() => setLibraryView(nextVisibleTabOrder[0]));
     }
-  }, [activeCollectionId, enableFilmMode, libraryView, visibleTabOrder]);
+  }, [enableFilmMode, libraryView, visibleTabOrder]);
 
   useEffect(() => {
     if (!selectedFilmBackId) return;
@@ -1191,7 +1271,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   );
 
   return (
-    <div className={`main-content rolls-main-content ${activeCollectionId ? 'has-active-collection' : ''}`}>
+    <div className={`main-content rolls-main-content ${isCollectionDetailOpen ? 'has-active-collection' : ''}`}>
       <header className="view-header view-header-stack-narrow">
         <div className="view-header-title-container">
           <motion.div
@@ -1265,175 +1345,169 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
       </header>
 
       {/* Body Content */}
-      
-        {activeCollectionId ? (
-          <motion.div 
-            key="collection-detail"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="collection-details-view rolls-collection-details"
-          >
-            <div className="rolls-collection-heading">
-              <IconButton variant="solid" onClick={() => setActiveCollectionId(null)} icon={<ArrowLeft size={20} />} />
-              <div>
-                <h2>{activeCollection?.name || t('common.loading')}</h2>
-                <p>{[
-                  activeCollection?.description,
-                  activeCollection?.date ? new Date(activeCollection.date).toLocaleDateString() : '',
-                ].filter(Boolean).join(' · ')}</p>
-              </div>
-            </div>
-            
-            {activeCollectionRolls.length > 0 && (
-              <div className="rolls-collection-actions-row">
-                <h3>{t('rolls.all')} ({activeCollectionRolls.length})</h3>
-              <div className="rolls-collection-actions">
-                <button className="primary" onClick={() => {
-                  setSelectedExistingRollIds([]);
-                  setIsAddExistingModalOpen(true);
-                }}>
-                  <Folder size={16} /> {t('rolls.addExistingTitle')}
-                </button>
-                <button className="secondary" onClick={() => openNewShoot(activeCollectionId)}>
-                  <Plus size={16} /> {t('rolls.newRoll')}
-                </button>
-              </div>
-              </div>
-            )}
-            
-            
-              <motion.div 
-                key={viewLayout}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2 }}
-                className={viewLayout === 'grid' ? 'rolls-grid' : 'rolls-list'}
-              >
-                {activeCollectionRolls.length === 0 ? (
-                   <div className="rolls-empty-grid-item">
-                      <EmptyState
-                        icon={Film}
-                        title={t('rolls.noRolls')}
-                        description={t('rolls.noRollsDesc')}
-                        action={
-                          <>
-                            <Button
-                              variant="primary"
-                              icon={<Folder size={16} />}
-                              onClick={() => {
-                                setSelectedExistingRollIds([]);
-                                setIsAddExistingModalOpen(true);
-                              }}
-                            >
-                              {t('rolls.addExistingTitle')}
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              icon={<Plus size={16} />}
-                              onClick={() => openNewShoot(activeCollectionId)}
-                            >
-                              {t('rolls.newRoll')}
-                            </Button>
-                          </>
-                        }
-                      />
-                   </div>
-                ) : (
-                  activeCollectionRolls.map(renderRollCard)
-                )}
-              </motion.div>
-            
-          </motion.div>
+      <motion.div
+        key="library-view"
+        className="unified-rolls-view rolls-library-content"
+      >
+        {/* TOP LEVEL LIBRARY TABS & SEARCH */}
+        <div className="rolls-toolbar">
 
-        ) : (
-          <motion.div 
-            key="library-view"
-            className="unified-rolls-view rolls-library-content"
-          >
-            {/* TOP LEVEL LIBRARY TABS & SEARCH */}
-            <div className="rolls-toolbar">
-              
-              <PageTabs
-                className="rolls-page-tabs"
-                tabs={visibleTabOrder.map(tab => ({
-                  id: tab,
-                  label: tab === 'collections' ? t('rolls.collections') : tab === 'all' ? t('rolls.all') : t('rolls.loose'),
-                  mobileLabel: tab === 'collections' ? t('rolls.collectionsMobileTab') : tab === 'all' ? t('rolls.allMobileTab') : t('rolls.looseMobileTab'),
-                  ariaLabel: tab === 'collections' ? t('rolls.collections') : tab === 'all' ? t('rolls.all') : t('rolls.loose'),
-                }))}
-                activeId={libraryView}
-                onChange={setLibraryView}
-                ariaLabel={t('nav.rolls')}
-                idPrefix="rolls-library"
-              />
-              
-              <div className="rolls-toolbar-actions">
-                  <div 
-                    className="search-bar search-input-wrapper rolls-search-input"
-                  >
-                    <Search size={16} className="rolls-search-icon" />
+          <PageTabs
+            className="rolls-page-tabs"
+            tabs={visibleTabOrder.map(tab => ({
+              id: tab,
+              label: tab === 'collections' ? t('rolls.collections') : tab === 'all' ? t('rolls.all') : t('rolls.loose'),
+              mobileLabel: tab === 'collections' ? t('rolls.collectionsMobileTab') : tab === 'all' ? t('rolls.allMobileTab') : t('rolls.looseMobileTab'),
+              ariaLabel: tab === 'collections' ? t('rolls.collections') : tab === 'all' ? t('rolls.all') : t('rolls.loose'),
+            }))}
+            activeId={libraryView}
+            onChange={handleLibraryViewChange}
+            ariaLabel={t('nav.rolls')}
+            idPrefix="rolls-library"
+          />
+
+          <div className="rolls-toolbar-actions">
+              <div
+                className="search-bar search-input-wrapper rolls-search-input"
+              >
+                <Search size={16} className="rolls-search-icon" />
 	                    <input
 	                      type="text"
 	                      aria-label={t('rolls.searchLabel')}
 	                      placeholder={t('rolls.searchPlaceholder')}
-                      value={searchQuery}
-                      onChange={(e) => {
-                        setSearchQuery(e.target.value);
-                        if (e.target.value.trim() !== '' && libraryView === 'collections') {
-                          setLibraryView('all');
-                        }
-                      }}
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    if (e.target.value.trim() !== '' && libraryView === 'collections') {
+                      handleLibraryViewChange('all');
+                    }
+                  }}
 	                      className="rolls-search-field"
-                    />
-                  </div>
-                  
-                  <div ref={sortRef} className="rolls-sort-menu">
-	                    <button
-	                      className="secondary btn-sm sort-trigger-btn"
-                      type="button"
-                      onClick={() => setIsSortOpen(!isSortOpen)}
-                      aria-expanded={isSortOpen}
-                      aria-controls="rolls-sort-options"
-                    >
-                      {sortBy === 'date' ? t('rolls.sortDate') : sortBy === 'camera' ? t('rolls.sortCamera') : t('rolls.sortName')}
-                      <svg className="rolls-sort-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                    </button>
-                    {isSortOpen && (
-                      <div id="rolls-sort-options" className="rolls-sort-options" role="menu">
-                        <button type="button" role="menuitemradio" aria-checked={sortBy === 'date'} className={`rolls-sort-option ${sortBy === 'date' ? 'is-selected' : ''}`} onClick={() => { setSortBy('date'); setIsSortOpen(false); }}>{t('rolls.sortDate')}</button>
-                        <button type="button" role="menuitemradio" aria-checked={sortBy === 'name'} className={`rolls-sort-option ${sortBy === 'name' ? 'is-selected' : ''}`} onClick={() => { setSortBy('name'); setIsSortOpen(false); }}>{t('rolls.sortName')}</button>
-                      </div>
-                    )}
-                  </div>
+                />
               </div>
 
-            </div>
-
-            {/* CONTENT AREA */}
-            <div
-              id={`rolls-library-${libraryView}-panel`}
-              className="rolls-library-tab-panel"
-              role="tabpanel"
-              aria-labelledby={`rolls-library-${libraryView}-tab`}
-            >
-              {isCollectionsTabVisible && libraryView === 'collections' && (
-                <motion.div
-                  key="collections"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.2 }}
+              <div ref={sortRef} className="rolls-sort-menu">
+	                    <button
+	                      className="secondary btn-sm sort-trigger-btn"
+                  type="button"
+                  onClick={() => setIsSortOpen(!isSortOpen)}
+                  aria-expanded={isSortOpen}
+                  aria-controls="rolls-sort-options"
                 >
+                  {sortBy === 'date' ? t('rolls.sortDate') : sortBy === 'camera' ? t('rolls.sortCamera') : t('rolls.sortName')}
+                  <svg className="rolls-sort-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                {isSortOpen && (
+                  <div id="rolls-sort-options" className="rolls-sort-options" role="menu">
+                    <button type="button" role="menuitemradio" aria-checked={sortBy === 'date'} className={`rolls-sort-option ${sortBy === 'date' ? 'is-selected' : ''}`} onClick={() => { setSortBy('date'); setIsSortOpen(false); }}>{t('rolls.sortDate')}</button>
+                    <button type="button" role="menuitemradio" aria-checked={sortBy === 'name'} className={`rolls-sort-option ${sortBy === 'name' ? 'is-selected' : ''}`} onClick={() => { setSortBy('name'); setIsSortOpen(false); }}>{t('rolls.sortName')}</button>
+                  </div>
+                )}
+              </div>
+          </div>
 
-                  <CollectionsTab 
-                    viewMode={viewLayout}
-                    onCollectionSelect={(id) => {
-                      setActiveCollectionId(id);
-                    }}
-                    onCreateRoll={() => openNewShoot()}
-                  />
+        </div>
+
+        {/* CONTENT AREA */}
+        <div
+          id={`rolls-library-${libraryView}-panel`}
+          className="rolls-library-tab-panel"
+          role="tabpanel"
+          aria-labelledby={`rolls-library-${libraryView}-tab`}
+        >
+          {isCollectionsTabVisible && libraryView === 'collections' && (
+            <motion.div
+              key="collections"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.2 }}
+            >
+              {isCollectionDetailOpen ? (
+                <motion.div
+                  key="collection-detail"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="collection-details-view rolls-collection-details"
+                >
+                  <div className="rolls-collection-heading">
+                    <IconButton variant="solid" onClick={closeCollectionDetail} icon={<ArrowLeft size={20} />} />
+                    <div>
+                      <h2>{activeCollection?.name || t('common.loading')}</h2>
+                      <p>{[
+                        activeCollection?.description,
+                        activeCollection?.date ? new Date(activeCollection.date).toLocaleDateString() : '',
+                      ].filter(Boolean).join(' · ')}</p>
+                    </div>
+                  </div>
+
+                  {activeCollectionRolls.length > 0 && (
+                    <div className="rolls-collection-actions-row">
+                      <h3>{t('rolls.all')} ({activeCollectionRolls.length})</h3>
+                      <div className="rolls-collection-actions">
+                        <button className="primary" onClick={() => {
+                          setSelectedExistingRollIds([]);
+                          setIsAddExistingModalOpen(true);
+                        }}>
+                          <Folder size={16} /> {t('rolls.addExistingTitle')}
+                        </button>
+                        <button className="secondary" onClick={() => openNewShoot(activeCollectionId)}>
+                          <Plus size={16} /> {t('rolls.newRoll')}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <motion.div
+                    key={viewLayout}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.2 }}
+                    className={viewLayout === 'grid' ? 'rolls-grid' : 'rolls-list'}
+                  >
+                    {activeCollectionRolls.length === 0 ? (
+                       <div className="rolls-empty-grid-item">
+                          <EmptyState
+                            icon={Film}
+                            title={t('rolls.noRolls')}
+                            description={t('rolls.noRollsDesc')}
+                            action={
+                              <>
+                                <Button
+                                  variant="primary"
+                                  icon={<Folder size={16} />}
+                                  onClick={() => {
+                                    setSelectedExistingRollIds([]);
+                                    setIsAddExistingModalOpen(true);
+                                  }}
+                                >
+                                  {t('rolls.addExistingTitle')}
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  icon={<Plus size={16} />}
+                                  onClick={() => openNewShoot(activeCollectionId)}
+                                >
+                                  {t('rolls.newRoll')}
+                                </Button>
+                              </>
+                            }
+                          />
+                       </div>
+                    ) : (
+                      activeCollectionRolls.map(renderRollCard)
+                    )}
+                  </motion.div>
                 </motion.div>
+              ) : (
+                <CollectionsTab
+                  viewMode={viewLayout}
+                  onCollectionSelect={openCollectionDetail}
+                  onCreateRoll={() => openNewShoot()}
+                />
               )}
+            </motion.div>
+          )}
 
               {libraryView === 'all' && (
                 <motion.div
@@ -1502,8 +1576,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
               )}
             </div>
           </motion.div>
-        )}
-      
+
       <input ref={quickCoverFileInputRef} type="file" accept="image/*" onChange={handleQuickCoverFileSelect} hidden />
 
             {/* Drawer for Roll Details */}

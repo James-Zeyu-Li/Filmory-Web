@@ -48,7 +48,7 @@ const Harness = (props: {
   onClose: () => void;
   onEdit: (camera: Camera) => void;
   onOpenRoll: (rollId: string) => void;
-  onOpenCollections: () => void;
+  onOpenCollection: (collectionId: string) => void;
 }) => {
   const { language, t } = useLanguage();
   return (
@@ -65,7 +65,7 @@ const Harness = (props: {
 describe('CameraHistoryDrawer', () => {
   it('renders total/active/completed counts, project groups and unassigned records', async () => {
     const onOpenRoll = vi.fn();
-    const onOpenCollections = vi.fn();
+    const onOpenCollection = vi.fn();
     const user = userEvent.setup();
 
     render(
@@ -76,7 +76,7 @@ describe('CameraHistoryDrawer', () => {
         onClose={vi.fn()}
         onEdit={vi.fn()}
         onOpenRoll={onOpenRoll}
-        onOpenCollections={onOpenCollections}
+        onOpenCollection={onOpenCollection}
       />,
     );
 
@@ -90,7 +90,7 @@ describe('CameraHistoryDrawer', () => {
     expect(onOpenRoll).toHaveBeenCalledWith('roll-project');
 
     await user.click(screen.getByRole('button', { name: '进入完整项目' }));
-    expect(onOpenCollections).toHaveBeenCalledTimes(1);
+    expect(onOpenCollection).toHaveBeenCalledWith('collection-1');
   });
 
   it('opens a roll row via keyboard Enter and Space', async () => {
@@ -105,7 +105,7 @@ describe('CameraHistoryDrawer', () => {
         onClose={vi.fn()}
         onEdit={vi.fn()}
         onOpenRoll={onOpenRoll}
-        onOpenCollections={vi.fn()}
+        onOpenCollection={vi.fn()}
       />,
     );
 
@@ -129,7 +129,7 @@ describe('CameraHistoryDrawer', () => {
         onClose={vi.fn()}
         onEdit={vi.fn()}
         onOpenRoll={vi.fn()}
-        onOpenCollections={vi.fn()}
+        onOpenCollection={vi.fn()}
       />,
     );
 
@@ -145,14 +145,14 @@ describe('CameraHistoryDrawer', () => {
         onClose={vi.fn()}
         onEdit={vi.fn()}
         onOpenRoll={vi.fn()}
-        onOpenCollections={vi.fn()}
+        onOpenCollection={vi.fn()}
       />,
     );
 
     expect(screen.getAllByText('相机记录不可用').length).toBeGreaterThan(0);
   });
 
-  it('routes the edit action to onEdit without triggering onOpenRoll/onOpenCollections', async () => {
+  it('routes the edit action to onEdit without triggering onOpenRoll/onOpenCollection', async () => {
     const onEdit = vi.fn();
     const user = userEvent.setup();
 
@@ -164,7 +164,7 @@ describe('CameraHistoryDrawer', () => {
         onClose={vi.fn()}
         onEdit={onEdit}
         onOpenRoll={vi.fn()}
-        onOpenCollections={vi.fn()}
+        onOpenCollection={vi.fn()}
       />,
     );
 

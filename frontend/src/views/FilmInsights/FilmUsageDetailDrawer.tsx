@@ -27,7 +27,7 @@ interface FilmUsageDetailDrawerProps {
   t: Translate;
   onClose: () => void;
   onOpenRoll: (rollId: string) => void;
-  onOpenCollections: () => void;
+  onOpenCollection: (collectionId: string) => void;
   onCreateRoll: () => void;
 }
 
@@ -50,7 +50,7 @@ export const FilmUsageDetailDrawer: React.FC<FilmUsageDetailDrawerProps> = ({
   t,
   onClose,
   onOpenRoll,
-  onOpenCollections,
+  onOpenCollection,
   onCreateRoll,
 }) => {
   const [expandedCollectionId, setExpandedCollectionId] = useState<string | null>(null);
@@ -130,7 +130,7 @@ export const FilmUsageDetailDrawer: React.FC<FilmUsageDetailDrawerProps> = ({
             <div className="film-insights-roll-list">
               {group.rolls.map(renderRollRow)}
             </div>
-            <button type="button" className="secondary film-insights-enter-project" onClick={onOpenCollections}>
+            <button type="button" className="secondary film-insights-enter-project" onClick={() => onOpenCollection(group.collection.id!)}>
               {t('filmInsights.enterProject')}
             </button>
           </div>

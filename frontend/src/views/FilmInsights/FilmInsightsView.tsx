@@ -38,7 +38,7 @@ export const FilmInsightsView: React.FC<FilmInsightsViewProps> = ({ isEmbedded =
   const selectedSummary = summaries.find(summary => summary.film.id === selectedFilmId) ?? null;
 
   const openRoll = (rollId: string) => navigate(`/rolls?tab=all&openRoll=${rollId}`);
-  const openCollectionsList = () => navigate('/rolls?tab=collections');
+  const openCollection = (collectionId: string) => navigate(`/rolls?tab=collections&collectionId=${collectionId}`);
   const openNewRoll = () => navigate('/rolls?newRoll=1');
 
   const getFilmLabel = (summary: FilmUsageSummary) => `${summary.film.brand} ${summary.film.name}`;
@@ -137,7 +137,7 @@ export const FilmInsightsView: React.FC<FilmInsightsViewProps> = ({ isEmbedded =
         t={t}
         onClose={() => setSelectedFilmId(null)}
         onOpenRoll={openRoll}
-        onOpenCollections={openCollectionsList}
+        onOpenCollection={openCollection}
         onCreateRoll={openNewRoll}
       />
     </div>

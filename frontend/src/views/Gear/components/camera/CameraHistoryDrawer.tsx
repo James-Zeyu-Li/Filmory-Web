@@ -31,7 +31,7 @@ interface CameraHistoryDrawerProps {
   onClose: () => void;
   onEdit: (camera: Camera) => void;
   onOpenRoll: (rollId: string) => void;
-  onOpenCollections: () => void;
+  onOpenCollection: (collectionId: string) => void;
 }
 
 const getAvatarFullUrl = (url?: string | null) => (
@@ -61,7 +61,7 @@ export const CameraHistoryDrawer: React.FC<CameraHistoryDrawerProps> = ({
   onClose,
   onEdit,
   onOpenRoll,
-  onOpenCollections,
+  onOpenCollection,
 }) => {
   const [expandedCollectionId, setExpandedCollectionId] = useState<string | null>(null);
 
@@ -129,7 +129,7 @@ export const CameraHistoryDrawer: React.FC<CameraHistoryDrawerProps> = ({
             <div className="camera-history-roll-list">
               {group.rolls.map(renderRollRow)}
             </div>
-            <button type="button" className="secondary camera-history-enter-project" onClick={onOpenCollections}>
+            <button type="button" className="secondary camera-history-enter-project" onClick={() => onOpenCollection(group.collection.id!)}>
               {t('gear.historyEnterProject')}
             </button>
           </div>

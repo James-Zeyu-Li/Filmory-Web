@@ -15,7 +15,7 @@ import { useLanguage } from '../../contexts/useLanguage';
 import { requestImmediateSync } from '../../services/syncEvents';
 
 interface CollectionsTabProps {
-  onCollectionSelect: (collectionId: string) => void;
+  onCollectionSelect: (collection: Collection) => void;
   onCreateRoll: () => void;
   viewMode?: 'grid' | 'list';
 }
@@ -105,16 +105,19 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
       isDanger: true
     });
     if (confirmed) {
-      await db.collections.delete(id);
-      
-      // Detach rolls
-      const linkedRolls = (await db.rolls.where('collectionId').equals(id).toArray())
-        .filter(roll => roll.userId === (user?.id || 'offline'));
-      for (const roll of linkedRolls) {
-        if (roll.id) {
-          await db.rolls.update(roll.id, { collectionId: undefined });
+      await db.transaction('rw', db.collections, db.rolls, async () => {
+        await db.collections.delete(id);
+
+        // Detach rolls atomically with the collection delete so a partial failure
+        // can't leave rolls pointing at a deleted collectionId.
+        const linkedRolls = (await db.rolls.where('collectionId').equals(id).toArray())
+          .filter(roll => roll.userId === (user?.id || 'offline'));
+        for (const roll of linkedRolls) {
+          if (roll.id) {
+            await db.rolls.update(roll.id, { collectionId: undefined });
+          }
         }
-      }
+      });
       requestImmediateSync('collection-delete');
     }
   }, [confirm, t, user]);
@@ -147,9 +150,9 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
           <div 
             key={collection.id} 
             className="roll-card collection-card"
-            onClick={() => onCollectionSelect(collection.id!)}
+            onClick={() => onCollectionSelect(collection)}
           >
-            <button type="button" className="record-card-open-action" onClick={(event) => { event.stopPropagation(); onCollectionSelect(collection.id!); }} aria-label={`${collection.name} (${t('collections.rollCount', { count: linkedRolls.length })})`} />
+            <button type="button" className="record-card-open-action" onClick={(event) => { event.stopPropagation(); onCollectionSelect(collection); }} aria-label={`${collection.name} (${t('collections.rollCount', { count: linkedRolls.length })})`} />
             <div className="roll-card-cover">
               {collection.coverUrl ? (
                 <div style={{ backgroundImage: `url(${collection.coverUrl})`, width: '100%', height: '100%', backgroundSize: 'cover', backgroundPosition: 'center' }} />
@@ -206,9 +209,9 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
         <div 
           key={collection.id} 
           className="collection-card-row"
-          onClick={() => onCollectionSelect(collection.id!)}
+          onClick={() => onCollectionSelect(collection)}
         >
-          <button type="button" className="record-card-open-action" onClick={(event) => { event.stopPropagation(); onCollectionSelect(collection.id!); }} aria-label={`${collection.name} (${t('collections.rollCount', { count: linkedRolls.length })})`} />
+          <button type="button" className="record-card-open-action" onClick={(event) => { event.stopPropagation(); onCollectionSelect(collection); }} aria-label={`${collection.name} (${t('collections.rollCount', { count: linkedRolls.length })})`} />
           {/* Square thumbnail: mosaic if photos exist, name initials if not */}
           <div className="collection-card-thumb-wrapper">
             {collection.coverUrl ? (

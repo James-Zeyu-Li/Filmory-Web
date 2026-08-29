@@ -285,7 +285,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
   const openFilmHistory = (film: FilmStock) => setViewingFilmStockId(film.id!);
   const closeFilmHistory = () => setViewingFilmStockId(null);
   const openRollFromHistory = (rollId: string) => navigate(`/rolls?tab=all&openRoll=${rollId}`);
-  const openCollectionsFromHistory = () => navigate('/rolls?tab=collections');
+  const openCollectionFromHistory = (collectionId: string) => navigate(`/rolls?tab=collections&collectionId=${collectionId}`);
   const openNewRollFromHistory = () => navigate('/rolls?newRoll=1');
 
   const openEditEquipment = (eq: OtherEquipment) => {
@@ -527,7 +527,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
         onClose={closeCameraHistory}
         onEdit={camera => { closeCameraHistory(); openEditCamera(camera); }}
         onOpenRoll={openRollFromHistory}
-        onOpenCollections={openCollectionsFromHistory}
+        onOpenCollection={openCollectionFromHistory}
       />
 
       <FilmUsageDetailDrawer
@@ -537,7 +537,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
         t={t}
         onClose={closeFilmHistory}
         onOpenRoll={openRollFromHistory}
-        onOpenCollections={openCollectionsFromHistory}
+        onOpenCollection={openCollectionFromHistory}
         onCreateRoll={openNewRollFromHistory}
       />
 

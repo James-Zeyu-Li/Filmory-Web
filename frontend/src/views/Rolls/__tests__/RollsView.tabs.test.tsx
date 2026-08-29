@@ -365,4 +365,123 @@ describe('RollsView tabs and empty states', () => {
       });
     });
   });
+
+  it('opens a project detail from the Collections list, keeps Tabs visible and the URL in sync, and closes back to the list', async () => {
+    const user = userEvent.setup();
+    const now = Date.now();
+
+    await db.collections.add({
+      id: 'collection-detail-url', userId: 'mock-user-id', name: '京都秋色', date: now, addedAt: now,
+    });
+    await db.rolls.add({
+      id: 'roll-in-detail', userId: 'mock-user-id', name: '岚山', cameraIds: [], status: 'archived', endDate: now, collectionId: 'collection-detail-url',
+    });
+
+    renderRollsView();
+    await user.click(screen.getByRole('tab', { name: '项目集' }));
+    await user.click(await screen.findByRole('button', { name: '京都秋色 (1 卷)' }));
+
+    expect(screen.getByTestId('location-probe')).toHaveTextContent('/rolls?tab=collections&collectionId=collection-detail-url');
+    expect(await screen.findByRole('heading', { name: '京都秋色', level: 2 })).toBeInTheDocument();
+    expect(screen.getByText('岚山')).toBeInTheDocument();
+    // The regression this guards: entering detail must not unmount the shared PageTabs.
+    expect(screen.getByRole('tab', { name: '项目集' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '全部拍摄记录' })).toBeInTheDocument();
+
+    const backButtons = screen.getAllByRole('button');
+    const backButton = backButtons.find(button => button.querySelector('svg') && button.closest('.rolls-collection-heading'));
+    await user.click(backButton!);
+
+    expect(screen.getByTestId('location-probe')).toHaveTextContent('/rolls');
+    expect(screen.queryByRole('heading', { name: '京都秋色', level: 2 })).not.toBeInTheDocument();
+  });
+
+  it('resolves a direct collection deep link after local data is available and rejects another user collection', async () => {
+    const now = Date.now();
+    await db.collections.bulkAdd([
+      { id: 'collection-direct', userId: 'mock-user-id', name: 'Direct project', date: now, addedAt: now },
+      { id: 'collection-other-user', userId: 'other-user-id', name: 'Private project', date: now, addedAt: now },
+    ]);
+
+    renderRollsView(true, '/rolls?collectionId=collection-direct');
+    expect(await screen.findByRole('heading', { name: 'Direct project', level: 2 })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('location-probe')).toHaveTextContent('/rolls?collectionId=collection-direct&tab=collections');
+    });
+
+    cleanup();
+    renderRollsView(true, '/rolls?tab=collections&collectionId=collection-other-user');
+    await waitFor(() => {
+      expect(screen.getByTestId('location-probe')).toHaveTextContent('/rolls?tab=collections');
+    });
+    expect(screen.queryByText('Private project')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '项目集' })).toBeInTheDocument();
+  });
+
+  it('drops collectionId from the URL when switching tabs away from a project detail, so a refresh does not pull the user back into it', async () => {
+    const user = userEvent.setup();
+    const now = Date.now();
+
+    await db.collections.add({
+      id: 'collection-tab-switch', userId: 'mock-user-id', name: '离开测试项目', date: now, addedAt: now,
+    });
+
+    renderRollsView();
+    await user.click(screen.getByRole('tab', { name: '项目集' }));
+    await user.click(await screen.findByRole('button', { name: '离开测试项目 (0 卷)' }));
+    expect(screen.getByTestId('location-probe')).toHaveTextContent('collectionId=collection-tab-switch');
+
+    await user.click(screen.getByRole('tab', { name: '全部拍摄记录' }));
+
+    expect(screen.getByTestId('location-probe')).not.toHaveTextContent('collectionId');
+    expect(screen.queryByRole('heading', { name: '离开测试项目', level: 2 })).not.toBeInTheDocument();
+
+    // Simulating "the user refreshes here": re-mount at the URL the app just settled on.
+    const settledUrl = screen.getByTestId('location-probe').textContent!;
+    cleanup();
+    renderRollsView(true, settledUrl);
+    expect(await screen.findByRole('heading', { name: '全部拍摄记录' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '离开测试项目', level: 2 })).not.toBeInTheDocument();
+  });
+
+  it('drops collectionId when typing in search from within a project detail', async () => {
+    const user = userEvent.setup();
+    const now = Date.now();
+
+    await db.collections.add({
+      id: 'collection-search-switch', userId: 'mock-user-id', name: '搜索离开测试', date: now, addedAt: now,
+    });
+
+    renderRollsView();
+    await user.click(screen.getByRole('tab', { name: '项目集' }));
+    await user.click(await screen.findByRole('button', { name: '搜索离开测试 (0 卷)' }));
+    expect(screen.getByTestId('location-probe')).toHaveTextContent('collectionId=collection-search-switch');
+
+    await user.type(screen.getByRole('textbox', { name: '搜索拍摄记录' }), '任意关键词');
+
+    expect(screen.getByTestId('location-probe')).not.toHaveTextContent('collectionId');
+    expect(screen.queryByRole('heading', { name: '搜索离开测试', level: 2 })).not.toBeInTheDocument();
+  });
+
+  it('falls back to the first visible tab, not tab=collections, when Collections is disabled while viewing a project detail', async () => {
+    const user = userEvent.setup();
+    const now = Date.now();
+
+    await db.collections.add({
+      id: 'collection-settings-off', userId: 'mock-user-id', name: '设置关闭测试', date: now, addedAt: now,
+    });
+
+    renderRollsView();
+    await user.click(screen.getByRole('tab', { name: '项目集' }));
+    await user.click(await screen.findByRole('button', { name: '设置关闭测试 (0 卷)' }));
+    expect(await screen.findByRole('heading', { name: '设置关闭测试', level: 2 })).toBeInTheDocument();
+
+    storage.set('grainfolio_rolls_collections_tab_enabled', 'false');
+    window.dispatchEvent(new CustomEvent('grainfolio:workspace-preferences-changed'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-probe')).toHaveTextContent('/rolls?tab=all');
+    });
+    expect(screen.queryByRole('heading', { name: '设置关闭测试', level: 2 })).not.toBeInTheDocument();
+  });
 });

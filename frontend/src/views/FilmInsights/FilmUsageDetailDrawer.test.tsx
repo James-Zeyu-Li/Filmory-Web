@@ -36,7 +36,7 @@ const Harness = (props: {
   summary: FilmUsageSummary | null;
   onClose: () => void;
   onOpenRoll: (rollId: string) => void;
-  onOpenCollections: () => void;
+  onOpenCollection: (collectionId: string) => void;
   onCreateRoll: () => void;
 }) => {
   const { language, t } = useLanguage();
@@ -46,7 +46,7 @@ const Harness = (props: {
 describe('FilmUsageDetailDrawer', () => {
   it('renders active/history sections plus the involved-projects and unassigned groups', async () => {
     const onOpenRoll = vi.fn();
-    const onOpenCollections = vi.fn();
+    const onOpenCollection = vi.fn();
     const user = userEvent.setup();
 
     render(
@@ -55,7 +55,7 @@ describe('FilmUsageDetailDrawer', () => {
         summary={buildSummary()}
         onClose={vi.fn()}
         onOpenRoll={onOpenRoll}
-        onOpenCollections={onOpenCollections}
+        onOpenCollection={onOpenCollection}
         onCreateRoll={vi.fn()}
       />,
     );
@@ -71,7 +71,7 @@ describe('FilmUsageDetailDrawer', () => {
     expect(onOpenRoll).toHaveBeenCalledWith('roll-project');
 
     await user.click(screen.getByRole('button', { name: '进入完整项目' }));
-    expect(onOpenCollections).toHaveBeenCalledTimes(1);
+    expect(onOpenCollection).toHaveBeenCalledWith('collection-1');
   });
 
   it('opens a roll row via keyboard Enter and Space', async () => {
@@ -84,7 +84,7 @@ describe('FilmUsageDetailDrawer', () => {
         summary={buildSummary()}
         onClose={vi.fn()}
         onOpenRoll={onOpenRoll}
-        onOpenCollections={vi.fn()}
+        onOpenCollection={vi.fn()}
         onCreateRoll={vi.fn()}
       />,
     );
@@ -111,7 +111,7 @@ describe('FilmUsageDetailDrawer', () => {
         })}
         onClose={vi.fn()}
         onOpenRoll={vi.fn()}
-        onOpenCollections={vi.fn()}
+        onOpenCollection={vi.fn()}
         onCreateRoll={onCreateRoll}
       />,
     );
@@ -128,7 +128,7 @@ describe('FilmUsageDetailDrawer', () => {
         summary={null}
         onClose={vi.fn()}
         onOpenRoll={vi.fn()}
-        onOpenCollections={vi.fn()}
+        onOpenCollection={vi.fn()}
         onCreateRoll={vi.fn()}
       />,
     );
