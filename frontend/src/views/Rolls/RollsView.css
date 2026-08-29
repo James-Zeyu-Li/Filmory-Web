@@ -430,6 +430,12 @@
   z-index: 2;
 }
 
+/* Collection grid cards have no clickable content inside their cover (no upload/preview
+   button like Roll covers do), so it must not outrank the card's own open-action button. */
+.collection-card .roll-card-cover {
+  z-index: 0;
+}
+
 .roll-card-cover-action {
   position: absolute;
   inset: 0;
