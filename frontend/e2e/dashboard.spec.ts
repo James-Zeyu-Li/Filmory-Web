@@ -9,11 +9,9 @@ test.describe('Dashboard film workspace', () => {
   test('shows film-first operational metrics instead of photo counters', async ({ page }) => {
     await expect(page.getByRole('heading', { name: /控制中心/ })).toBeVisible();
     await expect(page.locator('.metric-card').filter({ hasText: '进行中' })).toBeVisible();
-    await expect(page.locator('.metric-card').filter({ hasText: '库存胶卷' })).toBeVisible();
-    await expect(page.getByLabel('库存胶卷分组')).toContainText('135 11');
-    await expect(page.getByLabel('库存胶卷分组')).toContainText('120 0');
-    await expect(page.getByLabel('库存胶卷分组')).toContainText('彩色 8');
-    await expect(page.getByLabel('库存胶卷分组')).toContainText('黑白 3');
+    // The per-format/color stock breakdown was removed as part of the Insights noise-reduction
+    // pass; the metric card now shows a single aggregate count (11 rolls across the seeded stock).
+    await expect(page.locator('.metric-card').filter({ hasText: '库存胶卷' })).toContainText('11 卷');
     await expect(page.locator('.metric-card').filter({ hasText: '使用中机器' })).toBeVisible();
     await expect(page.locator('.active-roll-dash-card').filter({ hasText: '春日公园' })).toContainText('装片组合：Minolta X-700');
     await expect(page.getByText('30 天完成')).toHaveCount(0);
@@ -59,6 +57,9 @@ test.describe('Dashboard film workspace', () => {
 
   test('keeps rolls tab and list layout after refresh', async ({ page }) => {
     await page.goto('/rolls', { waitUntil: 'domcontentloaded' });
+    // The header's primary action only renders as "新建项目集" while the Collections tab
+    // is active; without this click it stays "新建拍摄记录" and the locator below times out.
+    await page.getByRole('tab', { name: '项目集' }).click();
     await page.locator('.view-header-actions').getByRole('button', { name: '新建项目集' }).click();
     const collectionModal = page.locator('.modal-content').filter({ hasText: '新建项目集' });
     await collectionModal.getByPlaceholder('例如：2026 东京旅拍').fill('测试项目集');
@@ -73,7 +74,7 @@ test.describe('Dashboard film workspace', () => {
     });
     expect(collectionColumnCount).toBe(2);
 
-    await page.getByRole('button', { name: '全部拍摄记录' }).click();
+    await page.getByRole('tab', { name: '全部拍摄记录' }).click();
 
     await expect(page.getByRole('heading', { name: '全部拍摄记录' })).toBeVisible();
     await expect(page.locator('.rolls-list')).toBeVisible();
