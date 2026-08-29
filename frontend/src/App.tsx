@@ -147,17 +147,19 @@ function AppContent() {
 
     return (
       <AnimatePresence mode="wait">
-        <Routes location={location} key={location.pathname}>
-          <Route path="/" element={<LandingView />} />
-          <Route path={AUTH_ROUTES.login} element={<LoginView />} />
-          <Route path={AUTH_ROUTES.signup} element={<LoginView />} />
-          <Route path={AUTH_ROUTES.legacyLogin} element={<LegacyLoginRedirect />} />
-          <Route path={AUTH_ROUTES.forgotPassword} element={<ForgotPasswordView />} />
-          <Route path={AUTH_ROUTES.resetPassword} element={<ResetPasswordView />} />
-          <Route path={AUTH_ROUTES.callback} element={<AuthCallbackView />} />
-          <Route path={AUTH_ROUTES.checkEmail} element={<AuthStatusView mode="check-email" />} />
-          <Route path={AUTH_ROUTES.verified} element={<AuthStatusView mode="verified" />} />
-        </Routes>
+        <PageTransition key={location.pathname} fill={false}>
+          <Routes location={location}>
+            <Route path="/" element={<LandingView />} />
+            <Route path={AUTH_ROUTES.login} element={<LoginView />} />
+            <Route path={AUTH_ROUTES.signup} element={<LoginView />} />
+            <Route path={AUTH_ROUTES.legacyLogin} element={<LegacyLoginRedirect />} />
+            <Route path={AUTH_ROUTES.forgotPassword} element={<ForgotPasswordView />} />
+            <Route path={AUTH_ROUTES.resetPassword} element={<ResetPasswordView />} />
+            <Route path={AUTH_ROUTES.callback} element={<AuthCallbackView />} />
+            <Route path={AUTH_ROUTES.checkEmail} element={<AuthStatusView mode="check-email" />} />
+            <Route path={AUTH_ROUTES.verified} element={<AuthStatusView mode="verified" />} />
+          </Routes>
+        </PageTransition>
       </AnimatePresence>
     );
   }

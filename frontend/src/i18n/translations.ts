@@ -20,11 +20,11 @@ export const detectBrowserLanguage = (
       ? navigator.languages
       : [navigator.language]
 ): LanguageCode => {
-  const hasChinesePreference = preferredLanguages.some(language => (
-    language.toLowerCase().startsWith('zh')
-  ));
+  // `navigator.languages` is ordered by the person's preference. A secondary
+  // Chinese locale must not override an English primary locale (or vice versa).
+  const primaryLanguage = preferredLanguages.find(language => language.trim().length > 0);
 
-  return hasChinesePreference ? 'zh-CN' : 'en-US';
+  return primaryLanguage?.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
 };
 
 export const translations = {

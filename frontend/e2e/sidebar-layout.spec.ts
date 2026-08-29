@@ -8,7 +8,7 @@ test.describe('Sidebar layout', () => {
 
     const sidebar = page.locator('.sidebar');
     const dashboard = page.getByRole('link', { name: /控制中心|Dashboard/ });
-    const account = page.getByRole('button', { name: /我的账号|My Account/ });
+    const account = page.getByRole('button', { name: /我的账户|My Account/ });
     const preferences = page.getByRole('button', { name: /偏好设置|Preferences/ });
     const collapse = page.getByRole('button', { name: /收起侧边栏|Collapse sidebar/ });
 
@@ -37,6 +37,18 @@ test.describe('Sidebar layout', () => {
     await collapse.click();
     await expect(sidebar).toHaveCSS('width', '72px');
     await expect(page.getByRole('button', { name: /展开侧边栏|Expand sidebar/ })).toBeVisible();
+
+    // A compact rail still needs a 44px touch target, but its controls should
+    // not stretch across the full 56px inner width of the 72px sidebar.
+    for (const control of [
+      dashboard,
+      account,
+      preferences,
+      page.getByRole('button', { name: /展开侧边栏|Expand sidebar/ }),
+    ]) {
+      await expect(control).toHaveCSS('width', '44px');
+      await expect(control).toHaveCSS('min-height', '44px');
+    }
   });
 
   test('preserves the 280px mobile drawer contract', async ({ page }) => {

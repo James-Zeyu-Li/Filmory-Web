@@ -6,13 +6,39 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="description" content="Grainfolio - 专业的个人胶片摄影数字化工作台与胶卷库存管理系统。支持双端数据流式同步、无极时间轴缩放、A/B卷联动对比及多维数据统计图表。" />
-    
+
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#000000" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!--
+      Resolve the theme before React mounts (and before first paint), so a light-system
+      visitor never sees a flash of the dark default while the app boots. Must run after
+      the theme-color meta tag above so querySelector can find it. This mirrors
+      getInitialTheme()/applyTheme() in src/services/themePreference.ts and
+      src/contexts/ThemeContext.tsx — keep the storage key and the two hex values here
+      in sync with --bg-primary in src/index.css if either changes.
+    -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('grainfolio-theme');
+          var resolved = saved === 'dark' || saved === 'light'
+            ? saved
+            : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+          document.documentElement.setAttribute('data-theme', resolved);
+          document.documentElement.style.colorScheme = resolved;
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', resolved === 'dark' ? '#0f1013' : '#f9fafb');
+        } catch (e) {
+          // localStorage/matchMedia can throw in locked-down embeds; fall back to the
+          // static dark default above rather than block page load.
+        }
+      })();
+    </script>
 
     <title>Grainfolio — 胶片摄影数字化与胶卷库存管理平台</title>
   </head>

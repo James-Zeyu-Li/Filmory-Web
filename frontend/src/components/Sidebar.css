@@ -274,6 +274,7 @@
   pointer-events: none;
   visibility: hidden;
   max-width: 0;
+  white-space: nowrap;
   overflow: hidden;
   transition: opacity 0.15s ease, transform 0.2s ease, max-width 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s;
 }
@@ -295,8 +296,11 @@
 }
 
 .sidebar.collapsed .nav-item {
+  width: 44px;
+  min-width: 44px;
+  align-self: center;
   justify-content: center;
-  padding: 12px 0;
+  padding: 12px;
 }
 
 .sidebar.collapsed .sidebar-footer {
@@ -334,6 +338,9 @@
     justify-content: flex-start;
   }
   .sidebar.collapsed .nav-item {
+    width: 100%;
+    min-width: 0;
+    align-self: stretch;
     justify-content: flex-start;
     padding: 12px 10px;
   }

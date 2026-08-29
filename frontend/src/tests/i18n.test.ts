@@ -11,6 +11,7 @@ describe('i18n translations', () => {
     expect(detectBrowserLanguage(['zh-CN', 'en-US'])).toBe('zh-CN');
     expect(detectBrowserLanguage(['zh-HK'])).toBe('zh-CN');
     expect(detectBrowserLanguage(['en-US', 'fr-CA'])).toBe('en-US');
+    expect(detectBrowserLanguage(['en-US', 'zh-CN'])).toBe('en-US');
     expect(detectBrowserLanguage([])).toBe('en-US');
   });
 

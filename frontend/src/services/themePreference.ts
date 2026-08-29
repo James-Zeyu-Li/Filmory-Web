@@ -11,12 +11,14 @@ export const getStoredTheme = (): Theme | null => {
     : null;
 };
 
-export const getInitialTheme = (pathname = window.location.pathname): Theme => {
+export const getInitialTheme = (): Theme => {
   const savedTheme = getStoredTheme();
   if (savedTheme) return savedTheme;
 
-  const isPublicAuthRoute = pathname === '/login' || pathname.startsWith('/auth/');
-  return isPublicAuthRoute ? 'dark' : 'system';
+  // Landing and Auth are both fully theme-aware now (no fixed-dark identity to
+  // stay continuous with), so first-visit behavior is the same everywhere:
+  // follow the OS/browser preference until the user picks one explicitly.
+  return 'system';
 };
 
 export const notifyThemeSync = () => {

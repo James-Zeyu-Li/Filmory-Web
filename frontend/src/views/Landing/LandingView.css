@@ -1,11 +1,9 @@
 .landing-container {
-  --landing-bg: #0b0b0a;
-  --landing-surface: #121210;
-  --landing-surface-raised: #171714;
-  --landing-border: rgba(255, 255, 255, 0.09);
-  --landing-accent: #e2b028;
+  /* Brand accent chip stays a constant warm cream across themes (paper/film identity);
+     everything else is theme-scoped below via [data-theme]. Opacity-varied colors use
+     an RGB triplet + rgba(), not dozens of named tokens, so every tint/shade stays in
+     sync automatically when the theme switches. */
   --landing-brand-surface: #f4efe2;
-  --landing-brand-border: rgba(255, 248, 225, 0.72);
   min-height: 100vh;
   min-height: 100dvh;
   width: 100%;
@@ -13,13 +11,41 @@
   flex: 1 1 auto;
   min-width: 0;
   background-color: var(--landing-bg);
-  color: #fff;
+  color: rgb(var(--landing-text-rgb));
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   overflow-x: clip;
   position: relative;
   display: flex;
   flex-direction: column;
   isolation: isolate;
+}
+
+[data-theme='dark'] .landing-container {
+  --landing-bg: #0b0b0a;
+  --landing-surface: #121210;
+  --landing-surface-raised: #171714;
+  --landing-border: rgba(255, 255, 255, 0.09);
+  --landing-nav-bg: rgba(11, 11, 10, 0.96);
+  --landing-accent: #e2b028;
+  --landing-accent-rgb: 226, 176, 40;
+  --landing-text-rgb: 255, 255, 255;
+  --landing-invert-text-rgb: 0, 0, 0;
+  --landing-brand-border: rgba(255, 248, 225, 0.72);
+  --landing-wordmark-filter: invert(1) grayscale(1) brightness(1.35) drop-shadow(0 1px 5px rgba(0, 0, 0, 0.5));
+}
+
+[data-theme='light'] .landing-container {
+  --landing-bg: #fbfaf7;
+  --landing-surface: #ffffff;
+  --landing-surface-raised: #f2efe8;
+  --landing-border: rgba(20, 19, 15, 0.1);
+  --landing-nav-bg: rgba(251, 250, 247, 0.96);
+  --landing-accent: #b45309;
+  --landing-accent-rgb: 180, 83, 9;
+  --landing-text-rgb: 20, 19, 15;
+  --landing-invert-text-rgb: 255, 255, 255;
+  --landing-brand-border: rgba(120, 103, 70, 0.35);
+  --landing-wordmark-filter: none;
 }
 
 /* Navbar */
@@ -37,7 +63,7 @@
   padding: 0 clamp(16px, 4vw, 48px);
   min-width: 0;
   z-index: 100;
-  background: rgba(11, 11, 10, 0.96);
+  background: var(--landing-nav-bg);
   border-bottom: 1px solid var(--landing-border);
 }
 
@@ -82,7 +108,7 @@
   height: 22px;
   max-width: min(166px, 37vw);
   object-fit: contain;
-  filter: invert(1) grayscale(1) brightness(1.35) drop-shadow(0 1px 5px rgba(0, 0, 0, 0.5));
+  filter: var(--landing-wordmark-filter);
 }
 
 .landing-nav-actions {
@@ -112,7 +138,7 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.64);
+  color: rgba(var(--landing-text-rgb), 0.64);
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.01em;
@@ -121,17 +147,17 @@
 }
 
 .landing-language-switch button:hover {
-  color: #fff;
+  color: rgb(var(--landing-text-rgb));
 }
 
 .landing-language-switch button.active {
-  color: #111;
-  background: #fff;
+  color: rgb(var(--landing-invert-text-rgb));
+  background: rgb(var(--landing-text-rgb));
   box-shadow: none;
 }
 
 .btn-ghost-trial {
-  color: rgba(255, 255, 255, 0.86);
+  color: rgba(var(--landing-text-rgb), 0.86);
   background: var(--landing-surface);
   border: 1px solid var(--landing-border);
   text-decoration: none;
@@ -144,13 +170,13 @@
 }
 
 .btn-ghost-trial:hover {
-  color: #fff;
+  color: rgb(var(--landing-text-rgb));
   background: var(--landing-surface-raised);
   transform: translateY(-1px);
 }
 
 .landing-nav-actions .btn-secondary {
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(var(--landing-text-rgb), 0.8);
   text-decoration: none;
   font-weight: 500;
   font-size: 0.95rem;
@@ -160,13 +186,13 @@
 }
 
 .landing-nav-actions .btn-secondary:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.05);
+  color: rgb(var(--landing-text-rgb));
+  background: rgba(var(--landing-text-rgb), 0.05);
 }
 
 .landing-nav-actions .btn-primary {
-  background: #fff;
-  color: #000;
+  background: rgb(var(--landing-text-rgb));
+  color: rgb(var(--landing-invert-text-rgb));
   text-decoration: none;
   font-weight: 600;
   font-size: 0.95rem;
@@ -177,7 +203,7 @@
 
 .landing-nav-actions .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(var(--landing-text-rgb), 0.2);
 }
 
 /* Hero Section */
@@ -216,7 +242,7 @@
   border-radius: 100px;
   font-size: 0.85rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(var(--landing-text-rgb), 0.8);
   margin-bottom: 32px;
 }
 
@@ -244,7 +270,7 @@
 .hero-subtitle {
   font-size: clamp(1rem, 2.5vw, 1.25rem);
   line-height: 1.6;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(var(--landing-text-rgb), 0.6);
   max-width: 600px;
   margin: 0 0 48px 0;
 }
@@ -274,20 +300,20 @@
 }
 
 .btn-primary.large {
-  background: #fff;
-  color: #000;
+  background: rgb(var(--landing-text-rgb));
+  color: rgb(var(--landing-invert-text-rgb));
 }
 
 .btn-secondary.large {
-  color: rgba(255, 255, 255, 0.88);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(var(--landing-text-rgb), 0.88);
+  background: rgba(var(--landing-text-rgb), 0.06);
+  border: 1px solid rgba(var(--landing-text-rgb), 0.12);
 }
 
 .btn-primary.large:hover,
 .btn-secondary.large:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 24px rgba(var(--landing-text-rgb), 0.15);
 }
 
 /* Features */
@@ -322,7 +348,7 @@
 
 .feature-card:hover {
   background: var(--landing-surface-raised);
-  border-color: rgba(226, 176, 40, 0.35);
+  border-color: rgba(var(--landing-accent-rgb), 0.35);
 }
 
 .feature-icon {
@@ -333,7 +359,7 @@
   align-items: center;
   justify-content: center;
   margin-bottom: 24px;
-  background: rgba(226, 176, 40, 0.1);
+  background: rgba(var(--landing-accent-rgb), 0.1);
   color: var(--landing-accent);
 }
 
@@ -341,19 +367,19 @@
   font-size: 1.25rem;
   font-weight: 600;
   margin: 0 0 12px 0;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(var(--landing-text-rgb), 0.9);
 }
 
 .feature-card p {
   font-size: 0.95rem;
   line-height: 1.6;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--landing-text-rgb), 0.5);
   margin: 0;
 }
 
 /* Footer */
 .landing-footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--landing-border);
   padding: 48px 0;
   margin-top: auto;
   width: 100%;
@@ -388,11 +414,10 @@
 .footer-brand-wordmark {
   height: 17px;
   max-width: 128px;
-  filter: invert(1) grayscale(1) brightness(1.35) drop-shadow(0 1px 4px rgba(0, 0, 0, 0.4));
 }
 
 .footer-copyright {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(var(--landing-text-rgb), 0.4);
   font-size: 0.85rem;
   margin: 0;
 }

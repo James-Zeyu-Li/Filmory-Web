@@ -46,16 +46,21 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     const root = document.documentElement;
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const themeColorMeta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
 
     const applyTheme = () => {
       const resolvedTheme: 'dark' | 'light' = theme === 'system'
         ? (mediaQuery.matches ? 'dark' : 'light')
         : theme;
-      
+
       setActualTheme(resolvedTheme);
       root.setAttribute('data-theme', resolvedTheme);
       // Fallback for color-scheme CSS property
       root.style.colorScheme = resolvedTheme;
+      // Keep the mobile browser chrome (address bar / PWA title bar) matched to
+      // the same --bg-primary value the page itself is using, instead of the
+      // static dark-only color baked into index.html.
+      themeColorMeta?.setAttribute('content', resolvedTheme === 'dark' ? '#0f1013' : '#f9fafb');
     };
 
     applyTheme();

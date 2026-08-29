@@ -33,7 +33,11 @@ describe('trial theme default', () => {
     });
   });
 
-  it('defaults public auth routes to dark without persisting a user preference', async () => {
+  it('follows the system preference on public auth routes without persisting a user preference', async () => {
+    // Landing and Auth are both fully theme-aware (neither has a fixed-dark
+    // identity to stay "continuous" with), so a first-time auth visit resolves
+    // exactly like any other route: 'system', which jsdom's default
+    // matchMedia mock reports as light here.
     window.history.replaceState({}, '', '/auth/login');
 
     render(
@@ -42,10 +46,10 @@ describe('trial theme default', () => {
       </ThemeProvider>
     );
 
-    expect(screen.getByTestId('theme')).toHaveTextContent('dark');
+    expect(screen.getByTestId('theme')).toHaveTextContent('system');
     await waitFor(() => {
-      expect(screen.getByTestId('actual-theme')).toHaveTextContent('dark');
-      expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
+      expect(screen.getByTestId('actual-theme')).toHaveTextContent('light');
+      expect(document.documentElement).toHaveAttribute('data-theme', 'light');
     });
     expect(storage.has('grainfolio-theme')).toBe(false);
     expect(storage.has('grainfolio-theme-explicit')).toBe(false);
