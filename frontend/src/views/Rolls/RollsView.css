@@ -1749,11 +1749,13 @@
   /* 1. Toolbar & Tabs */
   .rolls-toolbar {
     flex-direction: column;
+    flex-wrap: nowrap;
     align-items: stretch !important;
     gap: 16px;
   }
   
   .rolls-toolbar-actions {
+    flex: 0 0 auto;
     margin-left: 0 !important;
     max-width: 100% !important;
     flex-wrap: nowrap;

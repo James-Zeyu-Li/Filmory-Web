@@ -64,7 +64,7 @@ export const CamerasTab = memo(({
   if (activeCameras.length === 0 || displayCameras.length === 0) {
     return (
       <div className="cameras-grid-layout">
-        <div style={{ height: '50vh', gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
+        <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
           <EmptyState
             icon={CameraIcon}
             title={activeCameras.length === 0 ? t('gear.noCameraTitle') : t('gear.noCameraMatch')}

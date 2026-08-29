@@ -14,7 +14,7 @@ const getAvatarUrl = (url?: string | null) => url && (url.startsWith('http') || 
 
 export const FilmStocksTab = memo(({ filmStocks, searchQuery, sortBy, t, uploadingEntityId, onAdd, onView, onEdit, onDelete, onUpload, onPreview, onAdjustStock }: FilmStocksTabProps) => {
   const displayFilms = useFilteredGearItems(filmStocks, searchQuery, sortBy);
-  if (filmStocks.length === 0 || displayFilms.length === 0) return <div className="lenses-grid-layout"><div style={{ height: '50vh', gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}><EmptyState icon={Film} title={filmStocks.length === 0 ? t('gear.noFilmTitle') : t('gear.noFilmMatch')} description={filmStocks.length === 0 ? t('gear.noFilmDesc') : t('gear.noMatchDesc')} action={filmStocks.length === 0 ? <button className="primary" onClick={onAdd}><Plus size={16} /> {t('gear.addFilmStock')}</button> : undefined} /></div></div>;
+  if (filmStocks.length === 0 || displayFilms.length === 0) return <div className="lenses-grid-layout"><div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}><EmptyState icon={Film} title={filmStocks.length === 0 ? t('gear.noFilmTitle') : t('gear.noFilmMatch')} description={filmStocks.length === 0 ? t('gear.noFilmDesc') : t('gear.noMatchDesc')} action={filmStocks.length === 0 ? <button className="primary" onClick={onAdd}><Plus size={16} /> {t('gear.addFilmStock')}</button> : undefined} /></div></div>;
   return (
     <div className="lenses-grid-layout">
       {displayFilms.map(film => {

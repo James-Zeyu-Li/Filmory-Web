@@ -18,7 +18,7 @@ const getAvatarUrl = (url?: string | null) => url && (url.startsWith('http') || 
 export const LensesTab = memo(({ lenses, searchQuery, sortBy, t, uploadingEntityId, onAdd, onEdit, onDelete, onArchive, onUpload, onPreview }: LensesTabProps) => {
   const activeLenses = lenses.filter(lens => lens.status !== 'archived');
   const displayLenses = useFilteredGearItems(activeLenses, searchQuery, sortBy);
-  if (activeLenses.length === 0 || displayLenses.length === 0) return <div className="lenses-grid-layout"><div style={{ height: '50vh', gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}><EmptyState icon={SlidersHorizontal} title={activeLenses.length === 0 ? t('gear.noLensTitle') : t('gear.noLensMatch')} description={activeLenses.length === 0 ? t('gear.noLensDesc') : t('gear.noMatchDesc')} action={activeLenses.length === 0 ? <button className="primary" onClick={onAdd}><Plus size={16} /> {t('gear.addLens')}</button> : undefined} /></div></div>;
+  if (activeLenses.length === 0 || displayLenses.length === 0) return <div className="lenses-grid-layout"><div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}><EmptyState icon={SlidersHorizontal} title={activeLenses.length === 0 ? t('gear.noLensTitle') : t('gear.noLensMatch')} description={activeLenses.length === 0 ? t('gear.noLensDesc') : t('gear.noMatchDesc')} action={activeLenses.length === 0 ? <button className="primary" onClick={onAdd}><Plus size={16} /> {t('gear.addLens')}</button> : undefined} /></div></div>;
   return <div className="lenses-grid-layout">{displayLenses.map(lens => {
     const avatarUrl = getAvatarUrl(lens.avatarUrl);
     return <div key={lens.id} className="gear-card lens-card-horizontal" onClick={() => onEdit(lens)} style={{ cursor: 'pointer' }}>
