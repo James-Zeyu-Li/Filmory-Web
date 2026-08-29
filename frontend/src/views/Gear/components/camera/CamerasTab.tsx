@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Archive, Camera as CameraIcon, Plus, Search, Trash2, Upload } from 'lucide-react';
+import { Archive, Camera as CameraIcon, Edit2, Plus, Search, Trash2, Upload } from 'lucide-react';
 import type { Camera, FilmBack } from '../../../../db/schema';
 import type { TranslationKey } from '../../../../i18n/translations';
 import { EmptyState } from '../../../../components/EmptyState';
@@ -18,6 +18,7 @@ interface CamerasTabProps {
   t: Translate;
   uploadingEntityId: string | null;
   onAdd: () => void;
+  onView: (camera: Camera) => void;
   onEdit: (camera: Camera) => void;
   onDelete: (id: string) => void;
   onArchive: (camera: Camera) => void;
@@ -46,6 +47,7 @@ export const CamerasTab = memo(({
   t,
   uploadingEntityId,
   onAdd,
+  onView,
   onEdit,
   onDelete,
   onArchive,
@@ -79,8 +81,8 @@ export const CamerasTab = memo(({
       {displayCameras.map(camera => {
         const avatarUrl = getAvatarFullUrl(camera.avatarUrl);
         return (
-          <div key={camera.id} className="gear-card camera-card-with-avatar" onClick={() => onEdit(camera)} style={{ cursor: 'pointer' }}>
-            <button type="button" className="gear-card-open-action" onClick={event => { event.stopPropagation(); onEdit(camera); }} aria-label={`${t('gear.editCamera')}: ${camera.name}`} />
+          <div key={camera.id} className="gear-card camera-card-with-avatar" onClick={() => onView(camera)} style={{ cursor: 'pointer' }}>
+            <button type="button" className="gear-card-open-action" onClick={event => { event.stopPropagation(); onView(camera); }} aria-label={t('gear.viewCameraHistory', { name: camera.name })} />
             <div className="camera-avatar-container">
               {avatarUrl ? <img src={avatarUrl} alt={camera.name} className="camera-avatar-img" onClick={event => { event.stopPropagation(); onPreview(avatarUrl); }} title={t('gear.previewCover')} /> : <div className="camera-avatar-placeholder">{getPlaceholderText(camera.name)}</div>}
               <button type="button" className="camera-avatar-upload-overlay" onClick={event => { event.stopPropagation(); if (avatarUrl) onPreview(avatarUrl); else onUpload(camera.id!); }} disabled={uploadingEntityId === camera.id} title={avatarUrl ? t('gear.previewCover') : t('gear.uploadCameraCover')}>
@@ -91,6 +93,7 @@ export const CamerasTab = memo(({
               <div className="gear-card-header">
                 <span className={`tag ${camera.type}`}>{camera.type === 'film' ? t('gear.film') : t('gear.digital')}</span>
                 <div style={{ display: 'flex', gap: '4px' }}>
+                  <IconButton icon={<Edit2 size={16} />} title={t('gear.editCamera')} onClick={event => { event.stopPropagation(); onEdit(camera); }} />
                   <IconButton variant="success" icon={<Archive size={16} />} title={t('gear.sellArchive')} onClick={event => { event.stopPropagation(); onArchive(camera); }} />
                   <IconButton variant="danger" icon={<Trash2 size={16} />} title={t('gear.deletePermanently')} onClick={event => { event.stopPropagation(); onDelete(camera.id!); }} />
                 </div>

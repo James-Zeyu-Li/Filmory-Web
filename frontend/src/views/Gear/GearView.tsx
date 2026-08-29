@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { type Camera, type Lens, type FilmStock, type OtherEquipment } from '../../db/schema';
 import { Camera as CameraIcon, Check, Plus, X, Search, Aperture, Film, Package } from 'lucide-react';
 import './GearView.css';
@@ -6,7 +6,7 @@ import { useConfirm } from '../../contexts/useConfirm';
 import { useFeedback } from '../../contexts/useFeedback';
 import { useCurrency } from '../../contexts/useCurrency';
 import { useLanguage } from '../../contexts/useLanguage';
-import { useCameraSystems, useCameras, useFilmBacks, useLenses, useFilmStocks, useOtherEquipments } from '../../hooks/useData';
+import { useCameraSystems, useCameras, useCollections, useFilmBacks, useLenses, useFilmStocks, useOtherEquipments, useRolls } from '../../hooks/useData';
 import { Modal } from '../../components/Modal';
 import { PageTabs } from '../../components/ui/PageTabs';
 import { ResponsiveHeaderSubtitle } from '../../components/ui/ResponsiveHeaderSubtitle';
@@ -20,12 +20,16 @@ import { removeGearAvatar, updateGearAvatar, type GearAvatarTableName } from '..
 import { useLocation, useNavigate } from 'react-router-dom';
 import { GEAR_SUB_TAB_KEY } from '../../services/workspacePreferences';
 import { requestImmediateSync } from '../../services/syncEvents';
+import { buildCameraHistorySummaries } from '../../services/gearHistoryService';
+import { buildFilmUsageSummaries } from '../../services/filmInsightsService';
 import { CamerasTab } from './components/camera/CamerasTab';
 import { CameraFormModal } from './components/camera/CameraFormModal';
+import { CameraHistoryDrawer } from './components/camera/CameraHistoryDrawer';
 import { LensesTab } from './components/lens/LensesTab';
 import { LensFormModal } from './components/lens/LensFormModal';
 import { FilmStocksTab } from './components/film/FilmStocksTab';
 import { FilmStockFormModal } from './components/film/FilmStockFormModal';
+import { FilmUsageDetailDrawer } from '../FilmInsights/FilmUsageDetailDrawer';
 import { OtherEquipmentTab } from './components/equipment/OtherEquipmentTab';
 import { OtherEquipmentFormModal } from './components/equipment/OtherEquipmentFormModal';
 import { useGearActions } from './hooks/useGearActions';
@@ -44,7 +48,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
   const { confirm } = useConfirm();
   const { notify } = useFeedback();
   const { currencySymbol } = useCurrency();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const reduceMotion = useReducedMotion();
   const gearActions = useGearActions();
   const location = useLocation();
@@ -78,6 +82,10 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
   const [editingEquipmentId, setEditingEquipmentId] = useState<string | null>(null);
   const [equipmentFormSession, setEquipmentFormSession] = useState(0);
   const [nowTimestamp] = useState(Date.now);
+
+  // Detail/history viewing state (separate from the edit-form state above).
+  const [viewingCameraId, setViewingCameraId] = useState<string | null>(null);
+  const [viewingFilmStockId, setViewingFilmStockId] = useState<string | null>(null);
 
   // Upload and Lightbox states
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -206,6 +214,24 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
   const lenses = allLenses.filter(l => l.status !== 'archived');
   const filmStocks = useFilmStocks();
   const otherEquipments = useOtherEquipments();
+  const rolls = useRolls();
+  const collections = useCollections();
+
+  const cameraHistorySummaries = useMemo(
+    () => buildCameraHistorySummaries(allCameras, rolls, collections),
+    [allCameras, rolls, collections],
+  );
+  const filmUsageSummaries = useMemo(
+    () => buildFilmUsageSummaries(filmStocks, rolls, collections),
+    [filmStocks, rolls, collections],
+  );
+  const viewingCamera = viewingCameraId ? allCameras.find(camera => camera.id === viewingCameraId) ?? null : null;
+  const viewingCameraSummary = viewingCameraId
+    ? cameraHistorySummaries.find(summary => summary.camera.id === viewingCameraId) ?? null
+    : null;
+  const viewingFilmSummary = viewingFilmStockId
+    ? filmUsageSummaries.find(summary => summary.film.id === viewingFilmStockId) ?? null
+    : null;
 
   // Actions
 
@@ -254,6 +280,14 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     setIsFilmModalOpen(true);
   };
 
+  const openCameraHistory = (camera: Camera) => setViewingCameraId(camera.id!);
+  const closeCameraHistory = () => setViewingCameraId(null);
+  const openFilmHistory = (film: FilmStock) => setViewingFilmStockId(film.id!);
+  const closeFilmHistory = () => setViewingFilmStockId(null);
+  const openRollFromHistory = (rollId: string) => navigate(`/rolls?tab=all&openRoll=${rollId}`);
+  const openCollectionsFromHistory = () => navigate('/rolls?tab=collections');
+  const openNewRollFromHistory = () => navigate('/rolls?newRoll=1');
+
   const openEditEquipment = (eq: OtherEquipment) => {
     setEditingEquipmentId(eq.id!);
     setEquipmentFormSession(previous => previous + 1);
@@ -286,13 +320,13 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
   const renderActiveTab = () => {
     if (subTab === 'cameras') {
-      return <CamerasTab cameras={allCameras} cameraSystems={cameraSystems} filmBacks={filmBacks} searchQuery={searchQuery} sortBy={sortBy} t={t} uploadingEntityId={uploadingEntityId} onAdd={openNewCamera} onEdit={openEditCamera} onDelete={handleDeleteCamera} onArchive={camera => setArchiveTarget({ id: camera.id!, type: 'camera', name: camera.name })} onUpload={id => triggerAvatarUpload(id, 'cameras')} onPreview={openAvatarPreview} />;
+      return <CamerasTab cameras={allCameras} cameraSystems={cameraSystems} filmBacks={filmBacks} searchQuery={searchQuery} sortBy={sortBy} t={t} uploadingEntityId={uploadingEntityId} onAdd={openNewCamera} onView={openCameraHistory} onEdit={openEditCamera} onDelete={handleDeleteCamera} onArchive={camera => setArchiveTarget({ id: camera.id!, type: 'camera', name: camera.name })} onUpload={id => triggerAvatarUpload(id, 'cameras')} onPreview={openAvatarPreview} />;
     }
     if (subTab === 'lenses') {
       return <LensesTab lenses={allLenses} searchQuery={searchQuery} sortBy={sortBy} t={t} uploadingEntityId={uploadingEntityId} onAdd={openNewLens} onEdit={openEditLens} onDelete={handleDeleteLens} onArchive={lens => setArchiveTarget({ id: lens.id!, type: 'lens', name: lens.name })} onUpload={id => triggerAvatarUpload(id, 'lenses')} onPreview={openAvatarPreview} />;
     }
     if (subTab === 'filmStocks' && enableFilmMode) {
-      return <FilmStocksTab filmStocks={filmStocks} searchQuery={searchQuery} sortBy={sortBy} t={t} uploadingEntityId={uploadingEntityId} onAdd={openNewFilm} onEdit={openEditFilm} onDelete={handleDeleteFilm} onUpload={id => triggerAvatarUpload(id, 'filmStocks')} onPreview={openAvatarPreview} onAdjustStock={(id, delta) => { void handleUpdateStock(id, delta); }} />;
+      return <FilmStocksTab filmStocks={filmStocks} searchQuery={searchQuery} sortBy={sortBy} t={t} uploadingEntityId={uploadingEntityId} onAdd={openNewFilm} onView={openFilmHistory} onEdit={openEditFilm} onDelete={handleDeleteFilm} onUpload={id => triggerAvatarUpload(id, 'filmStocks')} onPreview={openAvatarPreview} onAdjustStock={(id, delta) => { void handleUpdateStock(id, delta); }} />;
     }
     return <OtherEquipmentTab equipment={otherEquipments} searchQuery={searchQuery} sortBy={sortBy} nowTimestamp={nowTimestamp} t={t} onAdd={openNewEquipment} onEdit={openEditEquipment} onDelete={handleDeleteEquipment} />;
   };
@@ -480,6 +514,31 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
         onPreview={openAvatarPreview}
         onUpload={triggerAvatarUpload}
         onRemoveAvatar={(id, type, label) => { void handleRemoveAvatar(id, type, label); }}
+      />
+
+      <CameraHistoryDrawer
+        isOpen={Boolean(viewingCameraId)}
+        camera={viewingCamera}
+        summary={viewingCameraSummary}
+        cameraSystems={cameraSystems}
+        filmBacks={filmBacks}
+        language={language}
+        t={t}
+        onClose={closeCameraHistory}
+        onEdit={camera => { closeCameraHistory(); openEditCamera(camera); }}
+        onOpenRoll={openRollFromHistory}
+        onOpenCollections={openCollectionsFromHistory}
+      />
+
+      <FilmUsageDetailDrawer
+        isOpen={Boolean(viewingFilmStockId)}
+        summary={viewingFilmSummary}
+        language={language}
+        t={t}
+        onClose={closeFilmHistory}
+        onOpenRoll={openRollFromHistory}
+        onOpenCollections={openCollectionsFromHistory}
+        onCreateRoll={openNewRollFromHistory}
       />
 
       <input

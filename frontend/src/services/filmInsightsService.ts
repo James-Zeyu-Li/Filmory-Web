@@ -1,4 +1,5 @@
-import type { FilmStock, Roll } from '../db/schema';
+import type { Collection, FilmStock, Roll } from '../db/schema';
+import { groupRollsByCollection, type CollectionGroup } from './rollCollectionGrouping';
 
 export type FilmInsightSort = 'recent' | 'usage' | 'stock';
 
@@ -6,6 +7,8 @@ export interface FilmUsageSummary {
   film: FilmStock;
   activeRolls: Roll[];
   completedRolls: Roll[];
+  collectionGroups: CollectionGroup[];
+  unassignedRolls: Roll[];
   lastUsedAt?: number;
 }
 
@@ -22,6 +25,7 @@ const getRollDate = (roll: Roll): number => roll.endDate ?? roll.startDate ?? 0;
 export const buildFilmUsageSummaries = (
   filmStocks: FilmStock[],
   rolls: Roll[],
+  collections: readonly Collection[] = [],
 ): FilmUsageSummary[] => {
   const eligibleFilms = filmStocks.filter(film => film.isSystem === 0 && Boolean(film.id));
 
@@ -33,9 +37,10 @@ export const buildFilmUsageSummaries = (
     const completedRolls = linkedRolls
       .filter(roll => roll.status === 'archived')
       .sort((left, right) => getRollDate(right) - getRollDate(left));
+    const { collectionGroups, unassignedRolls } = groupRollsByCollection(linkedRolls, collections);
     const lastUsedAt = Math.max(...linkedRolls.map(getRollDate), 0) || undefined;
 
-    return { film, activeRolls, completedRolls, lastUsedAt };
+    return { film, activeRolls, completedRolls, collectionGroups, unassignedRolls, lastUsedAt };
   });
 };
 

@@ -106,7 +106,8 @@ describe('Gear film stock controls', () => {
     const user = userEvent.setup();
     renderGearView();
 
-    await user.click(await screen.findByText('Kodak Gold 200'));
+    await screen.findByText('Kodak Gold 200');
+    await user.click(screen.getByTitle('编辑胶卷库存'));
     const stockCountInput = screen.getByLabelText('库存数量');
     stockCountInput.focus();
 

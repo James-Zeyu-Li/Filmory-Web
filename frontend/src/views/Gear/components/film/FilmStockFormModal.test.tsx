@@ -65,7 +65,8 @@ describe('FilmStockFormModal migration', () => {
     await act(async () => {
       await db.syncQueue.clear();
     });
-    await user.click(await screen.findByText('Kodak Gold 200'));
+    await screen.findByText('Kodak Gold 200');
+    await user.click(screen.getByTitle('编辑胶卷库存'));
     const editStockInput = screen.getByLabelText('库存数量');
     await user.clear(editStockInput);
     await user.type(editStockInput, '5');

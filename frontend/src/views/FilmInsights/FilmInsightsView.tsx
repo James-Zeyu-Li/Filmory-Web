@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Archive, CalendarDays, ChevronRight, CircleDot, Film, Package, Palette, Play, X } from 'lucide-react';
-import { Drawer } from '../../components/Drawer';
+import { useNavigate } from 'react-router-dom';
+import { Archive, ChevronRight, Film, Package, Palette, Play } from 'lucide-react';
 import { EmptyState } from '../../components/EmptyState';
-import { useFilmStocks, useRolls } from '../../hooks/useData';
+import { useCollections, useFilmStocks, useRolls } from '../../hooks/useData';
 import { useLanguage } from '../../contexts/useLanguage';
 import {
   buildFilmInsightsOverview,
@@ -11,6 +11,7 @@ import {
   type FilmInsightSort,
   type FilmUsageSummary,
 } from '../../services/filmInsightsService';
+import { FilmUsageDetailDrawer } from './FilmUsageDetailDrawer';
 import './FilmInsightsView.css';
 
 const formatDate = (value: number | undefined, language: string, fallback: string) => {
@@ -24,18 +25,23 @@ interface FilmInsightsViewProps {
 
 export const FilmInsightsView: React.FC<FilmInsightsViewProps> = ({ isEmbedded = false }) => {
   const { language, t } = useLanguage();
+  const navigate = useNavigate();
   const filmStocks = useFilmStocks();
   const rolls = useRolls();
+  const collections = useCollections();
   const [sort, setSort] = useState<FilmInsightSort>('recent');
   const [selectedFilmId, setSelectedFilmId] = useState<string | null>(null);
 
-  const summaries = buildFilmUsageSummaries(filmStocks, rolls);
+  const summaries = buildFilmUsageSummaries(filmStocks, rolls, collections);
   const overview = buildFilmInsightsOverview(summaries);
   const sortedSummaries = sortFilmUsageSummaries(summaries, sort);
   const selectedSummary = summaries.find(summary => summary.film.id === selectedFilmId) ?? null;
 
+  const openRoll = (rollId: string) => navigate(`/rolls?tab=all&openRoll=${rollId}`);
+  const openCollectionsList = () => navigate('/rolls?tab=collections');
+  const openNewRoll = () => navigate('/rolls?newRoll=1');
+
   const getFilmLabel = (summary: FilmUsageSummary) => `${summary.film.brand} ${summary.film.name}`;
-  const getRollDate = (roll: FilmUsageSummary['activeRolls'][number]) => roll.endDate ?? roll.startDate;
 
   return (
     <div className={isEmbedded ? 'film-insights-view' : 'main-content film-insights-view'}>
@@ -124,46 +130,16 @@ export const FilmInsightsView: React.FC<FilmInsightsViewProps> = ({ isEmbedded =
         </section>
       </div>
 
-      <Drawer isOpen={Boolean(selectedSummary)} onClose={() => setSelectedFilmId(null)} width={580}>
-        {selectedSummary && (
-          <section className="film-insights-drawer" role="dialog" aria-modal="true" aria-labelledby="film-insights-detail-title">
-            <header className="film-insights-drawer-header">
-              <div>
-                <p className="film-insights-eyebrow">{t('filmInsights.detailEyebrow')}</p>
-                <h2 id="film-insights-detail-title">{getFilmLabel(selectedSummary)}</h2>
-                <p>ISO {selectedSummary.film.iso} · {selectedSummary.film.format} · {selectedSummary.film.colorType === 'color' ? t('filmInsights.color') : t('filmInsights.bw')}</p>
-              </div>
-              <button type="button" className="icon-btn" onClick={() => setSelectedFilmId(null)} aria-label={t('filmInsights.closeDetails')}><X size={20} /></button>
-            </header>
-
-            <div className="film-insights-drawer-content">
-              <div className="film-insights-detail-metrics">
-                <div><span>{t('filmInsights.inStock')}</span><strong>{selectedSummary.film.stockCount ?? 0}</strong></div>
-                <div><span>{t('filmInsights.used')}</span><strong>{selectedSummary.completedRolls.length}</strong></div>
-                <div><span>{t('filmInsights.active')}</span><strong>{selectedSummary.activeRolls.length}</strong></div>
-              </div>
-
-              <section aria-labelledby="film-insights-active-title">
-                <div className="film-insights-drawer-section-heading"><h3 id="film-insights-active-title"><Play size={16} /> {t('filmInsights.activeRolls')}</h3><span>{selectedSummary.activeRolls.length}</span></div>
-                {selectedSummary.activeRolls.length === 0 ? <p className="film-insights-empty-inline">{t('filmInsights.noActiveRolls')}</p> : (
-                  <div className="film-insights-roll-list">
-                    {selectedSummary.activeRolls.map(roll => <div className="film-insights-roll-row" key={roll.id}><CircleDot size={16} aria-hidden="true" /><div><strong>{roll.name}</strong><span><CalendarDays size={13} /> {formatDate(getRollDate(roll), language, t('filmInsights.noDate'))}</span></div></div>)}
-                  </div>
-                )}
-              </section>
-
-              <section aria-labelledby="film-insights-history-title">
-                <div className="film-insights-drawer-section-heading"><h3 id="film-insights-history-title"><Archive size={16} /> {t('filmInsights.history')}</h3><span>{selectedSummary.completedRolls.length}</span></div>
-                {selectedSummary.completedRolls.length === 0 ? <p className="film-insights-empty-inline">{t('filmInsights.noHistory')}</p> : (
-                  <div className="film-insights-roll-list">
-                    {selectedSummary.completedRolls.map(roll => <div className="film-insights-roll-row" key={roll.id}><Archive size={16} aria-hidden="true" /><div><strong>{roll.name}</strong><span><CalendarDays size={13} /> {formatDate(getRollDate(roll), language, t('filmInsights.noDate'))}</span></div></div>)}
-                  </div>
-                )}
-              </section>
-            </div>
-          </section>
-        )}
-      </Drawer>
+      <FilmUsageDetailDrawer
+        isOpen={Boolean(selectedSummary)}
+        summary={selectedSummary}
+        language={language}
+        t={t}
+        onClose={() => setSelectedFilmId(null)}
+        onOpenRoll={openRoll}
+        onOpenCollections={openCollectionsList}
+        onCreateRoll={openNewRoll}
+      />
     </div>
   );
 };

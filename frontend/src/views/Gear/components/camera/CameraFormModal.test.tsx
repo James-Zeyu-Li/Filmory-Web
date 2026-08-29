@@ -60,7 +60,8 @@ describe('CameraFormModal migration', () => {
     expect(camera?.cameraSystemId).toBeTruthy();
     expect(await db.filmBacks.where('cameraSystemId').equals(camera!.cameraSystemId!).count()).toBe(4);
 
-    await user.click(await screen.findByText('Hasselblad 500CM'));
+    await screen.findByText('Hasselblad 500CM');
+    await user.click(screen.getByTitle('编辑相机'));
     expect(screen.getByRole('heading', { name: '编辑相机' })).toBeInTheDocument();
     const nameInput = screen.getByPlaceholderText('例如: Minolta X-700');
     await user.clear(nameInput);
