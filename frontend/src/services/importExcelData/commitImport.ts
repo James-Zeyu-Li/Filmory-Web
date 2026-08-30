@@ -45,9 +45,13 @@ export const parseAndValidateExcelImport = async (
 
   const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
 
+  const actualHeadersBySheet = Object.fromEntries(
+    SHEETS.map(sheet => [sheet, getSheetHeaders(workbook, sheet)]),
+  ) as Record<ImportSheetName, string[]>;
+
   const mappings = SHEETS.flatMap(sheet => {
     const override = mappingOverrides?.filter(mapping => mapping.sheet === sheet);
-    return override && override.length > 0 ? override : buildColumnMappings(sheet, getSheetHeaders(workbook, sheet));
+    return override && override.length > 0 ? override : buildColumnMappings(sheet, actualHeadersBySheet[sheet]);
   });
   const mappingsFor = (sheet: ImportSheetName) => mappings.filter(mapping => mapping.sheet === sheet);
 
@@ -81,6 +85,7 @@ export const parseAndValidateExcelImport = async (
   return {
     fileName: file.name,
     mappings,
+    actualHeadersBySheet,
     rows: { cameras: cameraRows, lenses: lensRows, filmStocks: filmStockRows, rolls: rollRows },
     duplicateGroups,
     counts,

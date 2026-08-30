@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { BackupService } from '../../services/backupService';
 import { deleteCurrentAccount } from '../../services/accountService';
-import { Shield, Download, X, Sun, Moon, Monitor, Coins, Film, ArrowUp, ArrowDown, Folder, Languages, ChevronDown, UserX, CloudUpload } from 'lucide-react';
+import { Shield, Download, X, Sun, Moon, Monitor, Coins, Film, ArrowUp, ArrowDown, Folder, Languages, ChevronDown, UserX, CloudUpload, UploadCloud } from 'lucide-react';
+import { ExcelImportModal } from '../../components/ExcelImportModal';
 import { useAuth } from '../../contexts/useAuth';
 import { useTheme } from '../../contexts/useTheme';
 import { Modal } from '../../components/Modal';
@@ -46,6 +47,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
   const [isProcessing, setIsProcessing] = useState(false);
   const [processMessage, setProcessMessage] = useState('');
   const [isCurrencyConversionOpen, setIsCurrencyConversionOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [targetCurrency, setTargetCurrency] = useState<CurrencyCode>(() => (
     currency === 'CNY' ? 'USD' : 'CNY'
   ));
@@ -522,12 +524,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
                 </div>
               </div>
               <div className="settings-item-action">
-                <button 
-                  className="primary" 
+                <button
+                  className="primary"
                   onClick={handleExport}
                   disabled={isProcessing}
                 >
                   {isProcessing ? t('common.loading') : t('settings.exportMetadataAction')}
+                </button>
+              </div>
+            </div>
+
+            <div className="settings-list-item settings-stack-on-mobile">
+              <div className="settings-item-content">
+                <div className="settings-item-icon safe"><UploadCloud size={18} /></div>
+                <div className="settings-item-text">
+                  <h4>{t('settings.batchImportTitle')}</h4>
+                  <p>{t('settings.batchImportDesc')}</p>
+                </div>
+              </div>
+              <div className="settings-item-action">
+                <button
+                  className="primary"
+                  onClick={() => setIsImportModalOpen(true)}
+                  disabled={isProcessing}
+                >
+                  {t('settings.batchImportAction')}
                 </button>
               </div>
             </div>
@@ -573,6 +594,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ enableFilmMode, setE
           <p style={{ marginTop: '16px', color: 'white' }}>{processMessage}</p>
         </div>
       )}
+
+      {isImportModalOpen && <ExcelImportModal onClose={() => setIsImportModalOpen(false)} />}
 
       <Modal
         isOpen={isCurrencyConversionOpen}

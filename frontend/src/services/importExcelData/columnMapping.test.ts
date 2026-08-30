@@ -26,6 +26,14 @@ describe('buildColumnMappings', () => {
     expect(priceMapping?.status).toBe('skipped');
   });
 
+  it('marks every field skipped (not needs-user-choice) when the sheet has no headers at all', () => {
+    // Distinguishes "sheet present but missing a required column" (real
+    // needs-user-choice) from "sheet entirely absent from this workbook"
+    // (nothing to map — the user just isn't importing this entity type).
+    const mappings = buildColumnMappings('胶卷库存', []);
+    expect(mappings.every(mapping => mapping.status === 'skipped')).toBe(true);
+  });
+
   it('ignores unknown/extra columns instead of silently coercing them', () => {
     const mappings = buildColumnMappings('相机机身', [
       '相机名称 (必填)', '一个未知的列', '备注',

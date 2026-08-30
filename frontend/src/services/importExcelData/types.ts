@@ -91,6 +91,7 @@ export interface DuplicateGroup {
 export interface ImportPreview {
   fileName: string;
   mappings: ImportColumnMapping[];
+  actualHeadersBySheet: Record<ImportSheetName, string[]>;
   rows: {
     cameras: ImportRowResult<CameraDraft>[];
     lenses: ImportRowResult<LensDraft>[];

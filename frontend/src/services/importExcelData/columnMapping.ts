@@ -43,7 +43,14 @@ const FIELD_DEFINITIONS: Record<ImportSheetName, FieldDefinition[]> = {
 /**
  * Only exact-header auto-match is supported in Stage A (no fuzzy/AI mapping,
  * per UI-23). A required field with no exact header present is flagged
- * `needs-user-choice` rather than silently defaulted.
+ * `needs-user-choice` rather than silently defaulted — EXCEPT when the sheet
+ * itself has no header row at all (the user simply didn't include that sheet
+ * in this import, e.g. an import that only brings cameras and rolls with no
+ * lenses/film stock). Forcing mapping choices for a sheet with zero columns
+ * would block the wizard on entities the user never intended to import;
+ * there's nothing to map, so every field is `skipped` and the sheet
+ * contributes zero rows downstream (matching `getRows`'s own empty-sheet
+ * behavior).
  */
 export const buildColumnMappings = (
   sheet: ImportSheetName,
@@ -51,13 +58,14 @@ export const buildColumnMappings = (
 ): ImportColumnMapping[] => (
   FIELD_DEFINITIONS[sheet].map(def => {
     const matchedHeader = actualHeaders.includes(def.header) ? def.header : null;
+    const sheetIsAbsent = actualHeaders.length === 0;
     return {
       sheet,
       expectedField: def.field,
       expectedLabel: def.label,
       matchedHeader,
       required: def.required,
-      status: matchedHeader ? 'auto-matched' : (def.required ? 'needs-user-choice' : 'skipped'),
+      status: matchedHeader ? 'auto-matched' : ((def.required && !sheetIsAbsent) ? 'needs-user-choice' : 'skipped'),
     };
   })
 );
