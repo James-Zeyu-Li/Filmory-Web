@@ -6,8 +6,14 @@ import { useLanguage } from '../../../../contexts/useLanguage';
 import type { Camera } from '../../../../db/schema';
 import { useCameraSystems, useCameras, useFilmBacks } from '../../../../hooks/useData';
 import type { GearAvatarTableName } from '../../../../services/gearAvatarService';
+import { BrandModelPicker } from '../shared/BrandModelPicker';
 import { GearAvatarEditor } from '../shared/GearAvatarEditor';
 import { useGearActions } from '../../hooks/useGearActions';
+
+// Shown by default before the brand list is searched or expanded. 120 shooters
+// look for a different set of "mainstream" names than 135/digital shooters.
+const POPULAR_CAMERA_BRANDS = ['Canon', 'Nikon', 'Leica', 'Pentax', 'Olympus', 'Minolta', 'Contax'];
+const POPULAR_120_CAMERA_BRANDS = ['Hasselblad', 'Mamiya', 'Rolleiflex', 'Bronica', 'Pentax', 'Yashica'];
 
 const CAMERA_SYSTEM_PRESETS = [
   { name: 'Hasselblad V', backs: ['A12 Back', 'A16 Back', 'A24 Back'] },
@@ -72,10 +78,7 @@ export const CameraFormModal = ({
   );
   const [cameraBackNames, setCameraBackNames] = useState<string[]>(editingCamera ? [] : ['Back 1']);
   const [newFilmBackName, setNewFilmBackName] = useState('');
-  const [selectedCameraBrand, setSelectedCameraBrand] = useState('');
   const [selectedCameraModel, setSelectedCameraModel] = useState('');
-  const [cameraBrandSearch, setCameraBrandSearch] = useState('');
-  const [cameraModelSearch, setCameraModelSearch] = useState('');
   const [nowTimestamp] = useState(Date.now);
 
   const currentEditingCamera = editingCameraId
@@ -97,23 +100,8 @@ export const CameraFormModal = ({
     digital: t('gear.digital'),
     largeFormat: t('gear.largeFormat'),
   };
-  const cameraBrandOptions = Array.from(new Set(
-    COMMON_CAMERAS
-      .filter(camera => camera.type === newCamera.type && camera.format === newCamera.format)
-      .map(camera => camera.brand),
-  )).sort((a, b) => a.localeCompare(b));
-  const visibleCameraBrandOptions = cameraBrandOptions.filter(brand =>
-    brand.toLowerCase().includes(cameraBrandSearch.trim().toLowerCase()),
-  );
-  const cameraModelOptions = selectedCameraBrand
-    ? COMMON_CAMERAS.filter(camera =>
-        camera.type === newCamera.type &&
-        camera.format === newCamera.format &&
-        camera.brand === selectedCameraBrand)
-    : [];
-  const visibleCameraModelOptions = cameraModelOptions.filter(camera =>
-    `${camera.brand} ${camera.model}`.toLowerCase().includes(cameraModelSearch.trim().toLowerCase()),
-  );
+  const cameraCatalog = COMMON_CAMERAS.filter(camera =>
+    camera.type === newCamera.type && camera.format === newCamera.format);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement | HTMLSelectElement>) => {
     if (event.key !== 'Enter') return;
@@ -142,10 +130,7 @@ export const CameraFormModal = ({
     setCameraSystemName('');
     setCameraBackNames(['Back 1']);
     setNewFilmBackName('');
-    setSelectedCameraBrand('');
     setSelectedCameraModel('');
-    setCameraBrandSearch('');
-    setCameraModelSearch('');
   };
 
   const handleSaveCamera = async (event: FormEvent) => {
@@ -217,7 +202,6 @@ export const CameraFormModal = ({
       format: preset.format,
       backType: preset.backType || (preset.format === '120' ? 'fixed' : undefined),
     }));
-    setSelectedCameraBrand(preset.brand);
     setSelectedCameraModel(preset.model);
     if (preset.cameraSystemName) {
       setCameraSystemMode('new');
@@ -274,12 +258,7 @@ export const CameraFormModal = ({
     <button
     type="button"
     className="secondary btn-sm"
-    onClick={() => {
-    setSelectedCameraBrand('');
-    setSelectedCameraModel('');
-    setCameraBrandSearch('');
-    setCameraModelSearch('');
-    }}
+    onClick={() => setSelectedCameraModel('')}
     >
     {t('gear.reselectCamera')}
     </button>
@@ -305,10 +284,7 @@ export const CameraFormModal = ({
     backType: undefined,
     name: ''
     });
-    setSelectedCameraBrand('');
     setSelectedCameraModel('');
-    setCameraBrandSearch('');
-    setCameraModelSearch('');
     setCameraSystemName('');
     setCameraBackNames(['Back 1']);
     }}
@@ -334,9 +310,7 @@ export const CameraFormModal = ({
     backType: format === '120' ? 'fixed' : undefined,
     name: ''
     });
-    setSelectedCameraBrand('');
     setSelectedCameraModel('');
-    setCameraModelSearch('');
     setCameraSystemName('');
     setCameraBackNames(['Back 1']);
     }}
@@ -347,91 +321,31 @@ export const CameraFormModal = ({
     </div>
     </div>
 
-    <div className="builder-step">
-    <div className="builder-step-label">3. {t('gear.recommendedBrand', { count: cameraBrandOptions.length })}</div>
-    {selectedCameraBrand ? (
-    <div className="selected-builder-summary">
-    <span>{selectedCameraBrand}</span>
-    <button
-    type="button"
-    className="secondary btn-sm"
-    onClick={() => {
-    setSelectedCameraBrand('');
-    setSelectedCameraModel('');
-    setCameraBrandSearch('');
-    setCameraModelSearch('');
-    }}
-    >
-    {t('gear.changeBrand')}
-    </button>
-    </div>
-    ) : (
-    <>
-    {cameraBrandOptions.length > 10 && (
-    <input
-    type="text"
-    className="form-control builder-option-search"
-    placeholder={t('gear.searchCameraBrand')}
-    value={cameraBrandSearch}
-    onChange={e => setCameraBrandSearch(e.target.value)}
-    />
-    )}
-    <div className="preset-chip-grid builder-scroll-grid">
-    {visibleCameraBrandOptions.map(brand => (
-    <button
-    key={brand}
-    type="button"
-    className="preset-chip"
-    onClick={() => {
-    setSelectedCameraBrand(brand);
-    setCameraModelSearch('');
-    setNewCamera(prev => ({
+    <BrandModelPicker
+    key={`${newCamera.type}|${newCamera.format}`}
+    catalog={cameraCatalog}
+    getBrand={camera => camera.brand}
+    getModelKey={camera => `${camera.brand}-${camera.model}`}
+    getModelSearchText={camera => `${camera.brand} ${camera.model}`}
+    renderModelLabel={camera => <>{camera.model}{camera.backType === 'interchangeable' ? ` · ${t('gear.interchangeableBack')}` : ''}</>}
+    popularBrands={newCamera.format === '120' ? POPULAR_120_CAMERA_BRANDS : POPULAR_CAMERA_BRANDS}
+    brandStepLabel={count => <>3. {t('gear.recommendedBrand', { count })}</>}
+    brandSearchPlaceholder={t('gear.searchCameraBrand')}
+    noBrandMatchLabel={t('gear.noBrandMatch')}
+    changeBrandLabel={t('gear.changeBrand')}
+    showMoreBrandsLabel={count => t('gear.showMoreBrands', { count })}
+    showFewerBrandsLabel={t('gear.showFewerBrands')}
+    modelStepLabel={count => <>4. {t('gear.selectRecommendedModel', { count })}</>}
+    modelSearchPlaceholder={brand => t('gear.searchCameraModel', { brand })}
+    noModelMatchLabel={t('gear.noCameraModelMatch')}
+    showMoreModelsLabel={count => t('gear.showMoreModels', { count })}
+    showFewerModelsLabel={t('gear.showFewerModels')}
+    onSelectBrand={brand => setNewCamera(prev => ({
     ...prev,
     name: prev.name?.trim() ? prev.name : brand,
-    }));
-    }}
-    >
-    {brand}
-    </button>
-    ))}
-    {visibleCameraBrandOptions.length === 0 && (
-    <span className="gear-preset-empty">{t('gear.noBrandMatch')}</span>
-    )}
-    </div>
-    </>
-    )}
-    </div>
-
-    {selectedCameraBrand && (
-    <div className="builder-step">
-    <div className="builder-step-label">4. {t('gear.selectRecommendedModel', { count: cameraModelOptions.length })}</div>
-    {cameraModelOptions.length > 8 && (
-    <input
-    type="text"
-    className="form-control builder-option-search"
-    placeholder={t('gear.searchCameraModel', { brand: selectedCameraBrand })}
-    value={cameraModelSearch}
-    onChange={e => setCameraModelSearch(e.target.value)}
+    }))}
+    onSelectModel={applyCameraPreset}
     />
-    )}
-    <div className="preset-chip-grid builder-scroll-grid model-grid">
-    {visibleCameraModelOptions.map(preset => (
-    <button
-    key={`${preset.brand}-${preset.model}`}
-    type="button"
-    className={`preset-chip ${newCamera.name === `${preset.brand} ${preset.model}` ? 'active' : ''}`}
-    onClick={() => applyCameraPreset(preset)}
-    >
-    {preset.model}
-    {preset.backType === 'interchangeable' ? ` · ${t('gear.interchangeableBack')}` : ''}
-    </button>
-    ))}
-    {visibleCameraModelOptions.length === 0 && (
-    <span className="gear-preset-empty">{t('gear.noCameraModelMatch')}</span>
-    )}
-    </div>
-    </div>
-    )}
     <div className="film-back-empty">{t('gear.cameraPresetHelp')}</div>
     </>
     )}
@@ -475,7 +389,6 @@ export const CameraFormModal = ({
     format: nextType === 'digital' ? 'digital' : (newCamera.format === 'digital' ? '135' : newCamera.format),
     backType: nextType === 'digital' ? undefined : newCamera.backType,
     });
-    setSelectedCameraBrand('');
     setSelectedCameraModel('');
     }}
     onKeyDown={handleKeyDown}
@@ -497,7 +410,6 @@ export const CameraFormModal = ({
     type: nextFormat === 'digital' ? 'digital' : newCamera.type,
     backType: nextFormat === '120' ? (newCamera.backType || 'fixed') : undefined,
     });
-    setSelectedCameraBrand('');
     setSelectedCameraModel('');
     }}
     onKeyDown={handleKeyDown}

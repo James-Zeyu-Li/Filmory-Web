@@ -9,7 +9,11 @@ import type { Lens } from '../../../../db/schema';
 import { useLenses } from '../../../../hooks/useData';
 import type { GearAvatarTableName } from '../../../../services/gearAvatarService';
 import { useGearActions } from '../../hooks/useGearActions';
+import { BrandModelPicker } from '../shared/BrandModelPicker';
 import { GearAvatarEditor } from '../shared/GearAvatarEditor';
+
+// Shown by default before the brand list is searched or expanded.
+const POPULAR_LENS_BRANDS = ['Canon', 'Nikon', 'Sony', 'Leica', 'Zeiss', 'Sigma', 'Fujifilm'];
 
 interface LensFormModalProps {
   isOpen: boolean;
@@ -49,10 +53,7 @@ export const LensFormModal = ({
   );
   const [lensMountFilter, setLensMountFilter] = useState(editingLens?.mountKey || 'all');
   const [lensMountSearch, setLensMountSearch] = useState('');
-  const [selectedLensBrand, setSelectedLensBrand] = useState('');
   const [selectedLensModel, setSelectedLensModel] = useState('');
-  const [lensBrandSearch, setLensBrandSearch] = useState('');
-  const [lensModelSearch, setLensModelSearch] = useState('');
 
   const currentEditingLens = editingLensId
     ? allLenses.find(lens => lens.id === editingLensId) || editingLens
@@ -67,19 +68,6 @@ export const LensFormModal = ({
     if (lensMountFilter !== 'all' && lens.mountKey !== lensMountFilter) return false;
     return true;
   });
-  const lensBrandOptions = Array.from(new Set(filteredLensCatalog.map(lens => lens.brand)))
-    .sort((a, b) => a.localeCompare(b));
-  const visibleLensBrandOptions = lensBrandOptions.filter(brand =>
-    brand.toLowerCase().includes(lensBrandSearch.trim().toLowerCase()),
-  );
-  const lensModelOptions = selectedLensBrand
-    ? filteredLensCatalog.filter(lens => lens.brand === selectedLensBrand)
-    : [];
-  const visibleLensModelOptions = lensModelOptions.filter(lens =>
-    `${lens.brand} ${lens.model} ${lens.focalLength}mm ${lens.mountKey}`
-      .toLowerCase()
-      .includes(lensModelSearch.trim().toLowerCase()),
-  );
   const filteredLensPresets = COMMON_LENSES.filter(lens => {
     const query = lensDictSearch.trim().toLowerCase();
     if (!query || lens.type !== lensTypeFilter) return false;
@@ -112,10 +100,7 @@ export const LensFormModal = ({
     setNewLens({ name: '', focalLength: 50, maxAperture: 'f/1.8', type: 'prime', purchasePrice: undefined });
     setLensDictSearch('');
     setIsLensDictDropdownOpen(false);
-    setSelectedLensBrand('');
     setSelectedLensModel('');
-    setLensBrandSearch('');
-    setLensModelSearch('');
     setLensTypeFilter('prime');
     setLensMountFilter('all');
     setLensMountSearch('');
@@ -130,13 +115,11 @@ export const LensFormModal = ({
       type: preset.type,
       mountKey: preset.mountKey,
     }));
-    setSelectedLensBrand(preset.brand);
     setSelectedLensModel(preset.model);
     setLensMountFilter(preset.mountKey);
     setLensTypeFilter(preset.type);
     setLensDictSearch('');
     setLensMountSearch('');
-    setLensModelSearch('');
     setIsLensDictDropdownOpen(false);
   };
 
@@ -199,11 +182,8 @@ export const LensFormModal = ({
     type="button"
     className="secondary btn-sm"
     onClick={() => {
-    setSelectedLensBrand('');
     setSelectedLensModel('');
     setLensMountFilter('all');
-    setLensBrandSearch('');
-    setLensModelSearch('');
     setLensDictSearch('');
     }}
     >
@@ -226,9 +206,7 @@ export const LensFormModal = ({
     onClick={() => {
     setLensTypeFilter(option.value);
     setNewLens(prev => ({ ...prev, type: option.value }));
-    setSelectedLensBrand('');
     setSelectedLensModel('');
-    setLensModelSearch('');
     }}
     >
     {option.label}
@@ -247,10 +225,7 @@ export const LensFormModal = ({
     onClick={() => {
     setLensMountFilter('all');
     setLensMountSearch('');
-    setSelectedLensBrand('');
     setSelectedLensModel('');
-    setLensBrandSearch('');
-    setLensModelSearch('');
     }}
     >
     {t('gear.changeMount')}
@@ -276,9 +251,7 @@ export const LensFormModal = ({
     onClick={() => {
     setLensMountFilter(mount);
     setLensMountSearch('');
-    setSelectedLensBrand('');
     setSelectedLensModel('');
-    setLensModelSearch('');
     }}
     >
     {mount}
@@ -292,87 +265,27 @@ export const LensFormModal = ({
     )}
     </div>
 
-    <div className="builder-step">
-    <div className="builder-step-label">3. {t('gear.recommendedBrand', { count: lensBrandOptions.length })}</div>
-    {selectedLensBrand ? (
-    <div className="selected-builder-summary">
-    <span>{selectedLensBrand}</span>
-    <button
-    type="button"
-    className="secondary btn-sm"
-    onClick={() => {
-    setSelectedLensBrand('');
-    setSelectedLensModel('');
-    setLensBrandSearch('');
-    setLensModelSearch('');
-    }}
-    >
-    {t('gear.changeBrand')}
-    </button>
-    </div>
-    ) : (
-    <>
-    {lensBrandOptions.length > 10 && (
-    <input
-    type="text"
-    className="form-control builder-option-search"
-    placeholder={t('gear.searchLensBrand')}
-    value={lensBrandSearch}
-    onChange={e => setLensBrandSearch(e.target.value)}
+    <BrandModelPicker
+    key={`${lensTypeFilter}|${lensMountFilter}`}
+    catalog={filteredLensCatalog}
+    getBrand={lens => lens.brand}
+    getModelKey={lens => `${lens.brand}-${lens.model}`}
+    getModelSearchText={lens => `${lens.brand} ${lens.model} ${lens.focalLength}mm ${lens.mountKey}`}
+    renderModelLabel={lens => <>{lens.model} · {lens.focalLength}mm</>}
+    popularBrands={POPULAR_LENS_BRANDS}
+    brandStepLabel={count => <>3. {t('gear.recommendedBrand', { count })}</>}
+    brandSearchPlaceholder={t('gear.searchLensBrand')}
+    noBrandMatchLabel={t('gear.noBrandMatch')}
+    changeBrandLabel={t('gear.changeBrand')}
+    showMoreBrandsLabel={count => t('gear.showMoreBrands', { count })}
+    showFewerBrandsLabel={t('gear.showFewerBrands')}
+    modelStepLabel={count => <>4. {t('gear.recommendedModel', { count })}</>}
+    modelSearchPlaceholder={brand => t('gear.searchLensModel', { brand })}
+    noModelMatchLabel={t('gear.noLensModelMatch')}
+    showMoreModelsLabel={count => t('gear.showMoreModels', { count })}
+    showFewerModelsLabel={t('gear.showFewerModels')}
+    onSelectModel={applyLensPreset}
     />
-    )}
-    <div className="preset-chip-grid builder-scroll-grid">
-    {visibleLensBrandOptions.map(brand => (
-    <button
-    key={brand}
-    type="button"
-    className="preset-chip"
-    onClick={() => {
-    setSelectedLensBrand(brand);
-    setSelectedLensModel('');
-    setLensModelSearch('');
-    }}
-    >
-    {brand}
-    </button>
-    ))}
-    {visibleLensBrandOptions.length === 0 && (
-    <span className="gear-preset-empty">{t('gear.noBrandMatch')}</span>
-    )}
-    </div>
-    </>
-    )}
-    </div>
-
-    {selectedLensBrand && (
-    <div className="builder-step">
-    <div className="builder-step-label">4. {t('gear.recommendedModel', { count: lensModelOptions.length })}</div>
-    {lensModelOptions.length > 8 && (
-    <input
-    type="text"
-    className="form-control builder-option-search"
-    placeholder={t('gear.searchLensModel', { brand: selectedLensBrand })}
-    value={lensModelSearch}
-    onChange={e => setLensModelSearch(e.target.value)}
-    />
-    )}
-    <div className="preset-chip-grid builder-scroll-grid model-grid">
-    {visibleLensModelOptions.map(preset => (
-    <button
-    key={`${preset.brand}-${preset.model}`}
-    type="button"
-    className={`preset-chip ${newLens.name === `${preset.brand} ${preset.model}` ? 'active' : ''}`}
-    onClick={() => applyLensPreset(preset)}
-    >
-    {preset.model} · {preset.focalLength}mm
-    </button>
-    ))}
-    {visibleLensModelOptions.length === 0 && (
-    <span className="gear-preset-empty">{t('gear.noLensModelMatch')}</span>
-    )}
-    </div>
-    </div>
-    )}
 
     <details className="builder-fallback-search">
     <summary>{t('gear.directSearchLens')}</summary>

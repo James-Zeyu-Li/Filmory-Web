@@ -602,11 +602,11 @@ button.edit-avatar-preview:focus-visible .edit-avatar-preview-label {
   max-height: 146px;
 }
 
-/* Film's brand/model pickers cap the item count with an explicit
-   show more/fewer button (see FilmStockFormModal) instead of an inner
-   scroll box, so nested scrolling inside the already-scrollable modal
-   doesn't hide items behind an easy-to-miss thin scrollbar. */
-.preset-chip-grid.builder-scroll-grid.film-picker-grid {
+/* BrandModelPicker caps the item count with an explicit show more/fewer
+   button instead of an inner scroll box, so nested scrolling inside the
+   already-scrollable modal doesn't hide items behind an easy-to-miss thin
+   scrollbar. */
+.preset-chip-grid.builder-scroll-grid.gear-picker-grid {
   max-height: none;
   overflow: visible;
 }

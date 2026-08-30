@@ -8,6 +8,7 @@ import { useLanguage } from '../../../../contexts/useLanguage';
 import type { FilmStock } from '../../../../db/schema';
 import type { GearAvatarTableName } from '../../../../services/gearAvatarService';
 import { useGearActions } from '../../hooks/useGearActions';
+import { BrandModelPicker } from '../shared/BrandModelPicker';
 import { GearAvatarEditor } from '../shared/GearAvatarEditor';
 
 interface FilmStockFormModalProps {
@@ -62,12 +63,7 @@ export const FilmStockFormModal = ({
   const [formatFilter, setFormatFilter] = useState<FilmFormat>(
     editingFilmStock?.format === '120' ? '120' : '135',
   );
-  const [selectedBrand, setSelectedBrand] = useState('');
-  const [brandSearch, setBrandSearch] = useState('');
-  const [modelSearch, setModelSearch] = useState('');
   const [showManualForm, setShowManualForm] = useState(false);
-  const [showAllBrands, setShowAllBrands] = useState(false);
-  const [showAllModels, setShowAllModels] = useState(false);
   const manualFormRef = useRef<HTMLDivElement>(null);
 
   const jumpToManualForm = () => {
@@ -76,36 +72,13 @@ export const FilmStockFormModal = ({
   };
 
   useEffect(() => {
-    if (showManualForm) manualFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (showManualForm) manualFormRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
   }, [showManualForm]);
 
   const currentEditingFilm = editingFilmId
     ? filmStocks.find(film => film.id === editingFilmId) || editingFilmStock
     : null;
   const catalog = COMMON_FILM_STOCKS.filter(film => film.format === formatFilter);
-  const brandOptions = Array.from(new Set(catalog.map(film => film.brand)))
-    .sort((a, b) => a.localeCompare(b));
-  const matchedBrandOptions = brandOptions.filter(brand =>
-    brand.toLowerCase().includes(brandSearch.trim().toLowerCase()),
-  );
-  const isBrandListCollapsed = !brandSearch.trim() && !showAllBrands;
-  const visibleBrandOptions = isBrandListCollapsed
-    ? POPULAR_FILM_BRANDS.filter(brand => matchedBrandOptions.includes(brand))
-    : matchedBrandOptions;
-  const hiddenBrandCount = matchedBrandOptions.length - visibleBrandOptions.length;
-
-  const modelOptions = selectedBrand
-    ? catalog.filter(film => film.brand === selectedBrand)
-    : [];
-  const matchedModelOptions = modelOptions.filter(film =>
-    `${film.brand} ${film.name} ${film.iso}`.toLowerCase().includes(modelSearch.trim().toLowerCase()),
-  );
-  const isModelListCollapsed = !modelSearch.trim() && !showAllModels
-    && matchedModelOptions.length > DEFAULT_VISIBLE_MODEL_COUNT;
-  const visibleModelOptions = isModelListCollapsed
-    ? matchedModelOptions.slice(0, DEFAULT_VISIBLE_MODEL_COUNT)
-    : matchedModelOptions;
-  const hiddenModelCount = matchedModelOptions.length - visibleModelOptions.length;
   const dictionaryResults = dictionarySearch
     ? COMMON_FILM_STOCKS
         .filter(film => `${film.brand} ${film.name} ${film.format}`
@@ -144,12 +117,7 @@ export const FilmStockFormModal = ({
     setDictionarySearch('');
     setIsDictionaryOpen(false);
     setFormatFilter('135');
-    setSelectedBrand('');
-    setBrandSearch('');
-    setModelSearch('');
     setShowManualForm(false);
-    setShowAllBrands(false);
-    setShowAllModels(false);
   };
 
   const applyPreset = (preset: CommonFilmStockPreset) => {
@@ -162,13 +130,9 @@ export const FilmStockFormModal = ({
       format: preset.format,
     }));
     setFormatFilter(preset.format);
-    setSelectedBrand(preset.brand);
     setDictionarySearch('');
-    setModelSearch('');
     setIsDictionaryOpen(false);
     setShowManualForm(false);
-    setShowAllBrands(false);
-    setShowAllModels(false);
   };
 
   const handleSave = async (event: FormEvent) => {
@@ -241,12 +205,7 @@ export const FilmStockFormModal = ({
                       stockCount: draft.stockCount,
                       pricePerRoll: draft.pricePerRoll,
                     });
-                    setSelectedBrand('');
-                    setBrandSearch('');
-                    setModelSearch('');
                     setShowManualForm(false);
-                    setShowAllBrands(false);
-                    setShowAllModels(false);
                   }}
                 >
                   {t('gear.reselectFilm')}
@@ -265,12 +224,7 @@ export const FilmStockFormModal = ({
                         onClick={() => {
                           setFormatFilter(format);
                           setDraft(previous => ({ ...previous, format }));
-                          setSelectedBrand('');
-                          setBrandSearch('');
-                          setModelSearch('');
                           setDictionarySearch('');
-                          setShowAllBrands(false);
-                          setShowAllModels(false);
                           if (!draft.brand || !draft.name) setShowManualForm(false);
                         }}
                       >
@@ -280,137 +234,30 @@ export const FilmStockFormModal = ({
                   </div>
                 </div>
 
-                <div className="builder-step">
-                  <div className="builder-step-label">
-                    2. {t('gear.recommendedBrand', { count: brandOptions.length })}
-                  </div>
-                  {selectedBrand ? (
-                    <div className="selected-builder-summary">
-                      <span>{selectedBrand}</span>
-                      <button
-                        type="button"
-                        className="secondary btn-sm"
-                        onClick={() => {
-                          setSelectedBrand('');
-                          setBrandSearch('');
-                          setModelSearch('');
-                          setShowAllModels(false);
-                        }}
-                      >
-                        {t('gear.changeBrand')}
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      {brandOptions.length > 10 && (
-                        <input
-                          type="text"
-                          className="form-control builder-option-search"
-                          placeholder={t('gear.searchFilmBrand')}
-                          value={brandSearch}
-                          onChange={event => setBrandSearch(event.target.value)}
-                        />
-                      )}
-                      <div className="preset-chip-grid builder-scroll-grid film-picker-grid">
-                        {visibleBrandOptions.map(brand => (
-                          <button
-                            key={brand}
-                            type="button"
-                            className="preset-chip"
-                            onClick={() => {
-                              setSelectedBrand(brand);
-                              setModelSearch('');
-                              setShowAllModels(false);
-                            }}
-                          >
-                            {brand}
-                          </button>
-                        ))}
-                        {visibleBrandOptions.length === 0 && (
-                          <div className="gear-preset-empty">
-                            <span>{t('gear.noBrandMatch')}</span>
-                            <button type="button" className="text-btn btn-sm" onClick={jumpToManualForm}>
-                              {t('gear.manualFilmToggle')}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      {isBrandListCollapsed && hiddenBrandCount > 0 && (
-                        <button
-                          type="button"
-                          className="text-btn btn-sm"
-                          onClick={() => setShowAllBrands(true)}
-                        >
-                          {t('gear.showMoreBrands', { count: hiddenBrandCount })}
-                        </button>
-                      )}
-                      {!isBrandListCollapsed && showAllBrands && !brandSearch.trim() && (
-                        <button
-                          type="button"
-                          className="text-btn btn-sm"
-                          onClick={() => setShowAllBrands(false)}
-                        >
-                          {t('gear.showFewerBrands')}
-                        </button>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                {selectedBrand && (
-                  <div className="builder-step">
-                    <div className="builder-step-label">
-                      3. {t('gear.recommendedModel', { count: modelOptions.length })}
-                    </div>
-                    {modelOptions.length > DEFAULT_VISIBLE_MODEL_COUNT && (
-                      <input
-                        type="text"
-                        className="form-control builder-option-search"
-                        placeholder={t('gear.searchFilmModel', { brand: selectedBrand })}
-                        value={modelSearch}
-                        onChange={event => setModelSearch(event.target.value)}
-                      />
-                    )}
-                    <div className="preset-chip-grid builder-scroll-grid model-grid film-picker-grid">
-                      {visibleModelOptions.map(film => (
-                        <button
-                          key={`${film.brand}-${film.name}-${film.format}`}
-                          type="button"
-                          className="preset-chip"
-                          onClick={() => applyPreset(film)}
-                        >
-                          {film.name} · ISO {film.iso}
-                        </button>
-                      ))}
-                      {visibleModelOptions.length === 0 && (
-                        <div className="gear-preset-empty">
-                          <span>{t('gear.noFilmModelMatch')}</span>
-                          <button type="button" className="text-btn btn-sm" onClick={jumpToManualForm}>
-                            {t('gear.manualFilmToggle')}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    {isModelListCollapsed && hiddenModelCount > 0 && (
-                      <button
-                        type="button"
-                        className="text-btn btn-sm"
-                        onClick={() => setShowAllModels(true)}
-                      >
-                        {t('gear.showMoreModels', { count: hiddenModelCount })}
-                      </button>
-                    )}
-                    {!isModelListCollapsed && showAllModels && !modelSearch.trim() && (
-                      <button
-                        type="button"
-                        className="text-btn btn-sm"
-                        onClick={() => setShowAllModels(false)}
-                      >
-                        {t('gear.showFewerModels')}
-                      </button>
-                    )}
-                  </div>
-                )}
+                <BrandModelPicker
+                  key={formatFilter}
+                  catalog={catalog}
+                  getBrand={film => film.brand}
+                  getModelKey={film => `${film.brand}-${film.name}-${film.format}`}
+                  getModelSearchText={film => `${film.brand} ${film.name} ${film.iso}`}
+                  renderModelLabel={film => <>{film.name} · ISO {film.iso}</>}
+                  popularBrands={POPULAR_FILM_BRANDS}
+                  brandStepLabel={count => <>2. {t('gear.recommendedBrand', { count })}</>}
+                  brandSearchPlaceholder={t('gear.searchFilmBrand')}
+                  noBrandMatchLabel={t('gear.noBrandMatch')}
+                  changeBrandLabel={t('gear.changeBrand')}
+                  showMoreBrandsLabel={count => t('gear.showMoreBrands', { count })}
+                  showFewerBrandsLabel={t('gear.showFewerBrands')}
+                  modelStepLabel={count => <>3. {t('gear.recommendedModel', { count })}</>}
+                  modelSearchPlaceholder={brand => t('gear.searchFilmModel', { brand })}
+                  noModelMatchLabel={t('gear.noFilmModelMatch')}
+                  showMoreModelsLabel={count => t('gear.showMoreModels', { count })}
+                  showFewerModelsLabel={t('gear.showFewerModels')}
+                  visibleModelCount={DEFAULT_VISIBLE_MODEL_COUNT}
+                  onSelectModel={applyPreset}
+                  manualEntryLabel={t('gear.manualFilmToggle')}
+                  onRequestManualEntry={jumpToManualForm}
+                />
 
                 <details className="builder-fallback-search">
                   <summary>{t('gear.directSearchFilm')}</summary>
