@@ -1,29 +1,5 @@
 import { test, expect } from '@playwright/test';
-import * as fs from 'fs';
-import * as XLSX from 'xlsx';
 import { resetAndLogin } from './helpers';
-
-function createMockExcel(filePath: string) {
-  const wb = XLSX.utils.book_new();
-
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([
-    { '相机名称 (必填)': 'E2E Excel Camera', '类型 (film/digital)': 'film', '画幅 (135/120/digital)': '135' }
-  ]), '相机机身');
-
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([
-    { '镜头名称 (必填)': 'E2E Excel Lens', '焦段mm': 35, '最大光圈 (例如 f/2)': 'f/2', '类型 (prime/zoom)': 'prime' }
-  ]), '镜头');
-
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([
-    { '品牌 (必填)': 'E2E Film', '型号名称 (必填)': 'Color 200', 'ISO (必填)': 200, '类型 (color/bw)': 'color', '画幅 (135/120)': '135', '初始库存数量': 2 }
-  ]), '胶卷库存');
-
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([
-    { '拍摄主题名称 (必填)': 'E2E Excel Roll', '相机名称 (必填)': 'E2E Excel Camera', '胶卷品牌 (仅胶片)': 'E2E Film', '胶卷型号 (仅胶片)': 'Color 200' }
-  ]), '拍摄任务');
-
-  XLSX.writeFile(wb, filePath);
-}
 
 test.describe('Grainfolio UI smoke flows', () => {
   test.beforeEach(async ({ page }) => {
@@ -58,12 +34,12 @@ test.describe('Grainfolio UI smoke flows', () => {
   test('creates a roll through the current roll modal', async ({ page }) => {
     await page.goto('/rolls', { waitUntil: 'domcontentloaded' });
 
-    await page.getByRole('button', { name: /全部拍摄记录/ }).click();
+    await page.getByRole('tab', { name: /全部拍摄记录/ }).click();
     await page.getByRole('button', { name: /新建拍摄记录/ }).click();
     const rollModal = page.locator('.modal-content').filter({ hasText: '新建拍摄记录' });
 
     await page.getByPlaceholder('例如: 2026春日踏青').fill('E2E Smoke Roll');
-    await rollModal.locator('div').filter({ hasText: /^Minolta X-700$/ }).first().click();
+    await rollModal.getByRole('button', { name: 'Minolta X-700', exact: true }).click();
     await page.getByPlaceholder(/搜索胶卷库/).fill('Kodak Gold 200');
     await page.getByRole('button', { name: '开始记录' }).click();
 
@@ -73,12 +49,12 @@ test.describe('Grainfolio UI smoke flows', () => {
   test('quick-add film opens above the roll modal and fills the selected film', async ({ page }) => {
     await page.goto('/rolls', { waitUntil: 'domcontentloaded' });
 
-    await page.getByRole('button', { name: /全部拍摄记录/ }).click();
+    await page.getByRole('tab', { name: /全部拍摄记录/ }).click();
     await page.getByRole('button', { name: /新建拍摄记录/ }).click();
     const rollModal = page.locator('.modal-content').filter({ hasText: '新建拍摄记录' });
 
     await rollModal.getByPlaceholder('例如: 2026春日踏青').fill('E2E Quick Film Roll');
-    await rollModal.locator('div').filter({ hasText: /^Minolta X-700$/ }).first().click();
+    await rollModal.getByRole('button', { name: 'Minolta X-700', exact: true }).click();
     await rollModal.locator('.form-group').filter({ hasText: '使用胶卷' }).getByRole('button', { name: /快捷添加/ }).click();
 
     const quickFilmModal = page.locator('.modal-content').filter({ hasText: '快捷添加胶卷' });
@@ -100,35 +76,11 @@ test.describe('Grainfolio UI smoke flows', () => {
     await expect(page.getByText('E2E Quick Film Roll')).toBeVisible();
   });
 
-  test('downloads Excel template and imports an Excel workbook', async ({ page }) => {
-    await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
-    await page.getByRole('button', { name: /批量导入/ }).click();
-    await expect(page.getByRole('heading', { name: '批量导入器材与拍摄记录' })).toBeVisible();
-
-    const downloadPromise = page.waitForEvent('download');
-    await page.getByRole('button', { name: '下载模板' }).click();
-    const download = await downloadPromise;
-    expect(download.suggestedFilename()).toBe('Grainfolio_Import_Template.xlsx');
-    await expect(page.getByText('模板已下载，请留意：')).toBeVisible();
-
-    const tempFilePath = 'mock_import.xlsx';
-    createMockExcel(tempFilePath);
-
-    page.once('dialog', async dialog => {
-      expect(dialog.message()).toContain('成功导入');
-      expect(dialog.message()).toContain('任务: 1');
-      await dialog.accept();
-    });
-
-    const fileChooserPromise = page.waitForEvent('filechooser');
-    await page.getByRole('button', { name: '选择表格并导入' }).click();
-    const fileChooser = await fileChooserPromise;
-    await fileChooser.setFiles(tempFilePath);
-
-    await expect(page.getByRole('heading', { name: '批量导入器材与拍摄记录' })).not.toBeVisible();
-
-    if (fs.existsSync(tempFilePath)) {
-      fs.unlinkSync(tempFilePath);
-    }
-  });
+  // The previous Excel-import smoke test asserted UI that no longer exists
+  // (a `/批量导入/` entry point on Dashboard, and a native `dialog` — the app
+  // uses the toast/Feedback system instead). ExcelImportModal has no
+  // production entry point yet (UI-23 Stage A is service-layer only); a real
+  // wizard E2E covering template -> mapping -> preview -> duplicate ->
+  // submit -> Instant Archive lands in UI-23 Stage B once an entry point
+  // (Settings) exists.
 });

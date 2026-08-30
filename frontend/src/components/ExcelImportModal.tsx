@@ -1,10 +1,27 @@
 import React, { useRef, useState } from 'react';
 import { Download, UploadCloud, X, AlertCircle } from 'lucide-react';
-import { importExcelDataFromFile, downloadExcelTemplate } from '../services/importExcelData';
+import { parseAndValidateExcelImport, commitExcelImport, downloadExcelTemplate } from '../services/importExcelData';
+import type { ImportExcelTranslator, ImportRowResult } from '../services/importExcelData';
 import { useAuth } from '../contexts/useAuth';
 import { useFeedback } from '../contexts/useFeedback';
 import { useLanguage } from '../contexts/useLanguage';
 import { Modal } from './Modal';
+
+// Stage A keeps this Modal's existing single-step UX unchanged (no mapping/
+// preview/duplicate-choice UI yet — that's Stage B). Every duplicate choice
+// defaults to 'skip', matching the previous "skip exact-name duplicates"
+// behavior; the only thing that changed underneath is that the write is now
+// genuinely atomic (see services/importExcelData/commitImport.ts).
+const flattenRejectedRowErrors = (rows: ImportRowResult[], t: ImportExcelTranslator): string[] => (
+  rows
+    .filter(row => row.status === 'rejected')
+    .flatMap(row => row.issues.map(rowIssue => t('excel.rowError', {
+      sheet: row.sheet,
+      row: row.rowNumber,
+      field: rowIssue.field,
+      reason: t(rowIssue.reasonKey, rowIssue.reasonValues),
+    })))
+);
 
 interface ExcelImportModalProps {
   onClose: () => void;
@@ -32,14 +49,21 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ onClose }) =
     setIsProcessing(true);
     setProcessMessage(t('excel.processingRead'));
     try {
-      const summary = await importExcelDataFromFile(file, user.id, t);
-      let msg = `${t('excel.summaryCameras')}: ${summary.camerasAdded}\n${t('excel.summaryLenses')}: ${summary.lensesAdded}\n${t('excel.summaryFilms')}: ${summary.filmsAdded}\n${t('excel.summaryRolls')}: ${summary.rollsAdded}`;
-      if (summary.errors.length > 0) {
-        msg += `\n\n${t('excel.summaryIssues', { count: summary.errors.length })}\n` + summary.errors.slice(0, 5).join('\n');
-        if (summary.errors.length > 5) msg += `\n${t('excel.summaryMore')}`;
+      const preview = await parseAndValidateExcelImport(file, user.id, t);
+      const result = await commitExcelImport(preview, {}, user.id, t);
+      const errors = [
+        ...flattenRejectedRowErrors(preview.rows.cameras, t),
+        ...flattenRejectedRowErrors(preview.rows.lenses, t),
+        ...flattenRejectedRowErrors(preview.rows.filmStocks, t),
+        ...flattenRejectedRowErrors(preview.rows.rolls, t),
+      ];
+      let msg = `${t('excel.summaryCameras')}: ${result.createdCounts.camera}\n${t('excel.summaryLenses')}: ${result.createdCounts.lens}\n${t('excel.summaryFilms')}: ${result.createdCounts.filmStock}\n${t('excel.summaryRolls')}: ${result.createdCounts.roll}`;
+      if (errors.length > 0) {
+        msg += `\n\n${t('excel.summaryIssues', { count: errors.length })}\n` + errors.slice(0, 5).join('\n');
+        if (errors.length > 5) msg += `\n${t('excel.summaryMore')}`;
       }
       notify({
-        type: summary.errors.length > 0 ? 'info' : 'success',
+        type: errors.length > 0 ? 'info' : 'success',
         title: t('excel.importCompleteTitle'),
         message: msg,
         durationMs: 6000

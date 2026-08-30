@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { db } from '../db/schema';
 import { BackupService } from '../services/backupService';
-import { importExcelDataFromFile } from '../services/importExcelData';
+import { parseAndValidateExcelImport, commitExcelImport } from '../services/importExcelData';
 import * as FileSaver from 'file-saver';
 import * as XLSX from 'xlsx';
 
@@ -119,11 +119,12 @@ describe('Tenant Isolation Breach Defenses (Multi-Tenant)', () => {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     });
 
-    const summary: any = await importExcelDataFromFile(file, 'user_A');
+    const preview = await parseAndValidateExcelImport(file, 'user_A');
+    const result = await commitExcelImport(preview, {}, 'user_A');
 
-    expect(summary.camerasAdded).toBe(1);
-    expect(summary.filmsAdded).toBe(1);
-    expect(summary.rollsAdded).toBe(1);
+    expect(result.createdCounts.camera).toBe(1);
+    expect(result.createdCounts.filmStock).toBe(1);
+    expect(result.createdCounts.roll).toBe(1);
 
     const userACamera = (await db.cameras.where('userId').equals('user_A').toArray())[0];
     const userAFilm = (await db.filmStocks.where('userId').equals('user_A').toArray())[0];

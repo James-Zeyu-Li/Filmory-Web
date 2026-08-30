@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import * as XLSX from 'xlsx';
 import { db } from '../db/schema';
 import { translations, type TranslationKey } from '../i18n/translations';
-import { importExcelDataFromFile } from '../services/importExcelData';
+import { parseAndValidateExcelImport, commitExcelImport, type ImportRowResult } from '../services/importExcelData';
 
 const createImportFile = (sheets: Record<string, Record<string, unknown>[]>) => {
   const workbook = XLSX.utils.book_new();
@@ -18,13 +18,21 @@ const englishImportText = (key: TranslationKey, values?: Record<string, string |
   translations['en-US'][key].replace(/\{\{(\w+)\}\}/g, (_, valueKey: string) => String(values?.[valueKey] ?? ''))
 );
 
+const flattenRejected = (rows: ImportRowResult[], t = englishImportText) => (
+  rows
+    .filter(row => row.status === 'rejected')
+    .flatMap(row => row.issues.map(issue => t('excel.rowError', {
+      sheet: row.sheet, row: row.rowNumber, field: issue.field, reason: t(issue.reasonKey, issue.reasonValues),
+    })))
+);
+
 describe('Excel import validation', () => {
   beforeEach(async () => {
     await Promise.all([db.cameras.clear(), db.lenses.clear(), db.filmStocks.clear(), db.rolls.clear(), db.ledgerTransactions.clear(), db.syncQueue.clear()]);
   });
 
   it('skips invalid rows while importing valid rows and reports row-level reasons', async () => {
-    const summary = await importExcelDataFromFile(createImportFile({
+    const preview = await parseAndValidateExcelImport(createImportFile({
       '相机机身': [
         { '相机名称 (必填)': 'Valid Camera', '类型 (film/digital)': 'film', '画幅 (135/120/digital)': '135' },
         { '相机名称 (必填)': 'Unknown Type', '类型 (film/digital)': 'instant', '画幅 (135/120/digital)': '135' },
@@ -40,31 +48,38 @@ describe('Excel import validation', () => {
       ],
     }), 'user-1');
 
-    expect(summary).toMatchObject({ camerasAdded: 1, filmsAdded: 1, rollsAdded: 1 });
-    expect(summary.errors).toEqual(expect.arrayContaining([
-      expect.stringContaining('相机机身 第 3 行'),
-      expect.stringContaining('相机机身 第 4 行'),
-      expect.stringContaining('胶卷库存 第 3 行'),
-      expect.stringContaining('拍摄任务 第 3 行'),
+    const rejectedMessages = [
+      ...flattenRejected(preview.rows.cameras),
+      ...flattenRejected(preview.rows.filmStocks),
+      ...flattenRejected(preview.rows.rolls),
+    ];
+    expect(rejectedMessages).toEqual(expect.arrayContaining([
+      expect.stringContaining('相机机身 row 3'),
+      expect.stringContaining('相机机身 row 4'),
+      expect.stringContaining('胶卷库存 row 3'),
+      expect.stringContaining('拍摄任务 row 3'),
     ]));
+
+    const result = await commitExcelImport(preview, {}, 'user-1');
+    expect(result.createdCounts).toMatchObject({ camera: 1, filmStock: 1, roll: 1 });
     expect(await db.cameras.where('userId').equals('user-1').count()).toBe(1);
     expect(await db.filmStocks.where('userId').equals('user-1').count()).toBe(1);
     expect(await db.rolls.where('userId').equals('user-1').count()).toBe(1);
   });
 
   it('rejects a missing user identity before writing any rows', async () => {
-    await expect(importExcelDataFromFile(createImportFile({
+    await expect(parseAndValidateExcelImport(createImportFile({
       '相机机身': [{ '相机名称 (必填)': 'Leica M6' }],
     }), '')).rejects.toThrow('valid user identity');
     expect(await db.cameras.count()).toBe(0);
   });
 
   it('localizes row-level validation reasons through the supplied translator', async () => {
-    const summary = await importExcelDataFromFile(createImportFile({
+    const preview = await parseAndValidateExcelImport(createImportFile({
       '相机机身': [{ '相机名称 (必填)': 'Unknown Type', '类型 (film/digital)': 'instant' }],
-    }), 'user-1', englishImportText);
+    }), 'user-1');
 
-    expect(summary.errors).toEqual([
+    expect(flattenRejected(preview.rows.cameras)).toEqual([
       expect.stringContaining('相机机身 row 2, “类型”: must be film or digital'),
     ]);
   });

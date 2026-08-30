@@ -26,7 +26,12 @@ const createOperation = (
   timestamp: Date.now(),
 });
 
-export const createRollWithInventory = async ({ roll, ledger }: CreateRollWithInventoryInput): Promise<void> => {
+// Transaction-scoped write. Performs only Dexie reads/writes (including the
+// syncQueue operation entry for film rolls) — no sync trigger. Callable
+// either by the public wrapper below (which opens its own transaction) or by
+// another caller's own outer transaction, as long as that transaction locks
+// at least the same tables this function touches.
+export const writeRollWithInventory = async ({ roll, ledger }: CreateRollWithInventoryInput): Promise<void> => {
   const userId = roll.userId;
   if (!roll.id || !userId) {
     throw new Error('A roll id and user id are required for inventory synchronization.');
@@ -35,38 +40,68 @@ export const createRollWithInventory = async ({ roll, ledger }: CreateRollWithIn
   // Digital rolls do not consume film inventory. Keep them on the ordinary
   // record queue instead of passing the local digital placeholder to a UUID RPC.
   if (!roll.filmStockId || roll.filmStockId === 'digital-placeholder') {
-    await db.transaction('rw', db.rolls, db.ledgerTransactions, async () => {
-      await db.rolls.add(roll);
-      if (ledger) await db.ledgerTransactions.add(ledger);
-    });
-    requestImmediateSync('digital-roll-create');
+    await db.rolls.add(roll);
+    if (ledger) await db.ledgerTransactions.add(ledger);
     return;
   }
 
-  await db.transaction('rw', db.rolls, db.filmStocks, db.ledgerTransactions, db.syncQueue, async () => {
-    suppressSyncRecordsForCurrentTransaction();
+  suppressSyncRecordsForCurrentTransaction();
 
-    const film = roll.filmStockId && roll.filmStockId !== 'digital-placeholder'
-      ? await db.filmStocks.get(roll.filmStockId)
-      : undefined;
-    const consumeInventory = Boolean(film && (film.stockCount || 0) > 0);
+  const film = roll.filmStockId && roll.filmStockId !== 'digital-placeholder'
+    ? await db.filmStocks.get(roll.filmStockId)
+    : undefined;
+  const consumeInventory = Boolean(film && (film.stockCount || 0) > 0);
 
-    await db.rolls.add(roll);
-    if (consumeInventory && film?.id) {
-      await db.filmStocks.update(film.id, { stockCount: Math.max(0, (film.stockCount || 0) - 1) });
-    }
-    if (ledger) {
-      await db.ledgerTransactions.add(ledger);
-    }
+  await db.rolls.add(roll);
+  if (consumeInventory && film?.id) {
+    await db.filmStocks.update(film.id, { stockCount: Math.max(0, (film.stockCount || 0) - 1) });
+  }
+  if (ledger) {
+    await db.ledgerTransactions.add(ledger);
+  }
 
-    await db.syncQueue.add(createOperation(userId, 'create_roll_with_inventory', {
-      roll,
-      consumeInventory,
-      ledger,
-    }));
-  });
+  await db.syncQueue.add(createOperation(userId, 'create_roll_with_inventory', {
+    roll,
+    consumeInventory,
+    ledger,
+  }));
+};
 
-  requestImmediateSync('inventory-roll-create');
+export const createRollWithInventory = async (input: CreateRollWithInventoryInput): Promise<void> => {
+  const isDigitalRoll = !input.roll.filmStockId || input.roll.filmStockId === 'digital-placeholder';
+  await db.transaction(
+    'rw',
+    isDigitalRoll ? [db.rolls, db.ledgerTransactions] : [db.rolls, db.filmStocks, db.ledgerTransactions, db.syncQueue],
+    () => writeRollWithInventory(input),
+  );
+  requestImmediateSync(isDigitalRoll ? 'digital-roll-create' : 'inventory-roll-create');
+};
+
+// Transaction-scoped write (same contract as writeRollWithInventory above):
+// only Dexie reads/writes, no sync trigger.
+export const writeFilmStockAdjustment = async (
+  film: Pick<FilmStock, 'id' | 'userId'>,
+  requestedDelta: number,
+): Promise<{ nextStock: number; didQueueOperation: boolean }> => {
+  // Read inside the transaction so rapid clicks never calculate a delta from
+  // an obsolete React/Dexie snapshot.
+  const currentFilm = await db.filmStocks.get(film.id!);
+  if (!currentFilm || currentFilm.userId !== film.userId) {
+    throw new Error('Film stock is unavailable for the current user.');
+  }
+
+  const currentStock = currentFilm.stockCount || 0;
+  const nextStock = Math.max(0, currentStock + requestedDelta);
+  const appliedDelta = nextStock - currentStock;
+  if (appliedDelta === 0) return { nextStock, didQueueOperation: false };
+
+  suppressSyncRecordsForCurrentTransaction();
+  await db.filmStocks.update(film.id!, { stockCount: nextStock });
+  await db.syncQueue.add(createOperation(film.userId!, 'adjust_film_stock', {
+    filmStockId: film.id,
+    delta: appliedDelta,
+  }));
+  return { nextStock, didQueueOperation: true };
 };
 
 export const adjustFilmStock = async (
@@ -77,33 +112,13 @@ export const adjustFilmStock = async (
     throw new Error('A film stock id, user id, and whole-number adjustment are required.');
   }
 
-  let nextStock = 0;
-  let didQueueOperation = false;
-
+  let result = { nextStock: 0, didQueueOperation: false };
   await db.transaction('rw', db.filmStocks, db.syncQueue, async () => {
-    // Read inside the transaction so rapid clicks never calculate a delta from
-    // an obsolete React/Dexie snapshot.
-    const currentFilm = await db.filmStocks.get(film.id!);
-    if (!currentFilm || currentFilm.userId !== film.userId) {
-      throw new Error('Film stock is unavailable for the current user.');
-    }
-
-    const currentStock = currentFilm.stockCount || 0;
-    nextStock = Math.max(0, currentStock + requestedDelta);
-    const appliedDelta = nextStock - currentStock;
-    if (appliedDelta === 0) return;
-
-    suppressSyncRecordsForCurrentTransaction();
-    await db.filmStocks.update(film.id!, { stockCount: nextStock });
-    await db.syncQueue.add(createOperation(film.userId!, 'adjust_film_stock', {
-      filmStockId: film.id,
-      delta: appliedDelta,
-    }));
-    didQueueOperation = true;
+    result = await writeFilmStockAdjustment(film, requestedDelta);
   });
 
-  if (didQueueOperation) {
+  if (result.didQueueOperation) {
     requestImmediateSync('inventory-stock-adjust');
   }
-  return nextStock;
+  return result.nextStock;
 };
