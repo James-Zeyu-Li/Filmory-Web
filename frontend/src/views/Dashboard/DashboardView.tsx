@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   Camera, LayoutDashboard,
@@ -6,6 +7,10 @@ import {
 import './DashboardView.css';
 import { useRolls, useCameras, useFilmStocks, useFilmBacks, useLenses } from '../../hooks/useData';
 import { useLanguage } from '../../contexts/useLanguage';
+import { resolveArchiveHighlight } from '../../services/archiveHighlightService';
+import { ShootingHighlightCard } from './ShootingHighlightCard';
+import { StatCard } from '../../components/ui/StatCard';
+import { EmptyState } from '../../components/EmptyState';
 
 interface DashboardViewProps {
   enableFilmMode: boolean;
@@ -28,6 +33,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
   const filmBacks = useFilmBacks();
   const lenses = useLenses();
   const filmStocks = useFilmStocks();
+
+  const highlight = useMemo(() => resolveArchiveHighlight(rolls, cameras), [rolls, cameras]);
 
   const activeRolls = rolls
     .filter(r => r.status === 'active')
@@ -110,61 +117,31 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
         <div className="dash-section">
           <h2 className="dash-section-title">{t('dashboard.workspace')}</h2>
           <div className="metrics-grid">
-            <button
-              type="button"
-              className="metric-card metric-card-button"
-              onClick={() => onNavigate('rolls')}
-            >
-              <div className="metric-icon active"><Play size={18} /></div>
-              <div className="metric-data">
-                <span>{t('dashboard.active')}</span>
-                <strong>{activeRolls.length} {t('common.rollUnit')}</strong>
-              </div>
+            <button type="button" className="metric-card-button" onClick={() => onNavigate('rolls')}>
+              <StatCard icon={Play} tone="sky" label={t('dashboard.active')} value={`${activeRolls.length} ${t('common.rollUnit')}`} />
             </button>
-            <button
-              type="button"
-              className="metric-card metric-card-button"
-              onClick={() => onNavigate('gear?tab=filmStocks')}
-            >
-              <div className="metric-icon stock"><Package size={18} /></div>
-              <div className="metric-data">
-                <span>{t('dashboard.filmStock')}</span>
-                <strong>{totalFilmStock} {t('common.rollUnit')}</strong>
-              </div>
+            <button type="button" className="metric-card-button" onClick={() => onNavigate('gear?tab=filmStocks')}>
+              <StatCard icon={Package} tone="gold" label={t('dashboard.filmStock')} value={`${totalFilmStock} ${t('common.rollUnit')}`} />
             </button>
-            <button
-              type="button"
-              className="metric-card metric-card-button"
-              onClick={() => onNavigate('gear?tab=cameras')}
-            >
-              <div className="metric-icon camera"><Camera size={18} /></div>
-              <div className="metric-data">
-                <span>{t('dashboard.activeCameras')}</span>
-                <strong>{activeCameraSummaries.length} {t('common.cameraUnit')}</strong>
-              </div>
+            <button type="button" className="metric-card-button" onClick={() => onNavigate('gear?tab=cameras')}>
+              <StatCard icon={Camera} tone="jade" label={t('dashboard.activeCameras')} value={`${activeCameraSummaries.length} ${t('common.cameraUnit')}`} />
             </button>
             {showLoadedBackMetric && (
-              <button
-                type="button"
-                className="metric-card metric-card-button"
-                onClick={() => onNavigate('gear?tab=cameras')}
-              >
-                <div className="metric-icon back"><Package size={18} /></div>
-                <div className="metric-data">
-                  <span>{t('dashboard.loadedBacks')}</span>
-                  <strong>{activeFilmBackIds.length} {t('common.backUnit')}</strong>
-                </div>
+              <button type="button" className="metric-card-button" onClick={() => onNavigate('gear?tab=cameras')}>
+                <StatCard icon={Package} tone="violet" label={t('dashboard.loadedBacks')} value={`${activeFilmBackIds.length} ${t('common.backUnit')}`} />
               </button>
             )}
           </div>
         </div>
+
+        <ShootingHighlightCard highlight={highlight} onViewInsights={() => onNavigate('insights')} />
 
         {/* Row 2: Launchpad (快捷入口) */}
         <div className="dash-section">
           <h2 className="dash-section-title">{t('dashboard.launchpad')}</h2>
           <div className="launchpad-row">
             <motion.button
-              className="launchpad-pill portal-blue"
+              className="launchpad-pill"
               custom={0} initial="hidden" animate="visible" variants={cardVariants}
               onClick={() => onNavigate('rolls?newRoll=1', { skipPageTransition: true })}
             >
@@ -180,7 +157,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
               </motion.button>
             )}
             <motion.button
-              className="launchpad-pill portal-gold"
+              className="launchpad-pill"
               custom={2} initial="hidden" animate="visible" variants={cardVariants}
               onClick={() => onNavigate('gear?tab=cameras&newCamera=1', { skipPageTransition: true })}
             >
@@ -194,18 +171,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
           <h2 className="dash-section-title">{t('dashboard.activeRollsTitle', { count: activeRolls.length })}</h2>
           <div className="active-rolls-list">
             {activeRolls.length === 0 ? (
-              <div className="active-rolls-empty">
-                <Play size={24} style={{ color: 'var(--text-muted)' }} />
-                <p>{t('dashboard.noActiveRolls')}</p>
-                <button
-                  type="button"
-                  className="primary btn-sm active-rolls-empty-cta"
-                  onClick={() => onNavigate('rolls?newRoll=1', { skipPageTransition: true })}
-                >
-                  <Film size={16} />
-                  {t('dashboard.startShootingRecord')}
-                </button>
-              </div>
+              <EmptyState
+                compact
+                icon={Play}
+                title={t('dashboard.noActiveRollsTitle')}
+                description={t('dashboard.noActiveRolls')}
+                action={
+                  <button
+                    type="button"
+                    className="primary btn-sm"
+                    onClick={() => onNavigate('rolls?newRoll=1', { skipPageTransition: true })}
+                  >
+                    <Film size={16} />
+                    {t('dashboard.startShootingRecord')}
+                  </button>
+                }
+              />
             ) : (
               activeRollsPreview.map((roll, i) => (
                 <motion.div
