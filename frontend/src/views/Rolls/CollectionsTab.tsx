@@ -208,12 +208,12 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
       return (
         <div 
           key={collection.id} 
-          className="collection-card-row"
+          className="record-row-card"
           onClick={() => onCollectionSelect(collection)}
         >
           <button type="button" className="record-card-open-action" onClick={(event) => { event.stopPropagation(); onCollectionSelect(collection); }} aria-label={`${collection.name} (${t('collections.rollCount', { count: linkedRolls.length })})`} />
           {/* Square thumbnail: mosaic if photos exist, name initials if not */}
-          <div className="collection-card-thumb-wrapper">
+          <div className="record-row-thumb-wrapper">
             {collection.coverUrl ? (
               <div className="collection-card-thumb" style={{ backgroundImage: `url(${collection.coverUrl})` }} />
             ) : mosaicUrls.length > 0 ? (

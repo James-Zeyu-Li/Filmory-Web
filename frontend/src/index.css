@@ -11,6 +11,7 @@
   --media-overlay: rgba(10, 12, 16, 0.58);
   --media-overlay-strong: rgba(10, 12, 16, 0.78);
   --media-control-bg: rgba(255, 255, 255, 0.2);
+  --media-control-bg-dark: rgba(10, 12, 16, 0.6);
   --text-on-media: #ffffff;
   --text-on-accent: #111827;
 
@@ -74,6 +75,11 @@
   --chart-series-green: #10b981;
   --chart-series-gray: #6b7280;
   --chart-series-stock: #3b82f6;
+  --chart-series-jade: #34d399;
+  --chart-series-violet: #a78bfa;
+  --chart-series-indigo: #818cf8;
+  --chart-series-rose: #fb7185;
+  --chart-series-teal: #2dd4bf;
   --chart-hover-fill: rgba(226, 176, 40, 0.08);
   --chart-surface-subtle: rgba(255, 255, 255, 0.04);
   --chart-image-fallback: #1f2937;
@@ -130,6 +136,11 @@
   --chart-series-green: #059669;
   --chart-series-gray: #4b5563;
   --chart-series-stock: #2563eb;
+  --chart-series-jade: #047857;
+  --chart-series-violet: #7c3aed;
+  --chart-series-indigo: #4f46e5;
+  --chart-series-rose: #e11d48;
+  --chart-series-teal: #0d9488;
   --chart-hover-fill: rgba(217, 119, 6, 0.1);
   --chart-surface-subtle: rgba(17, 24, 39, 0.04);
   --chart-image-fallback: #e5e7eb;

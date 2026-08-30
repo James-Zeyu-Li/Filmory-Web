@@ -111,6 +111,22 @@
   background-color: var(--danger-bg);
 }
 
+.stat-card--jade {
+  border-left-color: var(--chart-series-jade);
+}
+.stat-card--jade .stat-card-icon {
+  color: var(--chart-series-jade);
+  background-color: color-mix(in srgb, var(--chart-series-jade) 12%, transparent);
+}
+
+.stat-card--violet {
+  border-left-color: var(--chart-series-violet);
+}
+.stat-card--violet .stat-card-icon {
+  color: var(--chart-series-violet);
+  background-color: color-mix(in srgb, var(--chart-series-violet) 12%, transparent);
+}
+
 @media (max-width: 480px) {
   .stat-card {
     padding: 16px;

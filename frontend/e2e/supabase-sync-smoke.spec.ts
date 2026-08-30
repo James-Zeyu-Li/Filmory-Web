@@ -130,7 +130,7 @@ describeSyncSmoke('Supabase sync smoke with real Auth UI', () => {
     await rollModal.locator('div').filter({ hasText: new RegExp(`^${cameraName}$`) }).first().click();
     await rollModal.getByPlaceholder(/搜索胶卷库/).fill(`${filmBrand} ${filmName}`);
     await rollModal.getByRole('button', { name: '开始记录' }).click();
-    await expect(page.locator('.roll-card, .roll-card-row').filter({ hasText: rollName })).toBeVisible();
+    await expect(page.locator('.roll-card, .record-row-card').filter({ hasText: rollName })).toBeVisible();
 
     await expect.poll(async () => {
       const { data, error } = await admin

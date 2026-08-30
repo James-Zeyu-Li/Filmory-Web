@@ -38,6 +38,25 @@
   gap: 12px;
 }
 
+.premium-empty-state--compact {
+  padding: 24px;
+  margin: 0;
+}
+
+.premium-empty-state--compact .empty-icon-wrapper {
+  margin-bottom: 8px;
+  animation: none;
+}
+
+.premium-empty-state--compact .empty-title {
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.premium-empty-state--compact .empty-description {
+  margin-bottom: 16px;
+}
+
 @keyframes float {
   0% { transform: translateY(0px); }
   50% { transform: translateY(-8px); }

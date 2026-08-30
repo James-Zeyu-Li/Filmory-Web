@@ -292,9 +292,9 @@ export const AlbumDetails: React.FC<AlbumDetailsProps> = ({
                   <div 
                     className="selector-photo-checkbox" 
                     style={{ 
-                      backgroundColor: isSelectedForRemoval ? 'var(--danger)' : 'rgba(0,0,0,0.6)',
+                      backgroundColor: isSelectedForRemoval ? 'var(--danger)' : 'var(--media-control-bg-dark)',
                       borderColor: isSelectedForRemoval ? 'var(--danger)' : 'var(--border-color)',
-                      color: '#fff'
+                      color: 'var(--text-on-media)'
                     }}
                   >
                     {isSelectedForRemoval && <Check size={14} />}
@@ -336,13 +336,13 @@ export const AlbumDetails: React.FC<AlbumDetailsProps> = ({
                       <button 
                         className="icon-btn btn-sm" 
                         title="设为相册封面"
-                        style={{ background: 'rgba(0,0,0,0.6)', border: 'none', padding: '6px' }}
+                        style={{ background: 'var(--media-control-bg-dark)', border: 'none', padding: '6px' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleSetCover(photo.id!);
                         }}
                       >
-                        <Check size={12} color={album.coverPhotoId === photo.id ? 'var(--accent)' : '#fff'} />
+                        <Check size={12} color={album.coverPhotoId === photo.id ? 'var(--accent)' : 'var(--text-on-media)'} />
                       </button>
                     )}
                     {photo.rating && (
@@ -547,7 +547,7 @@ export const AlbumDetails: React.FC<AlbumDetailsProps> = ({
                 bottom: '24px',
                 left: '50%',
                 transform: 'translateX(-50%)',
-                backgroundColor: 'rgba(0,0,0,0.5)',
+                backgroundColor: 'var(--media-control-bg-dark)',
                 padding: '8px 20px',
                 borderRadius: '24px',
                 backdropFilter: 'blur(8px)',
@@ -555,14 +555,14 @@ export const AlbumDetails: React.FC<AlbumDetailsProps> = ({
                 alignItems: 'center',
                 gap: '16px',
                 fontSize: '12px',
-                color: 'rgba(255,255,255,0.7)',
+                color: 'color-mix(in srgb, var(--text-on-media) 70%, transparent)',
                 zIndex: 50,
                 pointerEvents: 'none'
               }}
             >
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><kbd style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '4px', padding: '2px 6px', fontFamily: 'monospace', color: '#fff' }}>1</kbd>-<kbd style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '4px', padding: '2px 6px', fontFamily: 'monospace', color: '#fff' }}>5</kbd> 打星</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><kbd style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '4px', padding: '2px 6px', fontFamily: 'monospace', color: '#fff' }}>0</kbd> 清除</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><kbd style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '4px', padding: '2px 6px', fontFamily: 'monospace', color: '#fff' }}>Del</kbd> 极速删除</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><kbd style={{ background: 'var(--media-control-bg)', borderRadius: '4px', padding: '2px 6px', fontFamily: 'monospace', color: 'var(--text-on-media)' }}>1</kbd>-<kbd style={{ background: 'var(--media-control-bg)', borderRadius: '4px', padding: '2px 6px', fontFamily: 'monospace', color: 'var(--text-on-media)' }}>5</kbd> 打星</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><kbd style={{ background: 'var(--media-control-bg)', borderRadius: '4px', padding: '2px 6px', fontFamily: 'monospace', color: 'var(--text-on-media)' }}>0</kbd> 清除</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><kbd style={{ background: 'var(--media-control-bg)', borderRadius: '4px', padding: '2px 6px', fontFamily: 'monospace', color: 'var(--text-on-media)' }}>Del</kbd> 极速删除</span>
             </div>
           </div>
 
@@ -754,7 +754,7 @@ const AddPhotosModal: React.FC<AddPhotosModalProps> = ({
                       })}
                     </div>
                   )}
-                  <div style={{ position: 'absolute', bottom: 4, left: 4, fontSize: '9px', background: 'rgba(0,0,0,0.6)', padding: '2px 4px', borderRadius: '2px', color: 'var(--text-secondary)', maxWidth: '90%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ position: 'absolute', bottom: 4, left: 4, fontSize: '9px', background: 'var(--media-control-bg-dark)', padding: '2px 4px', borderRadius: '2px', color: 'var(--text-on-media)', maxWidth: '90%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {archivedRolls.find(r => r.id === photo.rollId)?.name}
                   </div>
                 </div>

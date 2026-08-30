@@ -79,12 +79,12 @@ test.describe('120 interchangeable film backs', () => {
     await expect(rollModal.getByPlaceholder(/搜索胶卷库/)).toHaveValue('E2E 120 Portra Test');
     await rollModal.getByRole('button', { name: '开始记录' }).click();
 
-    await expect(page.locator('.roll-card, .roll-card-row').filter({ hasText: 'E2E 120 Back Roll' })).toContainText('A12 Back');
-    await expect(page.locator('.roll-card, .roll-card-row').filter({ hasText: 'E2E 120 Back Roll' })).toContainText('Hasselblad Carl Zeiss Planar 80mm f/2.8 C');
+    await expect(page.locator('.roll-card, .record-row-card').filter({ hasText: 'E2E 120 Back Roll' })).toContainText('A12 Back');
+    await expect(page.locator('.roll-card, .record-row-card').filter({ hasText: 'E2E 120 Back Roll' })).toContainText('Hasselblad Carl Zeiss Planar 80mm f/2.8 C');
 
     await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('.metric-card').filter({ hasText: '使用中镜头' })).toContainText('1 支');
-    await expect(page.locator('.metric-card').filter({ hasText: '装片后背' })).toContainText('1 个');
+    await expect(page.locator('.metric-card-button').filter({ hasText: '使用中镜头' })).toContainText('1 支');
+    await expect(page.locator('.metric-card-button').filter({ hasText: '装片后背' })).toContainText('1 个');
     await expect(page.locator('.active-roll-dash-card').filter({ hasText: 'E2E 120 Back Roll' })).toContainText('A12 Back');
     await expect(page.locator('.active-roll-dash-card').filter({ hasText: 'E2E 120 Back Roll' })).toContainText('装片组合：E2E Hasselblad 501CM + A12 Back + E2E 120 Portra Test');
     await expect(page.locator('.active-roll-dash-card').filter({ hasText: 'E2E 120 Back Roll' })).toContainText('Hasselblad Carl Zeiss Planar 80mm f/2.8 C');

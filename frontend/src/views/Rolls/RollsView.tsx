@@ -1055,18 +1055,18 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
 
     const filmStock = enableFilmMode ? filmStocks.find(f => f.id === roll.filmStockId) : undefined;
     const placeholderStyle: React.CSSProperties = {
-      background: 'rgba(56, 189, 248, 0.15)'
+      background: 'color-mix(in srgb, var(--chart-series-blue) 15%, transparent)'
     };
     if (!coverUrl && filmStock?.brand) {
       const brand = filmStock.brand.toLowerCase();
       if (brand.includes('kodak')) {
-        placeholderStyle.background = 'rgba(245, 158, 11, 0.18)';
+        placeholderStyle.background = 'color-mix(in srgb, var(--chart-series-gold-soft) 18%, transparent)';
       } else if (brand.includes('fuji')) {
-        placeholderStyle.background = 'rgba(16, 185, 129, 0.18)';
+        placeholderStyle.background = 'color-mix(in srgb, var(--success) 18%, transparent)';
       } else if (brand.includes('ilford') || filmStock.colorType === 'bw') {
-        placeholderStyle.background = 'rgba(156, 163, 175, 0.18)';
+        placeholderStyle.background = 'color-mix(in srgb, var(--text-secondary) 18%, transparent)';
       } else if (brand.includes('cinestill')) {
-        placeholderStyle.background = 'rgba(239, 68, 68, 0.18)';
+        placeholderStyle.background = 'color-mix(in srgb, var(--danger) 18%, transparent)';
       }
     }
     
@@ -1074,11 +1074,11 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
       return (
         <div 
           key={roll.id} 
-          className="roll-card-row"
+          className="record-row-card"
           onClick={() => openRollDrawer(roll)}
         >
           <button type="button" className="record-card-open-action" onClick={(event) => { event.stopPropagation(); openRollDrawer(roll); }} aria-label={t('rolls.openDetails', { name: roll.name })} />
-          <div className="roll-card-row-thumb-wrapper">
+          <div className="record-row-thumb-wrapper">
             {coverPhoto?.id ? (
               <RollCoverImage
                 photoId={coverPhoto.id}
@@ -2191,7 +2191,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                    return (
                      <div key={roll.id} 
                           onClick={() => setSelectedExistingRollIds(prev => isSelected ? prev.filter(id => id !== roll.id) : [...prev, roll.id!])}
-                          style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border-color)'}`, borderRadius: '8px', cursor: 'pointer', background: isSelected ? 'rgba(0, 122, 255, 0.05)' : 'transparent' }}>
+                          style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border-color)'}`, borderRadius: '8px', cursor: 'pointer', background: isSelected ? 'var(--accent-bg)' : 'transparent' }}>
                        <input type="checkbox" checked={isSelected} readOnly style={{ pointerEvents: 'none' }} />
                        <div>
                          <div style={{ fontWeight: 600, fontSize: '14px' }}>{roll.name}</div>

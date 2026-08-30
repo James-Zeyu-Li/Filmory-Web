@@ -81,7 +81,7 @@ export const CamerasTab = memo(({
       {displayCameras.map(camera => {
         const avatarUrl = getAvatarFullUrl(camera.avatarUrl);
         return (
-          <div key={camera.id} className="gear-card camera-card-with-avatar" onClick={() => onView(camera)} style={{ cursor: 'pointer' }}>
+          <div key={camera.id} className="gear-card gear-row-card" onClick={() => onView(camera)} style={{ cursor: 'pointer' }}>
             <button type="button" className="gear-card-open-action" onClick={event => { event.stopPropagation(); onView(camera); }} aria-label={t('gear.viewCameraHistory', { name: camera.name })} />
             <div className="camera-avatar-container">
               {avatarUrl ? <img src={avatarUrl} alt={camera.name} className="camera-avatar-img" onClick={event => { event.stopPropagation(); onPreview(avatarUrl); }} title={t('gear.previewCover')} /> : <div className="camera-avatar-placeholder">{getPlaceholderText(camera.name)}</div>}
@@ -92,7 +92,7 @@ export const CamerasTab = memo(({
             <div className="camera-card-content">
               <div className="gear-card-header">
                 <span className={`tag ${camera.type}`}>{camera.type === 'film' ? t('gear.film') : t('gear.digital')}</span>
-                <div style={{ display: 'flex', gap: '4px' }}>
+                <div style={{ display: 'flex', gap: '8px' }}>
                   <IconButton icon={<Edit2 size={16} />} title={t('gear.editCamera')} onClick={event => { event.stopPropagation(); onEdit(camera); }} />
                   <IconButton variant="success" icon={<Archive size={16} />} title={t('gear.sellArchive')} onClick={event => { event.stopPropagation(); onArchive(camera); }} />
                   <IconButton variant="danger" icon={<Trash2 size={16} />} title={t('gear.deletePermanently')} onClick={event => { event.stopPropagation(); onDelete(camera.id!); }} />

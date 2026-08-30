@@ -75,7 +75,7 @@ test.describe('Roll cover persistence', () => {
     await page.goto('/rolls', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: /全部拍摄记录|All shooting records/ })).toBeVisible();
 
-    const refreshedRollCard = page.locator('.roll-card, .roll-card-row').filter({ hasText: rollName });
+    const refreshedRollCard = page.locator('.roll-card, .record-row-card').filter({ hasText: rollName });
     await expect(refreshedRollCard).toBeVisible();
     const cardCover = refreshedRollCard.locator('.roll-card-cover img, .roll-card-row-thumb img').first();
     await expect(cardCover).toBeVisible();

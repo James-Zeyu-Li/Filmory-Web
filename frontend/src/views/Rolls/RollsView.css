@@ -182,18 +182,6 @@
   -webkit-backdrop-filter: blur(6px);
 }
 
-.status-badge.active {
-  background-color: rgba(0, 0, 0, 0.5);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-}
-
-.status-badge.archived {
-  background-color: rgba(0, 0, 0, 0.4);
-  color: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
 /* Info panel: completely separate from image, no blur, no overlay */
 .roll-card-content {
   padding: 12px 14px;
@@ -262,8 +250,11 @@
   letter-spacing: 0.2px;
 }
 
-/* === COLLECTION CARD: Horizontal List Row === */
-.collection-card-row {
+/* === RECORD ROW CARD: shared horizontal list-row shell for Roll and
+   Collection cards. Only the thumb content differs (Roll uses a real <img>
+   via .roll-card-row-thumb, Collection uses a background-image div via
+   .collection-card-thumb) — everything about the row shell itself is identical. */
+.record-row-card {
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -277,24 +268,25 @@
   position: relative;
 }
 
-.collection-card-row:hover,
-.collection-card-row:focus-within {
+.record-row-card:hover,
+.record-row-card:focus-within {
   border-color: var(--accent);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
-.collection-card-row:focus-visible,
-.collection-card:focus-visible {
+.record-row-card:focus-visible,
+.collection-card:focus-visible,
+.roll-card:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 
-.collection-card-row:hover .collection-card-thumb,
-.collection-card-row:focus-within .collection-card-thumb {
+.record-row-card:hover .collection-card-thumb,
+.record-row-card:focus-within .collection-card-thumb {
   transform: scale(1.06);
 }
 
-.collection-card-thumb-wrapper {
+.record-row-thumb-wrapper {
   width: 96px;
   flex-shrink: 0;
   overflow: hidden;
@@ -381,20 +373,6 @@
 }
 
 /* List row style for Rolls (used in list view) */
-.roll-card-row {
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
-  cursor: pointer;
-  display: flex;
-  align-items: stretch;
-  min-height: 112px;
-  width: 100%;
-  position: relative;
-}
-
 .record-card-open-action {
   position: absolute;
   inset: 0;
@@ -426,7 +404,7 @@
 }
 
 .roll-card-cover,
-.roll-card-row-thumb-wrapper {
+.record-row-thumb-wrapper {
   z-index: 2;
 }
 
@@ -492,30 +470,9 @@
   }
 }
 
-.roll-card-row:hover,
-.roll-card-row:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-}
-
-.roll-card-row:focus-visible,
-.roll-card:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
-}
-
-.roll-card-row:hover .roll-card-row-thumb,
-.roll-card-row:focus-within .roll-card-row-thumb {
+.record-row-card:hover .roll-card-row-thumb,
+.record-row-card:focus-within .roll-card-row-thumb {
   transform: scale(1.06);
-}
-
-.roll-card-row-thumb-wrapper {
-  width: 96px;
-  flex-shrink: 0;
-  overflow: hidden;
-  position: relative;
-  background-color: var(--bg-tertiary);
-  border-right: 1px solid var(--border-color);
 }
 
 .roll-card-row-thumb {
@@ -806,6 +763,16 @@
   z-index: 8;
   background: var(--bg-primary);
   padding: 12px 0;
+}
+
+/* .view-header stops being sticky at this same breakpoint (see index.css),
+   so the toolbar's top:89px offset (calibrated for a sticky header sitting
+   above it) no longer corresponds to anything real — it would float over
+   the scrolling card/roll grid instead of sitting flush under the header. */
+@media (max-width: 1024px) {
+  .unified-rolls-view .rolls-toolbar {
+    position: static;
+  }
 }
 
 /* Slide-Over Drawer */
@@ -1379,14 +1346,14 @@
 
 /* Status Badges Polish */
 .status-badge.active {
-  background-color: rgba(46, 204, 113, 0.15); /* Fresh Green */
-  color: #2ecc71;
-  border: 1px solid rgba(46, 204, 113, 0.3);
+  background-color: color-mix(in srgb, var(--success) 15%, transparent);
+  color: var(--success);
+  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
 }
 .status-badge.archived {
-  background-color: rgba(142, 142, 147, 0.15); /* Cool Gray */
+  background-color: color-mix(in srgb, var(--text-muted) 15%, transparent);
   color: var(--text-secondary);
-  border: 1px solid rgba(142, 142, 147, 0.3);
+  border: 1px solid color-mix(in srgb, var(--text-muted) 30%, transparent);
 }
 
 /* Action Buttons for Cards */
@@ -1533,7 +1500,7 @@
   position: absolute;
   top: 50%;
   left: 12px;
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   transform: translateY(-50%);
 }
 
@@ -1746,10 +1713,6 @@
 
   .roll-drawer-footer {
     padding: 12px 16px;
-  }
-
-  .unified-rolls-view .rolls-toolbar {
-    position: static;
   }
 
   /* 1. Toolbar & Tabs */

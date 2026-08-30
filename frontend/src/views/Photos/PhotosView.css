@@ -178,7 +178,7 @@
 .photo-card-meta h4 {
   font-size: 14px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-on-media);
   margin-bottom: 2px;
 }
 
@@ -191,7 +191,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  background-color: rgba(0,0,0,0.6);
+  background-color: var(--media-control-bg-dark);
   padding: 2px 6px;
   border-radius: var(--radius-sm);
   font-size: 11px;
@@ -226,14 +226,14 @@
 }
 
 .lightbox-close:hover {
-  color: #fff;
+  color: var(--text-on-media);
 }
 
 .lightbox-nav {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(23, 24, 28, 0.6);
+  background: var(--media-control-bg-dark);
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
   border-radius: var(--radius-full);
@@ -306,7 +306,7 @@
 .meta-row-primary h3 {
   font-size: 18px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-primary);
   margin-bottom: 4px;
 }
 
@@ -430,9 +430,9 @@
   position: absolute;
   bottom: 12px;
   right: 12px;
-  background-color: rgba(15, 16, 19, 0.85);
+  background-color: var(--media-overlay-strong);
   backdrop-filter: blur(4px);
-  color: var(--text-primary);
+  color: var(--text-on-media);
   font-size: 11px;
   font-weight: 700;
   padding: 4px 10px;
@@ -556,12 +556,12 @@
   width: 18px;
   height: 18px;
   border-radius: var(--radius-sm);
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: var(--media-control-bg-dark);
   border: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #000;
+  color: var(--text-on-accent);
   font-size: 11px;
   font-weight: bold;
 }

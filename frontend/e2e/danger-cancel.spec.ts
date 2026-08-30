@@ -25,7 +25,7 @@ async function createRoll(page: Page, name: string) {
   await rollModal.getByPlaceholder(/搜索胶卷库/).fill('Kodak Gold 200');
   await rollModal.getByRole('button', { name: '开始记录' }).click();
 
-  const rollCard = page.locator('.roll-card, .roll-card-row').filter({ hasText: name });
+  const rollCard = page.locator('.roll-card, .record-row-card').filter({ hasText: name });
   await expect(rollCard).toBeVisible();
   return rollCard;
 }
@@ -58,7 +58,7 @@ test.describe('Dangerous action cancel paths', () => {
     await expect(confirmModal.getByRole('heading', { name: '删除胶卷记录' })).toBeVisible();
     await confirmModal.getByRole('button', { name: '取消' }).click();
 
-    await expect(page.locator('.roll-card, .roll-card-row').filter({ hasText: rollName })).toBeVisible();
+    await expect(page.locator('.roll-card, .record-row-card').filter({ hasText: rollName })).toBeVisible();
   });
 
   test('does not delete or logout when account deletion final confirmation is cancelled', async ({ page }) => {

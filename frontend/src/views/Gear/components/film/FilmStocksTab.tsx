@@ -22,7 +22,7 @@ export const FilmStocksTab = memo(({ filmStocks, searchQuery, sortBy, t, uploadi
         const isUploading = uploadingEntityId === film.id;
 
         return (
-          <article key={film.id} className="gear-card lens-card-horizontal film-stock-card" onClick={() => onView(film)}>
+          <article key={film.id} className="gear-card gear-row-card film-stock-card" onClick={() => onView(film)}>
             <button
               type="button"
               className="gear-card-open-action"
@@ -57,7 +57,7 @@ export const FilmStocksTab = memo(({ filmStocks, searchQuery, sortBy, t, uploadi
             <div className="lens-card-content film-stock-card-content">
               <div className="gear-card-header">
                 <span className={`tag ${film.colorType === 'color' ? 'color' : 'bw'}`}>{film.colorType === 'color' ? t('gear.color') : t('gear.bw')}</span>
-                <div style={{ display: 'flex', gap: '4px' }}>
+                <div style={{ display: 'flex', gap: '8px' }}>
                   <IconButton icon={<Edit2 size={16} />} title={t('gear.editFilmStock')} onClick={event => { event.stopPropagation(); onEdit(film); }} />
                   <IconButton variant="danger" icon={<Trash2 size={16} />} title={t('gear.deletePermanently')} onClick={event => { event.stopPropagation(); onDelete(film.id!); }} />
                 </div>

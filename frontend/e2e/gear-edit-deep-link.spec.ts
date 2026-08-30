@@ -52,7 +52,7 @@ test.describe('Gear edit modal URL contract', () => {
     await lensModal.getByRole('button', { name: '添加', exact: true }).click();
     await expect(lensModal).toBeHidden();
 
-    await page.locator('.lens-card-horizontal').filter({ hasText: 'M.Zuiko Digital 17mm' }).click();
+    await page.locator('.gear-row-card').filter({ hasText: 'M.Zuiko Digital 17mm' }).click();
     await expect(page).toHaveURL(/\/gear\?tab=lenses&edit=/);
     await expect(page.locator('.modal-content').filter({ hasText: '编辑镜头' })).toBeVisible();
     // Opened via a list push with a matching origin marker, so Cancel goes

@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import './StatCard.css';
 
-export type StatCardTone = 'gold' | 'sky' | 'emerald' | 'red';
+export type StatCardTone = 'gold' | 'sky' | 'emerald' | 'red' | 'jade' | 'violet';
 
 interface StatCardProps {
   icon: LucideIcon;

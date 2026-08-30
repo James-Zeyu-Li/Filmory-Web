@@ -53,7 +53,7 @@ test.describe('Language preferences', () => {
     await expectNoHorizontalOverflow(page);
 
     await page.getByRole('button', { name: 'All shooting records' }).click();
-    const firstRollCard = page.locator('.roll-card, .roll-card-row').first();
+    const firstRollCard = page.locator('.roll-card, .record-row-card').first();
     await expect(firstRollCard).toBeVisible();
     await firstRollCard.click();
     const rollDrawer = page.locator('.drawer-panel');
