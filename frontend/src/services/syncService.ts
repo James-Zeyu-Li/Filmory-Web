@@ -3,220 +3,72 @@ import {
   db,
   isSyncOperationQueueItem,
   isSyncRecordQueueItem,
-  suppressSyncRecordsForCurrentTransaction,
   type FilmStock,
-  type SyncOperationQueueItem,
   type SyncQueueItem,
   type SyncRecordQueueItem,
 } from '../db/schema';
-import type { Table } from 'dexie';
 import {
   getSyncIntentFromEvent,
   LOCAL_CHANGE_EVENT,
   type SyncIntent,
 } from './syncEvents';
 import { recordSyncDiagnostic } from './syncDiagnostics';
+import { hasAutoSyncFlag, hasValidSupabaseKeyPair } from './sync/config';
+import {
+  convertKeysToCamelCase,
+  convertKeysToSnakeCase,
+  getSyncTable,
+  isFilmStockSyncRow,
+  isSyncRecord,
+  isSyncTableName,
+  supabaseTables,
+  tableMap,
+  type SyncRecord,
+  type SyncRow,
+  type SyncTableName,
+} from './sync/keyCaseMapping';
+import {
+  getCurrentUserId,
+  getReadyUserQueue,
+  getString,
+  getSyncWatermarkKey,
+  getTimestamp,
+  getUserQueue,
+  queueBelongsToUser,
+  summarizeSyncQueue,
+  type SyncQueueSummary,
+} from './sync/queueUtils';
+import {
+  applyInventoryOperationResult,
+  getPendingInventoryDeltas,
+  pushInventoryOperation,
+} from './sync/inventoryOperations';
+import {
+  recoverFilmStockMetadataSchemaFailures,
+  recoverLegacyInventoryRpcFailures,
+} from './sync/schemaCacheRecovery';
+import {
+  classifySyncFailure,
+  getErrorDetails,
+  getRetryDelayMs,
+  RETRY_SYNC_DELAY_MS,
+  SyncPushError,
+  type SyncFailure,
+} from './sync/failureClassification';
 
-const isLocalSupabaseUrl = (url: string) => (
-  url.includes('127.0.0.1:54321') || url.includes('localhost:54321')
-);
+export { summarizeSyncQueue, type SyncQueueSummary } from './sync/queueUtils';
 
-const hasValidSupabaseKeyPair = () => {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-  if (!supabaseUrl || !supabaseAnonKey) return false;
-  if (isLocalSupabaseUrl(supabaseUrl)) return supabaseAnonKey.startsWith('eyJ');
-  return supabaseAnonKey.startsWith('sb_publishable_') || supabaseAnonKey.startsWith('eyJ');
-};
-
-const hasAutoSyncFlag = () => import.meta.env.VITE_ENABLE_SUPABASE_SYNC === 'true';
-
-// --- Utility Functions for Key Case Conversion ---
-const camelToSnake = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-const snakeToCamel = (str: string) => str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-
-const localOnlyFields = new Set([
-  'blob',
-  'cloudUploadPending',
-  'cloudUploadError',
-  'cloudDeletePending',
-  'cloudDeleteError',
-  'replacesPhotoId',
-  'updatedAt',
-  'deletedAt',
-]);
-type SyncRecord = Record<string, unknown>;
-type SyncRow = SyncRecord & {
-  id?: string;
-  userId?: string;
-  updatedAt?: number | string;
-  addedAt?: number | string;
-};
-
-const isSyncRecord = (value: unknown): value is SyncRecord => (
-  typeof value === 'object' && value !== null && !Array.isArray(value)
-);
-
-const isFilmStockSyncRow = (value: unknown): value is FilmStock => {
-  if (!isSyncRecord(value)) return false;
-  return typeof value.id === 'string'
-    && typeof value.brand === 'string'
-    && typeof value.name === 'string'
-    && typeof value.iso === 'number'
-    && (value.colorType === 'color' || value.colorType === 'bw')
-    && typeof value.format === 'string'
-    && typeof value.isSystem === 'number'
-    && typeof value.addedAt === 'number';
-};
-
-const convertKeysToSnakeCase = (obj: unknown): unknown => {
-  if (!isSyncRecord(obj)) {
-    return Array.isArray(obj) ? obj.map(convertKeysToSnakeCase) : obj;
-  }
-  if (Array.isArray(obj)) return obj.map(convertKeysToSnakeCase);
-
-  const newObj: SyncRecord = {};
-  for (const [key, value] of Object.entries(obj)) {
-    if (localOnlyFields.has(key) || value === undefined) continue;
-    newObj[camelToSnake(key)] = convertKeysToSnakeCase(value);
-  }
-  return newObj;
-};
-
-const convertKeysToCamelCase = (obj: unknown): unknown => {
-  if (!isSyncRecord(obj)) {
-    return Array.isArray(obj) ? obj.map(convertKeysToCamelCase) : obj;
-  }
-  if (Array.isArray(obj)) return obj.map(convertKeysToCamelCase);
-
-  const newObj: SyncRecord = {};
-  for (const [key, value] of Object.entries(obj)) {
-    if (localOnlyFields.has(snakeToCamel(key))) continue;
-    newObj[snakeToCamel(key)] = convertKeysToCamelCase(value);
-  }
-  return newObj;
-};
-
-// Map Dexie table names to Supabase table names
-const tableMap = {
-  cameras: 'cameras',
-  cameraSystems: 'camera_systems',
-  filmBacks: 'film_backs',
-  lenses: 'lenses',
-  filmStocks: 'film_stocks',
-  rolls: 'rolls',
-  photoAssets: 'photo_assets',
-  otherEquipments: 'other_equipments',
-  collections: 'collections',
-  albums: 'albums',
-  albumPhotos: 'album_photos',
-  tagConfigs: 'tag_configs',
-  ledgerTransactions: 'ledger_transactions',
-  userProfiles: 'user_profiles'
-} as const;
-
-type SyncTableName = keyof typeof tableMap;
-
-const isSyncTableName = (value: string): value is SyncTableName => value in tableMap;
-
-// Sync is the only layer that bridges heterogeneous Dexie entities. The cast is
-// intentionally isolated here so views never receive an untyped database table.
-const getSyncTable = (tableName: SyncTableName): Table<SyncRow, string> => (
-  db[tableName] as unknown as Table<SyncRow, string>
-);
-
-const getString = (value: unknown) => typeof value === 'string' ? value : undefined;
-const getTimestamp = (value: unknown) => {
-  if (typeof value === 'number') return value;
-  if (typeof value === 'string') {
-    const timestamp = new Date(value).getTime();
-    return Number.isFinite(timestamp) ? timestamp : 0;
-  }
-  return 0;
-};
-
-const getCurrentUserId = () => localStorage.getItem('grainfolio_user_id');
-const getSyncWatermarkKey = (userId: string) => `grainfolio_last_sync_${userId}`;
-const queueBelongsToUser = (item: SyncQueueItem, userId: string) => (
-  item.userId === userId ||
-  (isSyncRecordQueueItem(item) && !item.userId && (item.payload?.userId === userId || item.payload?.user_id === userId))
-);
-
-const getUserQueue = async (userId: string) => {
-  const queue = await db.syncQueue.orderBy('timestamp').toArray();
-  return queue.filter(item => queueBelongsToUser(item, userId));
-};
-
-const getReadyUserQueue = async (userId: string) => {
-  const now = Date.now();
-  const queue = await getUserQueue(userId);
-  return queue.filter(item => (
-    item.failureKind !== 'needs_attention' &&
-    (!item.nextRetryAt || item.nextRetryAt <= now)
-  ));
-};
-
-const getInventoryOperationDelta = (item: SyncOperationQueueItem): { filmStockId: string; delta: number } | null => {
-  if (item.operationType === 'adjust_film_stock') {
-    const filmStockId = getString(item.operationPayload.filmStockId);
-    const delta = item.operationPayload.delta;
-    return filmStockId && typeof delta === 'number' && Number.isInteger(delta)
-      ? { filmStockId, delta }
-      : null;
-  }
-
-  const roll = item.operationPayload.roll;
-  if (item.operationPayload.consumeInventory !== true || !isSyncRecord(roll)) return null;
-  const filmStockId = getString(roll.filmStockId);
-  return filmStockId ? { filmStockId, delta: -1 } : null;
-};
-
-const getPendingInventoryDeltas = (queue: SyncQueueItem[]): Map<string, number> => {
-  const deltas = new Map<string, number>();
-  for (const item of queue) {
-    if (!isSyncOperationQueueItem(item)) continue;
-    const operation = getInventoryOperationDelta(item);
-    if (!operation) continue;
-    deltas.set(operation.filmStockId, (deltas.get(operation.filmStockId) || 0) + operation.delta);
-  }
-  return deltas;
-};
-
-export const summarizeSyncQueue = (queue: SyncQueueItem[], userId: string | null): SyncQueueSummary => {
-  if (!userId) return { pendingCount: 0, needsAttentionCount: 0 };
-  return queue
-    .filter(item => queueBelongsToUser(item, userId))
-    .reduce<SyncQueueSummary>((summary, item) => {
-      if (item.failureKind === 'needs_attention') {
-        summary.needsAttentionCount += 1;
-      } else {
-        summary.pendingCount += 1;
-      }
-      return summary;
-    }, { pendingCount: 0, needsAttentionCount: 0 });
-};
-
-const supabaseTables = Object.values(tableMap);
 export const SYNC_STATUS_EVENT = 'grainfolio-sync-status';
 export type SyncStatusState = 'local' | 'offline' | 'pending' | 'syncing' | 'synced' | 'needs_attention';
-export type SyncQueueSummary = {
-  pendingCount: number;
-  needsAttentionCount: number;
-};
 type SyncPullResult = {
   remoteUserProfileFound: boolean;
 };
 const SYNC_DEBOUNCE_MS = 500;
 const RESUME_SYNC_DEBOUNCE_MS = 400;
-const RETRY_SYNC_DELAY_MS = 5000;
-const MAX_RETRY_SYNC_DELAY_MS = 5 * 60_000;
 const VISIBLE_FALLBACK_POLL_INTERVAL_MS = 60_000;
 const REALTIME_STARTUP_TIMEOUT_MS = 3_000;
 const REALTIME_SUBSCRIBED_STATUS = 'SUBSCRIBED';
 const REALTIME_RETRY_STATUSES = new Set(['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED']);
-const MISSING_RPC_SCHEMA_CACHE_CODE = 'PGRST202';
-const MISSING_COLUMN_SCHEMA_CACHE_CODE = 'PGRST204';
-const FILM_STOCK_METADATA_COLUMNS = ['price_per_roll', 'avatar_url'];
 const SYNC_INTENT_DELAYS: Record<SyncIntent, number> = {
   debounced: SYNC_DEBOUNCE_MS,
   immediate: 0,
@@ -224,86 +76,10 @@ const SYNC_INTENT_DELAYS: Record<SyncIntent, number> = {
 };
 let currentSyncStatus: SyncStatusState = 'local';
 
-type SyncFailure = {
-  kind: 'retryable' | 'needs_attention';
-  code: string;
-  message: string;
-};
-
 type SyncTrigger = {
   intent: SyncIntent;
   reason: string;
 };
-
-type InventoryOperationResult = {
-  operationId: string;
-  filmStockId?: string | null;
-  stockCount?: number | null;
-};
-
-const isInventoryOperationResult = (value: unknown): value is InventoryOperationResult => (
-  isSyncRecord(value) &&
-  typeof value.operationId === 'string' &&
-  (value.filmStockId === undefined || value.filmStockId === null || typeof value.filmStockId === 'string') &&
-  (value.stockCount === undefined || value.stockCount === null || typeof value.stockCount === 'number')
-);
-
-class SyncPushError extends Error {
-  readonly nextRetryAt: number | null;
-
-  constructor(nextRetryAt: number | null) {
-    super('One or more sync push batches failed.');
-    this.nextRetryAt = nextRetryAt;
-  }
-}
-
-const getErrorDetails = (error: unknown): { code: string; status?: number; message: string } => {
-  const value = error as { code?: unknown; status?: unknown; message?: unknown };
-  const code = typeof value?.code === 'string' ? value.code : '';
-  const status = typeof value?.status === 'number' ? value.status : undefined;
-  const message = error instanceof Error
-    ? error.message
-    : typeof value?.message === 'string'
-      ? value.message
-      : 'Unknown sync failure.';
-  return { code, status, message };
-};
-
-const classifySyncFailure = (error: unknown): SyncFailure => {
-  const { code, status, message } = getErrorDetails(error);
-  const normalizedCode = code.toUpperCase();
-  const isRetryableStatus = status === 408 || status === 429 || (status !== undefined && status >= 500);
-  const isActionableStatus = status !== undefined && status >= 400 && status < 500 && !isRetryableStatus;
-  const isActionableCode = /^(42501|23503|23505|22P02|PGRST)/.test(normalizedCode);
-
-  return {
-    kind: isActionableStatus || isActionableCode ? 'needs_attention' : 'retryable',
-    code: code || (status ? String(status) : 'unknown'),
-    message: message.slice(0, 240),
-  };
-};
-
-const isRecoverableLegacyInventoryRpcFailure = (item: SyncQueueItem): item is SyncOperationQueueItem => (
-  isSyncOperationQueueItem(item) &&
-  item.failureKind === 'needs_attention' &&
-  item.recoveryAttemptedAt === undefined &&
-  item.lastErrorCode === MISSING_RPC_SCHEMA_CACHE_CODE &&
-  item.lastErrorMessage?.includes(`public.${item.operationType}`) === true
-);
-
-const isRecoverableFilmStockMetadataSchemaFailure = (item: SyncQueueItem): item is SyncRecordQueueItem => (
-  isSyncRecordQueueItem(item) &&
-  item.tableName === 'filmStocks' &&
-  item.failureKind === 'needs_attention' &&
-  item.recoveryAttemptedAt === undefined &&
-  item.lastErrorCode === MISSING_COLUMN_SCHEMA_CACHE_CODE &&
-  FILM_STOCK_METADATA_COLUMNS.some(column => item.lastErrorMessage?.includes(column))
-);
-
-const getRetryDelayMs = (attemptCount: number) => Math.min(
-  RETRY_SYNC_DELAY_MS * (2 ** Math.max(0, attemptCount - 1)),
-  MAX_RETRY_SYNC_DELAY_MS,
-);
 
 const countSyncIntents = (triggers: SyncTrigger[]): Partial<Record<SyncIntent, number>> => (
   triggers.reduce<Partial<Record<SyncIntent, number>>>((counts, trigger) => {
@@ -420,55 +196,12 @@ export class SyncService {
     return earliestRetryAt;
   }
 
-  // A deployment can add an inventory RPC after local operations were already
-  // queued. Re-open only the exact schema-cache failure once; all other
-  // actionable failures remain blocked until a user-facing resolution exists.
-  private static async recoverLegacyInventoryRpcFailures(userId: string): Promise<number> {
-    const recoverableItems = (await getUserQueue(userId))
-      .filter(isRecoverableLegacyInventoryRpcFailure)
-      .filter((item): item is SyncOperationQueueItem & { id: number } => item.id !== undefined);
-
-    if (recoverableItems.length === 0) return 0;
-
-    await db.syncQueue.where('id').anyOf(recoverableItems.map(item => item.id)).modify(item => {
-      item.recoveryAttemptedAt = Date.now();
-      delete item.attemptCount;
-      delete item.failureKind;
-      delete item.lastErrorCode;
-      delete item.lastErrorMessage;
-      delete item.lastAttemptAt;
-      delete item.nextRetryAt;
-    });
-
-    recordSyncDiagnostic('legacy_inventory_rpc_reopened', {
-      queueItemCount: recoverableItems.length,
-    });
-    return recoverableItems.length;
+  private static recoverLegacyInventoryRpcFailures(userId: string): Promise<number> {
+    return recoverLegacyInventoryRpcFailures(userId);
   }
 
-  // Re-open only records blocked by film-stock columns introduced in a known
-  // migration. Other PGRST204 failures remain actionable rather than guessed.
-  private static async recoverFilmStockMetadataSchemaFailures(userId: string): Promise<number> {
-    const recoverableItems = (await getUserQueue(userId))
-      .filter(isRecoverableFilmStockMetadataSchemaFailure)
-      .filter((item): item is SyncRecordQueueItem & { id: number } => item.id !== undefined);
-
-    if (recoverableItems.length === 0) return 0;
-
-    await db.syncQueue.where('id').anyOf(recoverableItems.map(item => item.id)).modify(item => {
-      item.recoveryAttemptedAt = Date.now();
-      delete item.attemptCount;
-      delete item.failureKind;
-      delete item.lastErrorCode;
-      delete item.lastErrorMessage;
-      delete item.lastAttemptAt;
-      delete item.nextRetryAt;
-    });
-
-    recordSyncDiagnostic('legacy_film_stock_schema_reopened', {
-      queueItemCount: recoverableItems.length,
-    });
-    return recoverableItems.length;
+  private static recoverFilmStockMetadataSchemaFailures(userId: string): Promise<number> {
+    return recoverFilmStockMetadataSchemaFailures(userId);
   }
 
   static start(): void {
@@ -716,72 +449,6 @@ export class SyncService {
     }, Math.max(0, delayMs));
   }
 
-  private static async applyInventoryOperationResult(
-    result: InventoryOperationResult,
-    userId: string,
-    completedQueueItemId: number,
-  ): Promise<void> {
-    const filmStockId = result.filmStockId;
-    const confirmedStockCount = result.stockCount;
-
-    await db.transaction('rw', db.filmStocks, db.syncQueue, async () => {
-      // Every accepted RPC must leave the durable outbox, including an
-      // unregistered shooting record that intentionally has no stock result.
-      await db.syncQueue.delete(completedQueueItemId);
-      if (!filmStockId || typeof confirmedStockCount !== 'number') return;
-
-      // The remaining local operations are rebased onto the Cloud-confirmed
-      // count in the same transaction so rapid local changes stay visible.
-      const pendingQueue = await getUserQueue(userId);
-      const pendingDelta = getPendingInventoryDeltas(pendingQueue).get(filmStockId) || 0;
-      suppressSyncRecordsForCurrentTransaction();
-      await db.filmStocks.update(filmStockId, {
-        stockCount: Math.max(0, confirmedStockCount + pendingDelta),
-      });
-    });
-  }
-
-  private static async pushInventoryOperation(item: SyncOperationQueueItem): Promise<InventoryOperationResult> {
-    const payload = item.operationPayload;
-    let data: unknown;
-    let error: unknown;
-
-    if (item.operationType === 'create_roll_with_inventory') {
-      const roll = payload.roll;
-      if (!isSyncRecord(roll)) {
-        throw new Error('Invalid create-roll inventory operation payload.');
-      }
-      const response = await supabase.rpc('create_roll_with_inventory', {
-        p_operation_id: item.operationId,
-        p_roll: roll,
-        p_consume_inventory: payload.consumeInventory === true,
-        p_ledger: isSyncRecord(payload.ledger) ? payload.ledger : null,
-      });
-      data = response.data;
-      error = response.error;
-    } else {
-      const filmStockId = getString(payload.filmStockId);
-      const delta = payload.delta;
-      if (!filmStockId || typeof delta !== 'number' || !Number.isInteger(delta)) {
-        throw new Error('Invalid film-stock adjustment operation payload.');
-      }
-      const response = await supabase.rpc('adjust_film_stock', {
-        p_operation_id: item.operationId,
-        p_film_stock_id: filmStockId,
-        p_delta: delta,
-      });
-      data = response.data;
-      error = response.error;
-    }
-
-    if (error) throw error;
-    if (!isInventoryOperationResult(data) || data.operationId !== item.operationId) {
-      throw new Error('Inventory operation returned an invalid result.');
-    }
-
-    return data;
-  }
-
   /**
    * PUSH: Consume the local sync queue and send changes to Supabase
    */
@@ -833,7 +500,7 @@ export class SyncService {
 
       const upserts: SyncRecord[] = [];
       const deletes: string[] = [];
-      
+
       const queueIdsToClear: number[] = [];
 
       for (const op of latestOps.values()) {
@@ -868,7 +535,7 @@ export class SyncService {
           for (const delId of deletes) {
             const { error } = await supabase
               .from(supabaseTable)
-              .update({ 
+              .update({
                 deleted_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
               })
@@ -908,8 +575,8 @@ export class SyncService {
     for (const operation of operationQueue) {
       if (operation.id === undefined) continue;
       try {
-        const result = await this.pushInventoryOperation(operation);
-        await this.applyInventoryOperationResult(result, userId, operation.id);
+        const result = await pushInventoryOperation(operation);
+        await applyInventoryOperationResult(result, userId, operation.id);
         recordSyncDiagnostic('inventory_operation_completed', {
           runId: this.activeSyncRunId,
           operationType: operation.operationType,
@@ -1015,14 +682,14 @@ export class SyncService {
           if (!rowId) continue;
           const localRow = localMap.get(rowId);
           const remoteTime = getTimestamp(row.updated_at);
-          
+
           let localTime = 0;
           if (localRow) {
             // Local timestamps might be numeric or strings depending on legacy, but usually updatedAt is ISO string in our new architecture, addedAt is numeric.
             localTime = getTimestamp(localRow.updatedAt ?? localRow.addedAt);
           }
-          
-          // CRITICAL EDGE CASE: If the user modified the item locally but it hasn't pushed yet, 
+
+          // CRITICAL EDGE CASE: If the user modified the item locally but it hasn't pushed yet,
           // the localRow.updatedAt in Dexie might be STALE (because Dexie hook doesn't mutate local object updatedAt).
           // The true local modified time is in the syncQueue timestamp.
           const pendingTime = pendingSyncMap.get(rowId) || 0;
@@ -1045,7 +712,7 @@ export class SyncService {
               }
               toPut.push({ ...camelPayload, id: rowId });
             }
-            
+
             // Critical: Drop any pending sync items that were overridden by cloud
             const pendingForRecord = (await db.syncQueue.where('recordId').equals(rowId).toArray())
               .filter(isSyncRecordQueueItem)
@@ -1145,7 +812,7 @@ export class SyncService {
       this.shouldRunAgain = true;
       return this.inFlightSync;
     }
-    
+
     // Dispatch sync start event
     dispatchSyncStatus('syncing');
 
