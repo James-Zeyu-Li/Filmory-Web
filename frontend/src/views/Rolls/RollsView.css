@@ -1314,13 +1314,13 @@
 }
 
 .create-new-item {
-  background-color: rgba(var(--accent-rgb, 100, 100, 255), 0.05);
+  background-color: color-mix(in srgb, var(--accent) 5%, transparent);
   border: 1px dashed var(--accent);
   margin-top: 8px;
 }
 
 .create-new-item:hover {
-  background-color: rgba(var(--accent-rgb, 100, 100, 255), 0.1);
+  background-color: var(--accent-bg);
   transform: translateY(-2px);
 }
 

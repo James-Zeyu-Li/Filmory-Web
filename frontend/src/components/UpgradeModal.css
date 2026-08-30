@@ -1,41 +1,6 @@
-/* ─── Overlay ───────────────────────────────────────────────── */
-.upgrade-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-  padding: 20px;
-  padding-top: max(20px, env(safe-area-inset-top));
-  padding-bottom: max(20px, env(safe-area-inset-bottom));
-  padding-left: max(20px, env(safe-area-inset-left));
-  padding-right: max(20px, env(safe-area-inset-right));
-}
-
-/* ─── Modal Shell ────────────────────────────────────────────── */
-.upgrade-modal {
-  position: relative;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 20px;
-  width: 100%;
-  max-width: 520px;
-  max-height: calc(100vh - 40px);
-  max-height: calc(100dvh - 32px);
-  overflow-y: auto;
-  padding: 32px;
-  box-shadow: var(--shadow-lg), 0 0 0 1px var(--border-color);
-  animation: upgrade-slide-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-@keyframes upgrade-slide-in {
-  from { opacity: 0; transform: scale(0.94) translateY(12px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
-}
+/* Overlay and modal shell are now provided by the shared <Modal> component
+   (.modal-overlay/.modal-content in index.css) — this file only styles the
+   content rendered inside it. */
 
 /* ─── Close Button ───────────────────────────────────────────── */
 .upgrade-close {
@@ -55,7 +20,7 @@
   width: 56px;
   height: 56px;
   border-radius: 16px;
-  background: linear-gradient(135deg, var(--accent-bg) 0%, rgba(226, 176, 40, 0.2) 100%);
+  background: var(--accent-bg);
   border: 1px solid var(--accent-border);
   color: var(--accent);
   display: flex;
@@ -104,7 +69,7 @@
 
 .upgrade-plan.vip {
   border-color: var(--accent-border);
-  background: linear-gradient(160deg, var(--accent-bg) 0%, var(--bg-tertiary) 100%);
+  background: var(--accent-bg);
   box-shadow: 0 0 24px var(--accent-bg);
 }
 
@@ -200,7 +165,7 @@
 }
 
 .upgrade-feature-row.highlight {
-  background: linear-gradient(90deg, var(--accent-bg) 0%, transparent 80%);
+  background: var(--accent-bg);
 }
 
 .feature-label {
@@ -262,7 +227,7 @@
   padding: 12px 14px;
   border-radius: 12px;
   border: 1px solid var(--accent-border);
-  background: linear-gradient(135deg, var(--accent-bg) 0%, transparent 100%);
+  background: var(--accent-bg);
   margin-bottom: 14px;
 }
 
@@ -342,11 +307,6 @@
 
 /* ─── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 480px) {
-  .upgrade-modal {
-    padding: 24px 18px;
-    border-radius: 16px;
-  }
-
   .upgrade-feature-header,
   .upgrade-feature-row {
     grid-template-columns: 1fr 72px 72px;
@@ -359,11 +319,6 @@
 }
 
 @media (max-height: 650px) {
-  .upgrade-modal {
-    max-height: calc(100dvh - 20px);
-    padding: 20px 24px;
-  }
-
   .upgrade-header {
     margin-bottom: 16px;
   }

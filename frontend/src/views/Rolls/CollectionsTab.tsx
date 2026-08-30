@@ -311,7 +311,7 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
             </div>
             <form onSubmit={handleSave}>
               <div className="modal-body form-group">
-                <label>{t('collections.collectionName')} <span style={{ color: 'var(--danger-color)' }}>*</span></label>
+                <label>{t('collections.collectionName')} <span style={{ color: 'var(--danger)' }}>*</span></label>
                 <input 
                   type="text" 
                   value={name} 
@@ -321,7 +321,7 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({ onCollectionSele
                   autoFocus
                 />
                 
-                <label>{t('collections.date')} <span style={{ color: 'var(--danger-color)' }}>*</span></label>
+                <label>{t('collections.date')} <span style={{ color: 'var(--danger)' }}>*</span></label>
                 <input 
                   type="date" 
                   value={date} 

@@ -12,8 +12,8 @@ const NotFoundView: React.FC = () => {
       alignItems: 'center',
       justifyContent: 'center',
       height: '100vh',
-      backgroundColor: 'var(--bg-main)',
-      color: 'var(--text-main)',
+      backgroundColor: 'var(--bg-primary)',
+      color: 'var(--text-primary)',
       textAlign: 'center',
       padding: '24px'
     }}>

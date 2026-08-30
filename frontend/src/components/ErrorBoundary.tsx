@@ -40,8 +40,8 @@ export class ErrorBoundary extends Component<Props, State> {
           minHeight: '400px',
           padding: '24px',
           textAlign: 'center',
-          backgroundColor: 'var(--bg-main)',
-          color: 'var(--text-main)',
+          backgroundColor: 'var(--bg-primary)',
+          color: 'var(--text-primary)',
           borderRadius: '8px'
         }}>
           <div style={{ 
@@ -50,7 +50,7 @@ export class ErrorBoundary extends Component<Props, State> {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             marginBottom: '16px'
           }}>
-            <AlertTriangle size={32} color="var(--danger-color, #ef4444)" />
+            <AlertTriangle size={32} color="var(--danger)" />
           </div>
           <h2 style={{ margin: '0 0 12px 0', fontSize: '1.2rem' }}>渲染组件时发生意外错误</h2>
           <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', maxWidth: '400px', fontSize: '14px' }}>

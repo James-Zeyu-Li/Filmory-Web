@@ -1,14 +1,8 @@
 .film-insights-body { display: flex; flex-direction: column; gap: 24px; }
 .film-insights-body-embedded { padding: 0; }
-.film-insights-overview { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.film-insights-metric { min-height: 96px; padding: 18px; display: flex; align-items: flex-start; gap: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--bg-secondary); color: var(--text-secondary); box-shadow: var(--shadow-sm); }
-.film-insights-metric > svg { margin-top: 2px; color: var(--text-muted); }
-.film-insights-metric > div { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.film-insights-metric span, .film-insights-detail-metrics span { color: var(--text-muted); font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
-.film-insights-metric strong { color: var(--text-primary); font-size: 20px; line-height: 1.25; font-variant-numeric: tabular-nums; }
-.film-insights-metric-accent { border-color: var(--accent-border); }
-.film-insights-metric-accent > svg { color: var(--accent); }
-.film-insights-metric-active > svg { color: var(--success); }
+/* Overview summary cards now use the shared .stat-card-grid/.stat-card
+   primitives from src/components/ui/StatCard.css. */
+.film-insights-detail-metrics span { color: var(--text-muted); font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
 .film-insights-workspace { border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--bg-secondary); overflow: hidden; }
 .film-insights-section-heading { padding: 20px 20px 16px; border-bottom: 1px solid var(--border-color); display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
 .film-insights-eyebrow { margin: 0 0 5px; color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
@@ -77,7 +71,6 @@
 .film-insights-project-chevron.is-expanded { transform: rotate(180deg); }
 .film-insights-project-expanded { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 10px; background: var(--bg-tertiary); }
 .film-insights-enter-project { align-self: flex-start; min-height: 40px; }
-@media (max-width: 1100px) { .film-insights-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 700px) { .film-insights-overview { grid-template-columns: 1fr; } .film-insights-section-heading { align-items: stretch; flex-direction: column; } .film-insights-sort-control { width: 100%; } .film-insights-row { grid-template-columns: auto minmax(0, 1fr) auto; min-height: 104px; padding: 14px 16px; } .film-insights-row-stats { grid-column: 2 / -1; justify-content: flex-start; gap: 20px; } .film-insights-row-stats span { align-items: flex-start; } .film-insights-row-chevron { grid-column: 3; grid-row: 1; } .film-insights-drawer-header, .film-insights-drawer-content { padding: 20px; } .film-insights-project-row { grid-template-columns: auto minmax(0, 1fr) auto; } .film-insights-project-status { display: none; } }
+@media (max-width: 700px) { .film-insights-section-heading { align-items: stretch; flex-direction: column; } .film-insights-sort-control { width: 100%; } .film-insights-row { grid-template-columns: auto minmax(0, 1fr) auto; min-height: 104px; padding: 14px 16px; } .film-insights-row-stats { grid-column: 2 / -1; justify-content: flex-start; gap: 20px; } .film-insights-row-stats span { align-items: flex-start; } .film-insights-row-chevron { grid-column: 3; grid-row: 1; } .film-insights-drawer-header, .film-insights-drawer-content { padding: 20px; } .film-insights-project-row { grid-template-columns: auto minmax(0, 1fr) auto; } .film-insights-project-status { display: none; } }
 @media (max-width: 420px) { .film-insights-detail-metrics div { padding: 12px 9px; } .film-insights-detail-metrics strong { font-size: 19px; } }
 @media (prefers-reduced-motion: reduce) { .film-insights-row { transition: none; } .film-insights-project-chevron { transition: none; } }

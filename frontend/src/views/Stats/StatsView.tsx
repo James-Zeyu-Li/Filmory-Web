@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { BarChart3, TrendingUp, DollarSign, Camera, Film, Layers, Star, Package, ChevronDown } from 'lucide-react';
 import './StatsView.css';
+import { StatCard } from '../../components/ui/StatCard';
 import { useRolls, useCameras, useFilmStocks, usePhotoAssets, useCollections } from '../../hooks/useData';
 import { db, type CameraTransfer, type LedgerTransaction } from '../../db/schema';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -171,51 +172,46 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
 
       <div className={`view-body stats-workspace-body ${isEmbedded ? 'embedded-mode' : ''}`}>
         {/* KPI Cards Grid */}
-        <div className="stats-kpi-grid">
-          <div className="kpi-card stats-kpi-gold">
-            <div className="kpi-icon"><Film size={22} /></div>
-            <div className="kpi-content">
-              <span>{t('stats.totalRolls')}</span>
-              <h2>{t('stats.rollsValue', { count: totalRolls })}</h2>
-              <p>{t('stats.activeArchived', { active: activeRolls, archived: archivedRolls })}</p>
-            </div>
-          </div>
+        <div className="stat-card-grid">
+          <StatCard
+            tone="gold"
+            icon={Film}
+            label={t('stats.totalRolls')}
+            value={t('stats.rollsValue', { count: totalRolls })}
+            description={t('stats.activeArchived', { active: activeRolls, archived: archivedRolls })}
+          />
 
-          <div className="kpi-card stats-kpi-sky">
-            <div className="kpi-icon"><Layers size={22} /></div>
-            <div className="kpi-content">
-              <span>{t('stats.totalCollections')}</span>
-              <h2>{t('stats.collectionsValue', { count: totalCollections })}</h2>
-              <p>{t('stats.collectionsDesc')}</p>
-            </div>
-          </div>
+          <StatCard
+            tone="sky"
+            icon={Layers}
+            label={t('stats.totalCollections')}
+            value={t('stats.collectionsValue', { count: totalCollections })}
+            description={t('stats.collectionsDesc')}
+          />
 
-          <div className="kpi-card stats-kpi-emerald">
-            <div className="kpi-icon"><Camera size={22} /></div>
-            <div className="kpi-content">
-              <span>{t('stats.cameraCount')}</span>
-              <h2>{t('stats.camerasValue', { count: totalCameras })}</h2>
-              <p>{t('stats.camerasDesc')}</p>
-            </div>
-          </div>
+          <StatCard
+            tone="emerald"
+            icon={Camera}
+            label={t('stats.cameraCount')}
+            value={t('stats.camerasValue', { count: totalCameras })}
+            description={t('stats.camerasDesc')}
+          />
 
-          <div className="kpi-card stats-kpi-gold">
-            <div className="kpi-icon"><Package size={22} /></div>
-            <div className="kpi-content">
-              <span>{t('stats.inventoryRolls')}</span>
-              <h2>{t('stats.rollsValue', { count: inventoryRolls })}</h2>
-              <p>{t('stats.inventoryDesc')}</p>
-            </div>
-          </div>
+          <StatCard
+            tone="gold"
+            icon={Package}
+            label={t('stats.inventoryRolls')}
+            value={t('stats.rollsValue', { count: inventoryRolls })}
+            description={t('stats.inventoryDesc')}
+          />
 
-          <div className="kpi-card stats-kpi-sky">
-            <div className="kpi-icon"><BarChart3 size={22} /></div>
-            <div className="kpi-content">
-              <span>{t('stats.shotRolls')}</span>
-              <h2>{t('stats.rollsValue', { count: archivedRolls })}</h2>
-              <p>{t('stats.savedSamples', { count: savedSamplePhotos })}</p>
-            </div>
-          </div>
+          <StatCard
+            tone="sky"
+            icon={BarChart3}
+            label={t('stats.shotRolls')}
+            value={t('stats.rollsValue', { count: archivedRolls })}
+            description={t('stats.savedSamples', { count: savedSamplePhotos })}
+          />
         </div>
 
         {/* Visual Charts Layout - Grid */}

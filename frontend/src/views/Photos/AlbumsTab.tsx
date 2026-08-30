@@ -125,7 +125,6 @@ export const AlbumsTab: React.FC<AlbumsTabProps> = ({ onSelectAlbum }) => {
                     <img src={coverUrl} alt={album.name} />
                   ) : (
                     <div className="album-cover-placeholder">
-                      <span>📁</span>
                       <ImageIcon size={24} />
                     </div>
                   )}

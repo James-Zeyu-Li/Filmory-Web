@@ -14,62 +14,12 @@
   margin-bottom: 16px;
 }
 
-.finance-kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  margin-bottom: 24px;
-}
+/* Shared .stat-card-grid/.stat-card primitives live in
+   src/components/ui/StatCard.css so Shooting/Spending/Film tabs render one
+   consistent card style — no page-local KPI card styles here anymore. */
 
-@media (max-width: 900px) {
-  .finance-kpi-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.finance-kpi-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 24px;
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.finance-kpi-card:hover,
-.finance-kpi-card:focus-within {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-}
-
-.finance-kpi-card--gear {
-  border-color: color-mix(in srgb, var(--chart-series-blue) 28%, var(--border-color));
-  background: linear-gradient(135deg, color-mix(in srgb, var(--chart-series-blue) 12%, transparent), color-mix(in srgb, var(--chart-series-blue) 5%, transparent));
-}
-
-.finance-kpi-card--gear .finance-kpi-icon,
 .ledger-entity-name {
   color: var(--chart-series-blue);
-}
-
-.finance-kpi-card--film {
-  border-color: color-mix(in srgb, var(--chart-series-red) 28%, var(--border-color));
-  background: linear-gradient(135deg, color-mix(in srgb, var(--chart-series-red) 12%, transparent), color-mix(in srgb, var(--chart-series-red) 5%, transparent));
-}
-
-.finance-kpi-card--film .finance-kpi-icon {
-  color: var(--chart-series-red);
-}
-
-.finance-kpi-card--income {
-  border-color: color-mix(in srgb, var(--success) 28%, var(--border-color));
-  background: linear-gradient(135deg, color-mix(in srgb, var(--success) 12%, transparent), color-mix(in srgb, var(--success) 5%, transparent));
-}
-
-.finance-kpi-card--income .finance-kpi-icon {
-  color: var(--success);
 }
 
 .finance-alert-panel {
@@ -106,41 +56,6 @@
   border-radius: var(--radius-sm);
   background: var(--bg-tertiary);
   font-size: 12px;
-}
-
-.finance-kpi-icon {
-  background: rgba(255, 255, 255, 0.05);
-  padding: 12px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.finance-kpi-content {
-  flex: 1;
-}
-
-.finance-kpi-content h3 {
-  margin: 0;
-  font-size: 13px;
-  color: var(--text-secondary);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.finance-kpi-value {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text-color);
-  margin: 8px 0 4px 0;
-  font-variant-numeric: tabular-nums;
-}
-
-.finance-kpi-subtext {
-  font-size: 12px;
-  color: var(--text-muted);
 }
 
 /* Ledger Table */

@@ -89,9 +89,9 @@ export const FeedbackProvider: React.FC<FeedbackProviderProps> = ({ children }) 
           <div
             style={{
               color: activeFeedback.type === 'error'
-                ? 'var(--danger-color, #ef4444)'
+                ? 'var(--danger)'
                 : activeFeedback.type === 'success'
-                  ? 'var(--success-color, #22c55e)'
+                  ? 'var(--success)'
                   : 'var(--accent)'
             }}
           >

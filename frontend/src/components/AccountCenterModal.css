@@ -27,9 +27,7 @@
   padding: 16px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  background:
-    linear-gradient(135deg, rgba(226, 176, 40, 0.08), transparent 58%),
-    var(--bg-tertiary);
+  background: var(--bg-tertiary);
 }
 
 .account-status-card.trial {
@@ -38,9 +36,6 @@
 
 .account-status-card.dev {
   border-color: rgba(56, 189, 248, 0.28);
-  background:
-    linear-gradient(135deg, rgba(56, 189, 248, 0.08), transparent 58%),
-    var(--bg-tertiary);
 }
 
 .account-status-icon {
@@ -199,11 +194,11 @@
 }
 
 .account-detail-item .sync-enabled {
-  color: var(--success-color, #22c55e);
+  color: var(--success);
 }
 
 .account-detail-item .sync-synced {
-  color: var(--success-color, #22c55e);
+  color: var(--success);
 }
 
 .account-detail-item .sync-syncing,

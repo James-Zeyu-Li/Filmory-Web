@@ -149,7 +149,7 @@ export const PhotosView: React.FC<PhotosViewProps> = ({ enableFilmMode }) => {
             value={filterCameraId}
             onChange={e => setFilterCameraId(e.target.value)}
           >
-            <option value="all">📷 所有相机</option>
+            <option value="all">所有相机</option>
             {cameras.map(c => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
@@ -161,7 +161,7 @@ export const PhotosView: React.FC<PhotosViewProps> = ({ enableFilmMode }) => {
               value={filterFilmId}
               onChange={e => setFilterFilmId(e.target.value)}
             >
-              <option value="all">🎞️ 所有胶卷</option>
+              <option value="all">所有胶卷</option>
               {filmStocks.filter(f => f.isSystem === 0).map(f => (
                 <option key={f.id} value={f.id}>{f.brand} {f.name}</option>
               ))}
@@ -173,10 +173,10 @@ export const PhotosView: React.FC<PhotosViewProps> = ({ enableFilmMode }) => {
             value={filterRating}
             onChange={e => setFilterRating(e.target.value)}
           >
-            <option value="all">⭐ 所有评分</option>
-            <option value="5">⭐⭐⭐⭐⭐ (5星)</option>
-            <option value="4">⭐⭐⭐⭐及以上 (&gt;=4星)</option>
-            <option value="3">⭐⭐⭐及以上 (&gt;=3星)</option>
+            <option value="all">所有评分</option>
+            <option value="5">5 星</option>
+            <option value="4">4 星及以上</option>
+            <option value="3">3 星及以上</option>
           </select>
         </div>
       </div>

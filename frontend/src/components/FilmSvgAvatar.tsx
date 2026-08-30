@@ -1,4 +1,5 @@
 import React from 'react';
+import { Film } from 'lucide-react';
 
 // Eager load all SVG assets from the assets directory using Vite's glob import
 const svgModules = import.meta.glob('../assets/filmstock_icons/svg/*.svg', {
@@ -70,7 +71,7 @@ export const FilmSvgAvatar: React.FC<FilmSvgAvatarProps> = ({
           style={{ width: '100%', height: '100%', objectFit: 'contain' }}
         />
       ) : (
-        <div style={{ fontSize: '24px' }}>🎞️</div>
+        <Film size={24} color="var(--text-muted)" />
       )}
     </div>
   );

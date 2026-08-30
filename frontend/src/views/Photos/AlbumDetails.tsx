@@ -5,9 +5,9 @@ import { useFeedback } from '../../contexts/useFeedback';
 import { usePhotoUrlMap } from '../../hooks/usePhotoUrlMap';
 import { useAlbums, useAlbumPhotos, usePhotoAssets, useCameras, useFilmStocks, useTagConfigs, useRolls } from '../../hooks/useData';
 import { EmptyState } from '../../components/EmptyState';
-import { 
-  ChevronLeft, ChevronRight, Plus, Trash2, Image as ImageIcon, 
-  Star, X, Check, Trash, Sliders, Calendar 
+import {
+  ChevronLeft, ChevronRight, Plus, Trash2, Image as ImageIcon,
+  Star, X, Check, Trash, Sliders, Calendar, Tag
 } from 'lucide-react';
 
 interface AlbumDetailsProps {
@@ -297,7 +297,7 @@ export const AlbumDetails: React.FC<AlbumDetailsProps> = ({
                       color: '#fff'
                     }}
                   >
-                    {isSelectedForRemoval ? '✓' : ''}
+                    {isSelectedForRemoval && <Check size={14} />}
                   </div>
                 )}
 
@@ -480,7 +480,7 @@ export const AlbumDetails: React.FC<AlbumDetailsProps> = ({
                     setIsEditingTags(!isEditingTags);
                   }}
                 >
-                  🏷️ 编辑标签
+                  <Tag size={12} /> 编辑标签
                 </button>
 
                 {/* Popover overlay for checking tags */}
@@ -660,7 +660,7 @@ const AddPhotosModal: React.FC<AddPhotosModalProps> = ({
               setFilterRollId('all'); // reset roll filter
             }}
           >
-            <option value="all">📷 所有相机</option>
+            <option value="all">所有相机</option>
             {cameras.map(c => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
@@ -688,10 +688,10 @@ const AddPhotosModal: React.FC<AddPhotosModalProps> = ({
             value={filterRating}
             onChange={e => setFilterRating(e.target.value)}
           >
-            <option value="all">⭐ 所有评分</option>
-            <option value="5">⭐⭐⭐⭐⭐</option>
-            <option value="4">⭐⭐⭐⭐及以上</option>
-            <option value="3">⭐⭐⭐及以上</option>
+            <option value="all">所有评分</option>
+            <option value="5">5 星</option>
+            <option value="4">4 星及以上</option>
+            <option value="3">3 星及以上</option>
           </select>
 
           <select 
@@ -699,7 +699,7 @@ const AddPhotosModal: React.FC<AddPhotosModalProps> = ({
             value={filterTag}
             onChange={e => setFilterTag(e.target.value)}
           >
-            <option value="all">🏷️ 所有标签</option>
+            <option value="all">所有标签</option>
             {tagConfigs.map(t => (
               <option key={t.id} value={t.name}>{t.name}</option>
             ))}
@@ -724,7 +724,7 @@ const AddPhotosModal: React.FC<AddPhotosModalProps> = ({
                 >
                   <img src={photoUrls[photo.id!]} alt={photo.originalFileName} />
                   <div className="selector-photo-checkbox">
-                    {isSelected ? '✓' : ''}
+                    {isSelected && <Check size={14} />}
                   </div>
                   {/* Tag overlay inside selection dialog */}
                   {photo.tags && (

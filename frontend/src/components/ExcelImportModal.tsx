@@ -67,7 +67,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ onClose }) =
         </div>
 
         {showInstruction && (
-          <div style={{ backgroundColor: 'rgba(var(--accent-rgb, 100, 100, 255), 0.1)', border: '1px solid var(--accent)', padding: '16px', borderRadius: '8px', marginBottom: '24px', position: 'relative' }}>
+          <div style={{ backgroundColor: 'var(--accent-bg)', border: '1px solid var(--accent)', padding: '16px', borderRadius: '8px', marginBottom: '24px', position: 'relative' }}>
             <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
               <AlertCircle size={20} color="var(--accent)" style={{ flexShrink: 0, marginTop: '2px' }} />
               <div>

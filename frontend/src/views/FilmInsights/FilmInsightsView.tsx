@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Archive, ChevronRight, Film, Package, Palette, Play } from 'lucide-react';
 import { EmptyState } from '../../components/EmptyState';
+import { StatCard } from '../../components/ui/StatCard';
 import { useCollections, useFilmStocks, useRolls } from '../../hooks/useData';
 import { useLanguage } from '../../contexts/useLanguage';
 import {
@@ -56,23 +57,29 @@ export const FilmInsightsView: React.FC<FilmInsightsViewProps> = ({ isEmbedded =
       </header>}
 
       <div className={`film-insights-body ${isEmbedded ? 'film-insights-body-embedded' : 'view-body'}`}>
-        <section className="film-insights-overview" aria-label={t('filmInsights.overviewLabel')}>
-          <article className="film-insights-metric film-insights-metric-accent">
-            <Package size={18} aria-hidden="true" />
-            <div><span>{t('filmInsights.inStock')}</span><strong>{t('filmInsights.rollCount', { count: overview.inventoryCount })}</strong></div>
-          </article>
-          <article className="film-insights-metric film-insights-metric-active">
-            <Play size={18} aria-hidden="true" />
-            <div><span>{t('filmInsights.active')}</span><strong>{t('filmInsights.rollCount', { count: overview.activeCount })}</strong></div>
-          </article>
-          <article className="film-insights-metric">
-            <Archive size={18} aria-hidden="true" />
-            <div><span>{t('filmInsights.used')}</span><strong>{t('filmInsights.rollCount', { count: overview.completedCount })}</strong></div>
-          </article>
-          <article className="film-insights-metric film-insights-metric-split">
-            <Palette size={18} aria-hidden="true" />
-            <div><span>{t('filmInsights.usedByType')}</span><strong>{t('filmInsights.colorBwCounts', { color: overview.colorCompletedCount, bw: overview.bwCompletedCount })}</strong></div>
-          </article>
+        <section className="stat-card-grid" aria-label={t('filmInsights.overviewLabel')}>
+          <StatCard
+            tone="gold"
+            icon={Package}
+            label={t('filmInsights.inStock')}
+            value={t('filmInsights.rollCount', { count: overview.inventoryCount })}
+          />
+          <StatCard
+            tone="emerald"
+            icon={Play}
+            label={t('filmInsights.active')}
+            value={t('filmInsights.rollCount', { count: overview.activeCount })}
+          />
+          <StatCard
+            icon={Archive}
+            label={t('filmInsights.used')}
+            value={t('filmInsights.rollCount', { count: overview.completedCount })}
+          />
+          <StatCard
+            icon={Palette}
+            label={t('filmInsights.usedByType')}
+            value={t('filmInsights.colorBwCounts', { color: overview.colorCompletedCount, bw: overview.bwCompletedCount })}
+          />
         </section>
 
         <section className="film-insights-workspace" aria-labelledby="film-insights-library-title">

@@ -918,7 +918,7 @@ button.edit-avatar-preview:focus-visible .edit-avatar-preview-label {
 
 .gear-card.equipment-card.expired-alert {
   border-color: rgba(239, 68, 68, 0.5);
-  background-image: linear-gradient(135deg, var(--bg-secondary) 95%, rgba(239, 68, 68, 0.05) 5%);
+  background-color: var(--danger-bg);
 }
 
 .expired-text {
@@ -987,7 +987,7 @@ button.edit-avatar-preview:focus-visible .edit-avatar-preview-label {
   font-size: 11px;
   font-weight: 700;
   color: var(--accent);
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%);
+  background: var(--bg-tertiary);
   width: 100%;
   height: 100%;
   display: flex;

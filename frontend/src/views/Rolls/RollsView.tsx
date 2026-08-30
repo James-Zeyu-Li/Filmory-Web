@@ -1055,18 +1055,18 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
 
     const filmStock = enableFilmMode ? filmStocks.find(f => f.id === roll.filmStockId) : undefined;
     const placeholderStyle: React.CSSProperties = {
-      background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(99, 102, 241, 0.15) 100%)'
+      background: 'rgba(56, 189, 248, 0.15)'
     };
     if (!coverUrl && filmStock?.brand) {
       const brand = filmStock.brand.toLowerCase();
       if (brand.includes('kodak')) {
-        placeholderStyle.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.25) 100%)';
+        placeholderStyle.background = 'rgba(245, 158, 11, 0.18)';
       } else if (brand.includes('fuji')) {
-        placeholderStyle.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.25) 100%)';
+        placeholderStyle.background = 'rgba(16, 185, 129, 0.18)';
       } else if (brand.includes('ilford') || filmStock.colorType === 'bw') {
-        placeholderStyle.background = 'linear-gradient(135deg, rgba(156, 163, 175, 0.15) 0%, rgba(75, 85, 99, 0.25) 100%)';
+        placeholderStyle.background = 'rgba(156, 163, 175, 0.18)';
       } else if (brand.includes('cinestill')) {
-        placeholderStyle.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(185, 28, 28, 0.25) 100%)';
+        placeholderStyle.background = 'rgba(239, 68, 68, 0.18)';
       }
     }
     

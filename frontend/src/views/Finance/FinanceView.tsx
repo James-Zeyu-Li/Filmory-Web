@@ -11,6 +11,7 @@ import { requestImmediateSync } from '../../services/syncEvents';
 import { useCameras, useLenses, useRolls } from '../../hooks/useData';
 import { Wallet, TrendingUp, TrendingDown, Plus, Camera as CameraIcon, AlertTriangle, Trash2 } from 'lucide-react';
 import { Modal } from '../../components/Modal';
+import { StatCard } from '../../components/ui/StatCard';
 import './FinanceView.css';
 
 interface FinanceViewProps {
@@ -171,31 +172,28 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
           </div>
         )}
         {/* KPI Cards */}
-        <div className="finance-kpi-grid">
-          <div className="finance-kpi-card finance-kpi-card--gear">
-            <div className="finance-kpi-icon"><CameraIcon size={24} /></div>
-            <div className="finance-kpi-content">
-              <h3>{t('finance.gearInvestment')}</h3>
-              <div className="finance-kpi-value">{formatCurrency(totalGearAssets)}</div>
-              <span className="finance-kpi-subtext">{t('finance.gearInvestmentDesc')}</span>
-            </div>
-          </div>
-          <div className="finance-kpi-card finance-kpi-card--film">
-            <div className="finance-kpi-icon"><TrendingDown size={24} /></div>
-            <div className="finance-kpi-content">
-              <h3>{t('finance.filmLabCost')}</h3>
-              <div className="finance-kpi-value">{formatCurrency(totalFilmBurned)}</div>
-              <span className="finance-kpi-subtext">{t('finance.filmLabCostDesc')}</span>
-            </div>
-          </div>
-          <div className="finance-kpi-card finance-kpi-card--income">
-            <div className="finance-kpi-icon"><TrendingUp size={24} /></div>
-            <div className="finance-kpi-content">
-              <h3>{t('finance.income')}</h3>
-              <div className="finance-kpi-value">{formatCurrency(totalServiceIncome)}</div>
-              <span className="finance-kpi-subtext">{t('finance.incomeDesc')}</span>
-            </div>
-          </div>
+        <div className="stat-card-grid">
+          <StatCard
+            tone="sky"
+            icon={CameraIcon}
+            label={t('finance.gearInvestment')}
+            value={formatCurrency(totalGearAssets)}
+            description={t('finance.gearInvestmentDesc')}
+          />
+          <StatCard
+            tone="red"
+            icon={TrendingDown}
+            label={t('finance.filmLabCost')}
+            value={formatCurrency(totalFilmBurned)}
+            description={t('finance.filmLabCostDesc')}
+          />
+          <StatCard
+            tone="emerald"
+            icon={TrendingUp}
+            label={t('finance.income')}
+            value={formatCurrency(totalServiceIncome)}
+            description={t('finance.incomeDesc')}
+          />
         </div>
 
         {/* Missing Prices Alert Panel */}

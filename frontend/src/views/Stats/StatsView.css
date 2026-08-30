@@ -10,109 +10,11 @@
   padding: 0;
 }
 
-/* KPI Cards Grid */
-.stats-kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 24px;
+/* KPI Cards Grid — shared .stat-card-grid/.stat-card primitives live in
+   src/components/ui/StatCard.css so Shooting/Spending/Film tabs render one
+   consistent card style. */
+.stat-card-grid {
   margin-bottom: 8px;
-}
-
-.kpi-card {
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  transition: transform var(--transition-normal), border-color var(--transition-fast), box-shadow var(--transition-normal);
-}
-
-.kpi-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-}
-
-/* Color themed borders/shadows for KPI cards */
-.stats-kpi-gold {
-  border-left: 4px solid var(--accent);
-}
-.stats-kpi-gold:hover {
-  border-color: var(--accent);
-  box-shadow: 0 8px 30px rgba(226, 176, 40, 0.05);
-}
-
-.stats-kpi-sky {
-  border-left: 4px solid var(--chart-series-blue);
-}
-.stats-kpi-sky:hover {
-  border-color: var(--chart-series-blue);
-}
-
-.stats-kpi-emerald {
-  border-left: 4px solid var(--success);
-}
-.stats-kpi-emerald:hover {
-  border-color: var(--success);
-  box-shadow: 0 8px 30px rgba(16, 185, 129, 0.05);
-}
-
-.kpi-icon {
-  background-color: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  padding: 14px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
-  transition: color var(--transition-fast), background-color var(--transition-fast);
-}
-
-.stats-kpi-gold .kpi-icon {
-  color: var(--accent);
-  background-color: rgba(226, 176, 40, 0.05);
-}
-
-.stats-kpi-sky .kpi-icon {
-  color: var(--chart-series-blue);
-  background-color: var(--chart-surface-subtle);
-}
-
-.stats-kpi-emerald .kpi-icon {
-  color: var(--success);
-  background-color: rgba(16, 185, 129, 0.05);
-}
-
-.kpi-content {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.kpi-content span {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.kpi-content h2 {
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.kpi-content p {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin: 0;
 }
 
 /* Charts Grid */

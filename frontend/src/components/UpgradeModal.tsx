@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Check, Zap, Lock, RefreshCw, Infinity as InfinityIcon, Crown } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import { db } from '../db/schema';
@@ -17,6 +17,7 @@ import {
 } from '../services/membershipUpgrade';
 import { FREE_ACTIVE_ROLL_LIMIT } from '../services/membershipPolicy';
 import { copyTextToClipboard } from '../utils/clipboard';
+import { Modal } from './Modal';
 import './UpgradeModal.css';
 
 interface UpgradeModalProps {
@@ -36,19 +37,19 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
   const { t, language } = useLanguage();
   const userProfile = useUserProfile();
 
-  if (!isOpen) return null;
-
   return (
-    <UpgradeModalContent
-      key={`${userProfile?.membershipContactEmail || user?.email || ''}:${userProfile?.membershipRequestNote || ''}:${userProfile?.membershipRequestStatus || 'none'}`}
-      onClose={onClose}
-      trigger={trigger}
-      user={user}
-      userProfile={userProfile}
-      notify={notify}
-      t={t}
-      language={language}
-    />
+    <Modal isOpen={isOpen} onClose={onClose} style={{ maxWidth: '520px', borderRadius: '20px' }}>
+      <UpgradeModalContent
+        key={`${userProfile?.membershipContactEmail || user?.email || ''}:${userProfile?.membershipRequestNote || ''}:${userProfile?.membershipRequestStatus || 'none'}`}
+        onClose={onClose}
+        trigger={trigger}
+        user={user}
+        userProfile={userProfile}
+        notify={notify}
+        t={t}
+        language={language}
+      />
+    </Modal>
   );
 };
 
@@ -74,19 +75,6 @@ const UpgradeModalContent: React.FC<UpgradeModalContentProps> = ({
   const [contactEmail, setContactEmail] = useState(userProfile?.membershipContactEmail || user?.email || '');
   const [requestNote, setRequestNote] = useState(userProfile?.membershipRequestNote || '');
   const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [onClose]);
 
   const isRequestPending = userProfile?.membershipRequestStatus === 'pending';
   const requestTimestampLabel = formatMembershipRequestTime(userProfile?.membershipRequestedAt, language);
@@ -131,8 +119,8 @@ const UpgradeModalContent: React.FC<UpgradeModalContentProps> = ({
     },
     {
       label: t('upgrade.featureExcelExport'),
-      free: '✓',
-      vip: '✓',
+      free: t('upgrade.available'),
+      vip: t('upgrade.available'),
       freeIcon: <Check size={14} />,
       vipIcon: <Check size={14} />,
     },
@@ -154,8 +142,8 @@ const UpgradeModalContent: React.FC<UpgradeModalContentProps> = ({
     },
     {
       label: t('upgrade.featureOffline'),
-      free: '✓',
-      vip: '✓',
+      free: t('upgrade.available'),
+      vip: t('upgrade.available'),
       freeIcon: <Check size={14} />,
       vipIcon: <Check size={14} />,
     },
@@ -266,11 +254,9 @@ const UpgradeModalContent: React.FC<UpgradeModalContentProps> = ({
   };
 
   return (
-    <div className="upgrade-overlay" onClick={onClose} role="dialog" aria-modal="true">
-      <div className="upgrade-modal" onClick={e => e.stopPropagation()}>
-
-        {/* Close */}
-        <button className="upgrade-close icon-btn" onClick={onClose}>
+    <>
+      {/* Close */}
+      <button className="upgrade-close icon-btn" onClick={onClose}>
           <X size={18} />
         </button>
 
@@ -404,8 +390,6 @@ const UpgradeModalContent: React.FC<UpgradeModalContentProps> = ({
             {t('upgrade.localPendingNote')}
           </p>
         </div>
-
-      </div>
-    </div>
+    </>
   );
 };

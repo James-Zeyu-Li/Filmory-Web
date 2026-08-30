@@ -1,5 +1,5 @@
 .dashboard-hero {
-  background: linear-gradient(135deg, rgba(226, 176, 40, 0.04) 0%, rgba(31, 41, 55, 0) 100%);
+  background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: 24px 30px;
