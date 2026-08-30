@@ -20,7 +20,7 @@ test.describe('Gear add builders', () => {
     await expect(cameraModal.getByRole('button', { name: 'FM2' })).toHaveCount(0);
     await cameraModal.getByRole('button', { name: '取消' }).click();
 
-    await page.getByRole('button', { name: /镜头库/ }).click();
+    await page.getByRole('tab', { name: /镜头库/ }).click();
     await page.getByRole('button', { name: '添加镜头' }).first().click();
     const lensModal = page.locator('.modal-content').filter({ hasText: '添加镜头' });
     await lensModal.getByRole('button', { name: 'micro-four-thirds' }).click();
@@ -38,7 +38,7 @@ test.describe('Gear add builders', () => {
   test('collapses film preset selection after choosing a stock and leaves details editable', async ({ page }) => {
     await page.goto('/gear', { waitUntil: 'domcontentloaded' });
 
-    await page.getByRole('button', { name: /胶卷/ }).click();
+    await page.getByRole('tab', { name: /胶卷库/ }).click();
     await page.getByRole('button', { name: '添加胶卷' }).first().click();
 
     const filmModal = page.locator('.modal-content').filter({ hasText: '入库胶卷' });
@@ -52,12 +52,13 @@ test.describe('Gear add builders', () => {
     await expect(filmModal.getByRole('button', { name: '135', exact: true })).toHaveCount(0);
     await expect(filmModal.getByRole('button', { name: '120', exact: true })).toHaveCount(0);
 
+    await filmModal.getByRole('button', { name: '展开自定义' }).click();
     await expect(filmModal.getByPlaceholder('例如: Kodak')).toHaveValue('Kodak');
     await expect(filmModal.getByPlaceholder('例如: Gold 200')).toHaveValue('Portra 400');
     await filmModal.getByPlaceholder('例如: Gold 200').fill('Portra 400 E2E');
-    await filmModal.getByPlaceholder('可留空，默认为 0').fill('3');
+    await filmModal.getByPlaceholder('默认 1，可按这次实际入库卷数调整').fill('3');
     await filmModal.getByRole('button', { name: '添加', exact: true }).click();
 
-    await expect(page.locator('.gear-card').filter({ hasText: 'Portra 400 E2E' })).toContainText('库存数量：3 卷');
+    await expect(page.locator('.gear-card').filter({ hasText: 'Portra 400 E2E' })).toContainText('库存数量3 卷');
   });
 });
