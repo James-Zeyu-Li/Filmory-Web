@@ -64,6 +64,9 @@ trace.zip
 before-click-*.png
 
 # 本机专用的规划、审查、人工验证、架构资料与文档资源，不进入 Git。
-.local-docs/
+.local-docs/*
+!.local-docs/roadmap/
+.local-docs/roadmap/*
+!.local-docs/roadmap/SETTINGS_TODO.md
 docs/
 .agents/

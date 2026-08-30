@@ -9,9 +9,10 @@ import { useLanguage } from '../../contexts/useLanguage';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { requestImmediateSync } from '../../services/syncEvents';
 import { useCameras, useLenses, useRolls } from '../../hooks/useData';
-import { Wallet, TrendingUp, TrendingDown, Plus, Camera as CameraIcon, AlertTriangle, Trash2 } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, Plus, Camera as CameraIcon, AlertTriangle, Trash2, Calculator } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { StatCard } from '../../components/ui/StatCard';
+import { resolveAverageCostPerRoll } from '../../services/costPerRollService';
 import './FinanceView.css';
 
 interface FinanceViewProps {
@@ -80,6 +81,8 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
 	      if (!isExpense) totalServiceIncome += amt; // Any other unexpected income
 	    }
 	  });
+
+  const averageCostPerRoll = resolveAverageCostPerRoll(rolls);
 
   const handleAddTx = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,6 +196,15 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ isEmbedded }) => {
             label={t('finance.income')}
             value={formatCurrency(totalServiceIncome)}
             description={t('finance.incomeDesc')}
+          />
+          <StatCard
+            tone="violet"
+            icon={Calculator}
+            label={t('finance.avgCostPerRoll')}
+            value={averageCostPerRoll ? formatCurrency(averageCostPerRoll.averageCost) : '—'}
+            description={averageCostPerRoll
+              ? t('finance.avgCostPerRollDesc', { count: averageCostPerRoll.eligibleCount })
+              : t('finance.avgCostInsufficientDesc')}
           />
         </div>
 

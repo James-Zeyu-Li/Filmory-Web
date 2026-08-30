@@ -42,7 +42,15 @@
 
     <title>Grainfolio — 胶片摄影数字化与胶卷库存管理平台</title>
   </head>
-  <body>
+  <!--
+    ontouchstart="" is the classic WebKit trick to make iOS Safari actually
+    apply :active/:hover styles on tap — without a touch listener somewhere in
+    the ancestor chain, iOS never enters the :active pseudo-state at all, so
+    every :active rule in the app (button press feedback, card taps) would
+    silently never fire on real iPhones despite working fine in a desktop
+    browser or emulator.
+  -->
+  <body ontouchstart="">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

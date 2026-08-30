@@ -142,7 +142,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
           <div className="launchpad-row">
             <motion.button
               className="launchpad-pill"
-              custom={0} initial="hidden" animate="visible" variants={cardVariants}
+              custom={0} initial="hidden" animate="visible" variants={cardVariants} whileTap={{ scale: 0.96 }}
               onClick={() => onNavigate('rolls?newRoll=1', { skipPageTransition: true })}
             >
               <Film size={16} /> <span>{t('dashboard.newRoll')}</span>
@@ -150,7 +150,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
             {enableFilmMode && (
               <motion.button
                 className="launchpad-pill"
-                custom={1} initial="hidden" animate="visible" variants={cardVariants}
+                custom={1} initial="hidden" animate="visible" variants={cardVariants} whileTap={{ scale: 0.96 }}
                 onClick={() => onNavigate('gear?tab=filmStocks&newFilm=1', { skipPageTransition: true })}
               >
                 <Package size={16} /> <span>{t('dashboard.addFilmStock')}</span>
@@ -158,7 +158,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
             )}
             <motion.button
               className="launchpad-pill"
-              custom={2} initial="hidden" animate="visible" variants={cardVariants}
+              custom={2} initial="hidden" animate="visible" variants={cardVariants} whileTap={{ scale: 0.96 }}
               onClick={() => onNavigate('gear?tab=cameras&newCamera=1', { skipPageTransition: true })}
             >
               <Camera size={16} /> <span>{t('dashboard.addCamera')}</span>
