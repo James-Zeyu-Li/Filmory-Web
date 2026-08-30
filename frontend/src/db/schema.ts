@@ -7,6 +7,13 @@ declare global {
   }
 }
 
+// Attributed to records/sync-queue items created before any user id has reached
+// localStorage yet. Shares its value with authMode.ts's DEV_BYPASS_USER_ID (that's
+// the id AuthContext seeds localStorage with in dev-bypass mode) so the two never
+// drift apart, without this low-level db module depending on the higher-level
+// auth-mode concept.
+export const LOCAL_FALLBACK_USER_ID = 'mock_uid_123';
+
 export type InventoryOperationType = 'create_roll_with_inventory' | 'adjust_film_stock';
 
 interface SyncQueueBase {
@@ -719,14 +726,17 @@ export class GrainfolioDatabase extends Dexie {
         if (table.name === 'syncQueue') return; // Do not intercept queue itself
 
         table.hook('creating', (primKey, obj) => {
-          const currentUserId = localStorage.getItem('grainfolio_user_id') || 'mock_uid_123';
+          const currentUserId = localStorage.getItem('grainfolio_user_id') || LOCAL_FALLBACK_USER_ID;
           if (typeof obj === 'object' && obj !== null && !('userId' in obj)) {
             obj.userId = currentUserId;
           }
           
-          // Force UUID if not provided
+          // Force UUID if not provided. crypto.randomUUID() is called unguarded
+          // everywhere else in the app (RollsView, useGearActions, seedService, ...),
+          // so this backbone hook matches that assumption instead of silently
+          // enqueuing a sync record with an undefined recordId if it were ever missing.
           let assignedId = primKey;
-          if (!assignedId && typeof crypto !== 'undefined' && crypto.randomUUID) {
+          if (!assignedId) {
             obj.id = crypto.randomUUID();
             assignedId = obj.id;
           }
@@ -750,7 +760,7 @@ export class GrainfolioDatabase extends Dexie {
         table.hook('updating', (modifications, primKey, obj) => {
           if (shouldEnqueueSyncRecord()) {
             const updatedObj = { ...obj, ...modifications };
-            const currentUserId = updatedObj.userId || localStorage.getItem('grainfolio_user_id') || 'mock_uid_123';
+            const currentUserId = updatedObj.userId || localStorage.getItem('grainfolio_user_id') || LOCAL_FALLBACK_USER_ID;
             enqueueSyncChange({
               userId: currentUserId,
               tableName: table.name,
@@ -767,7 +777,7 @@ export class GrainfolioDatabase extends Dexie {
             const record = typeof obj === 'object' && obj !== null ? obj as Record<string, unknown> : undefined;
             const currentUserId = typeof record?.userId === 'string'
               ? record.userId
-              : localStorage.getItem('grainfolio_user_id') || 'mock_uid_123';
+              : localStorage.getItem('grainfolio_user_id') || LOCAL_FALLBACK_USER_ID;
             enqueueSyncChange({
               userId: currentUserId,
               tableName: table.name,

@@ -11,12 +11,12 @@ import {
   buildMembershipMailtoHref,
   buildMembershipRequestMessage,
   buildPendingMembershipProfile,
-  copyTextToClipboard,
   formatMembershipRequestTime,
   type MembershipRequestCopy,
   MEMBERSHIP_SUPPORT_EMAIL,
 } from '../services/membershipUpgrade';
 import { FREE_ACTIVE_ROLL_LIMIT } from '../services/membershipPolicy';
+import { copyTextToClipboard } from '../utils/clipboard';
 import './UpgradeModal.css';
 
 interface UpgradeModalProps {

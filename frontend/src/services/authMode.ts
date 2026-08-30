@@ -1,11 +1,14 @@
 import type { User } from '@supabase/supabase-js';
+import { LOCAL_FALLBACK_USER_ID } from '../db/schema';
 import { TRIAL_USER_EMAIL, TRIAL_USER_ID } from './trialPolicy';
 
 export type AuthMode = 'supabase' | 'dev-bypass' | 'trial';
 export type AccountRole = 'user' | 'admin';
 export type EnabledOAuthProvider = 'google' | 'github';
 
-export const DEV_BYPASS_USER_ID = 'mock_uid_123';
+// Shares its value with db/schema.ts's LOCAL_FALLBACK_USER_ID — see that constant's
+// comment for why the two must stay in sync.
+export const DEV_BYPASS_USER_ID = LOCAL_FALLBACK_USER_ID;
 export const DEV_BYPASS_EMAIL = 'developer@grainfolio.app';
 
 export const isDevBypassEnabled = () => (

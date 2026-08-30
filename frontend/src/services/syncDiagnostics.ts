@@ -19,9 +19,11 @@ export type SyncDiagnosticEvent =
   | 'legacy_inventory_rpc_reopened'
   | 'legacy_film_stock_schema_reopened'
   | 'pull_started'
+  | 'pull_table_synced'
   | 'pull_completed'
   | 'pull_failed'
-  | 'realtime_status';
+  | 'realtime_status'
+  | 'realtime_change_received';
 
 export type SyncDiagnosticEntry = {
   timestamp: number;
@@ -40,12 +42,16 @@ export type SyncDiagnosticEntry = {
   deleteCount?: number;
   operationType?: string;
   pullMode?: 'initial' | 'incremental';
+  lastSync?: string;
+  downloadedCount?: number;
+  keptLocalCount?: number;
   changedTableCount?: number;
   receivedRecordCount?: number;
   durationMs?: number;
   errorCode?: string;
   failureKind?: 'retryable' | 'needs_attention';
   realtimeStatus?: string;
+  realtimeEventType?: string;
 };
 
 type SyncDiagnosticDetails = Omit<SyncDiagnosticEntry, 'timestamp' | 'event'>;

@@ -945,17 +945,14 @@ export class SyncService {
     let lastSync = new Date(0).toISOString();
     const lastSyncStr = localStorage.getItem(getSyncWatermarkKey(userId));
     const isInitialPull = !lastSyncStr;
+    if (!isInitialPull) {
+      lastSync = new Date(lastSyncStr).toISOString();
+    }
     recordSyncDiagnostic('pull_started', {
       runId: this.activeSyncRunId,
       pullMode: isInitialPull ? 'initial' : 'incremental',
+      lastSync: isInitialPull ? undefined : lastSync,
     });
-
-    if (!isInitialPull) {
-      lastSync = new Date(lastSyncStr).toISOString();
-      console.log(`[Sync Pull] Incremental pull since ${lastSync}`);
-    } else {
-      console.log('📦 [Sync Pull] No user sync watermark, forcing a FULL PULL from Supabase...');
-    }
 
     const newSyncTime = new Date().toISOString();
 
@@ -981,12 +978,11 @@ export class SyncService {
         return { dexieTable, supaTable, data: (data || []) as SyncRecord[] };
       }));
 
-      for (const { dexieTable, supaTable, data } of remoteChanges) {
+      for (const { dexieTable, data } of remoteChanges) {
         if (data.length === 0) continue;
         changedTableCount += 1;
         receivedRecordCount += data.length;
-
-        console.log(`[Sync Pull] Downloaded ${data.length} new/updated records for ${supaTable}`);
+        let keptLocalCount = 0;
 
         const shouldPreferRemoteProfile = preferRemoteUserProfile && dexieTable === 'userProfiles';
         if (shouldPreferRemoteProfile) remoteUserProfileFound = true;
@@ -1060,7 +1056,7 @@ export class SyncService {
               await db.syncQueue.bulkDelete(pendingForRecord);
             }
           } else {
-            console.log(`[Sync LWW] Kept local version for ${rowId} (${localTime} > ${remoteTime})`);
+            keptLocalCount += 1;
           }
         }
 
@@ -1089,9 +1085,17 @@ export class SyncService {
           } else {
             await table.bulkPut(toPut);
           }
-          console.log(`[Sync Pull] Saved ${toPut.length} records to local Dexie ${dexieTable}`);
         }
         if (toDelete.length > 0) await table.bulkDelete(toDelete);
+
+        recordSyncDiagnostic('pull_table_synced', {
+          runId: this.activeSyncRunId,
+          tableName: dexieTable,
+          downloadedCount: data.length,
+          upsertCount: toPut.length,
+          deleteCount: toDelete.length,
+          keptLocalCount,
+        });
       }
 
       // Update the user-scoped sync watermark only after every table succeeds.
@@ -1223,7 +1227,6 @@ export class SyncService {
   ) {
     if (!userId || !this.isAutoSyncEnabled()) return;
 
-    console.log('[Sync Realtime] Subscribing to postgres changes...');
     let channel = supabase.channel(`grainfolio-user-${userId}`);
 
     for (const table of supabaseTables) {
@@ -1233,7 +1236,10 @@ export class SyncService {
         table,
         filter: `user_id=eq.${userId}`,
       }, (payload) => {
-        console.log('[Sync Realtime] Cloud mutated!', payload);
+        recordSyncDiagnostic('realtime_change_received', {
+          tableName: table,
+          realtimeEventType: payload.eventType,
+        });
         this.requestSyncIntent('background', 'realtime');
       });
     }
