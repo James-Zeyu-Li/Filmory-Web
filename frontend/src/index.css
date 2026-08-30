@@ -307,27 +307,9 @@ html.language-transitioning {
     position: relative;
   }
 
-  /* Match page tools to the mobile navigation breakpoint. */
-  .rolls-toolbar {
-    flex-direction: column;
-    align-items: stretch !important;
-    gap: 12px;
-  }
-
-  .rolls-toolbar-actions {
-    width: 100%;
-    min-width: 0 !important;
-    flex: 0 0 auto;
-    justify-content: flex-start;
-  }
-
   .gear-page-tabs,
   .rolls-page-tabs {
     width: 100%;
-  }
-
-  .rolls-toolbar-actions > .search-input-wrapper {
-    min-height: 44px;
   }
 
   .rolls-toolbar-actions .sort-trigger-btn {
@@ -464,6 +446,41 @@ html.language-transitioning {
 
   .rolls-toolbar-actions {
     justify-content: flex-start !important;
+  }
+}
+
+@media (max-width: 1024px) {
+  /* Positioned after the base .rolls-toolbar/.rolls-toolbar-actions rules
+     above so these overrides actually win the cascade tie (equal
+     specificity; @media nesting does not add weight - see
+     FRONTEND_UI_GUIDELINES.md). Without this ordering the base rule's
+     flex: 1 1 240px stays in effect, and since .rolls-toolbar switches to
+     flex-direction: column here, that flex-basis is read as a height,
+     forcing .rolls-toolbar-actions into a 240px-tall box with a large
+     dead-space gap above/below the search bar - and its own
+     justify-content: flex-end (also from the base rule) keeps winning too,
+     which is why the row visibly jumps between left- and right-aligned
+     around the 950px/1024px boundaries. */
+  .rolls-toolbar {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 12px;
+  }
+
+  .rolls-toolbar-actions {
+    width: 100%;
+    min-width: 0 !important;
+    flex: 0 0 auto;
+    justify-content: flex-start;
+  }
+
+  .rolls-toolbar-actions > .search-input-wrapper {
+    min-height: 44px;
+    /* Let the search box grow to fill the row next to the sort button
+       instead of capping at a fixed max-width: on a full-width toolbar row
+       (tablet widths), a capped-width search box leaves a large empty gap
+       after the sort button and reads as off-center rather than balanced. */
+    flex: 1 1 240px;
   }
 }
 
