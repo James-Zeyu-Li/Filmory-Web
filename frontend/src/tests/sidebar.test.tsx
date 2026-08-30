@@ -56,4 +56,24 @@ describe('Sidebar', () => {
     expect(screen.getByRole('button', { name: '展开侧边栏' })).toBeInTheDocument();
     expect(document.querySelector('.sidebar')).toHaveClass('collapsed');
   });
+
+  it('closes the mobile drawer when resized back above the desktop breakpoint', () => {
+    window.innerWidth = 800;
+    const onClose = vi.fn();
+    render(
+      <MemoryRouter>
+        <Sidebar
+          onOpenSettings={vi.fn()}
+          onOpenAccountCenter={vi.fn()}
+          isOpen
+          onClose={onClose}
+        />
+      </MemoryRouter>
+    );
+
+    window.innerWidth = 1440;
+    fireEvent(window, new Event('resize'));
+
+    expect(onClose).toHaveBeenCalled();
+  });
 });

@@ -164,7 +164,9 @@ html.theme-transitioning *::after {
 /* Language switches swap every visible string at once, so a color transition
    wouldn't smooth anything — dip the whole page's opacity, swap the text
    underneath, then recover. The transition lives on the base rule (not the
-   class) so it applies symmetrically on both the dip and the recovery. */
+   class) so it applies symmetrically on both the dip and the recovery.
+   LanguageContext.tsx defers the actual text swap until this 180ms fade-out
+   completes — keep the two durations in sync. */
 html {
   transition: opacity 180ms ease;
 }
@@ -315,6 +317,7 @@ html.language-transitioning {
   .rolls-toolbar-actions {
     width: 100%;
     min-width: 0 !important;
+    flex: 0 0 auto;
     justify-content: flex-start;
   }
 
@@ -452,16 +455,6 @@ html.language-transitioning {
 .rolls-toolbar-actions > .sort-dropdown-container,
 .rolls-toolbar-actions > .rolls-sort-menu {
   flex: 0 0 auto;
-}
-
-@media (max-width: 1024px) {
-  /* .rolls-toolbar switches to flex-direction: column at this breakpoint (see
-     above), which turns the base rule's 240px flex-basis into a vertical
-     size instead of a horizontal one, stretching this row far past its
-     content. Reset it back to a content-sized row here. */
-  .rolls-toolbar-actions {
-    flex: 0 0 auto;
-  }
 }
 
 @media (max-width: 950px) {

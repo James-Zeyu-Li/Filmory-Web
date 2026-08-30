@@ -164,55 +164,6 @@
   box-shadow: none;
 }
 
-.btn-ghost-trial {
-  color: var(--text-primary);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 0.92rem;
-  padding: 9px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-ghost-trial:hover {
-  background: var(--bg-tertiary);
-  transform: translateY(-1px);
-}
-
-.landing-nav-actions .btn-secondary {
-  color: var(--text-secondary);
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 0.95rem;
-  padding: 8px 16px;
-  border-radius: 6px;
-  transition: all 0.2s;
-}
-
-.landing-nav-actions .btn-secondary:hover {
-  color: var(--text-primary);
-  background: var(--bg-tertiary);
-}
-
-.landing-nav-actions .btn-primary {
-  background: var(--text-primary);
-  color: var(--bg-primary);
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 0.95rem;
-  padding: 10px 20px;
-  border-radius: 6px;
-  transition: all 0.2s;
-}
-
-.landing-nav-actions .btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
 /* Hero Section */
 .landing-hero {
   position: relative;
@@ -439,15 +390,6 @@
     min-width: 0;
   }
 
-  .landing-nav-actions .btn-ghost-trial,
-  .landing-nav-actions .landing-nav-login {
-    display: none;
-  }
-
-  .landing-nav-actions .btn-secondary,
-  .landing-nav-actions .btn-primary {
-    padding-inline: 12px;
-  }
 }
 
 @media (max-width: 560px) {
@@ -463,12 +405,6 @@
     width: 34px;
     padding: 5px 0;
     font-size: 0.76rem;
-  }
-
-  .landing-nav-actions .btn-secondary,
-  .landing-nav-actions .btn-primary {
-    padding-inline: 12px;
-    font-size: 0.9rem;
   }
 
   .hero-actions {

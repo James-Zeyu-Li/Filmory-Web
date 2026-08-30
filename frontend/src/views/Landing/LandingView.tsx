@@ -66,11 +66,6 @@ export const LandingView: React.FC = () => {
               </button>
             ))}
           </div>
-          <button type="button" className="btn-ghost-trial" onClick={handleStartTrial}>
-            {t('landing.trial')}
-          </button>
-          <Link to={AUTH_ROUTES.login} className="btn-secondary landing-nav-login">{t('landing.login')}</Link>
-          <Link to={AUTH_ROUTES.signup} className="btn-primary">{t('landing.signup')}</Link>
         </div>
       </nav>
 
