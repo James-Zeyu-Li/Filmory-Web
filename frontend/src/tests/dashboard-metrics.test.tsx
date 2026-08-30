@@ -199,4 +199,38 @@ describe('Dashboard metrics', () => {
     fireEvent.click(screen.getByRole('button', { name: '开始拍摄记录' }));
     expect(onNavigate).toHaveBeenCalledWith('rolls?newRoll=1', { skipPageTransition: true });
   });
+
+  it('renders no shooting highlight card for a brand new user with zero rolls', () => {
+    mockUseRolls.mockReturnValue([]);
+    mockUseCameras.mockReturnValue([]);
+    mockUseFilmBacks.mockReturnValue([]);
+    mockUseLenses.mockReturnValue([]);
+    mockUseFilmStocks.mockReturnValue([]);
+
+    render(<DashboardView enableFilmMode={true} onNavigate={onNavigate} />);
+
+    expect(screen.queryByText(/查看洞察/)).not.toBeInTheDocument();
+  });
+
+  it('shows a shooting highlight fact and routes into Insights on click', () => {
+    mockUseCameras.mockReturnValue([
+      { id: 'cam-1', userId: 'mock-user-id', name: 'Canon QL19', type: 'film', format: '135', addedAt: 1 },
+    ]);
+    mockUseFilmBacks.mockReturnValue([]);
+    mockUseLenses.mockReturnValue([]);
+    mockUseFilmStocks.mockReturnValue([]);
+    mockUseRolls.mockReturnValue([
+      {
+        id: 'roll-1', userId: 'mock-user-id', name: 'Roll 1', currentCameraId: 'cam-1',
+        cameraIds: ['cam-1'], lensIds: [], status: 'archived', startDate: Date.now(),
+      },
+    ]);
+    onNavigate.mockClear();
+
+    render(<DashboardView enableFilmMode={true} onNavigate={onNavigate} />);
+
+    expect(screen.getByText(/Canon QL19/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText(/查看洞察/));
+    expect(onNavigate).toHaveBeenCalledWith('insights');
+  });
 });
