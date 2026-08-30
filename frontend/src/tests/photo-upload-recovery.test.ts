@@ -2,10 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '../db/schema';
 import {
   cleanupPendingPhotoDeletes,
+  commitUploadedContactSheetPhoto,
   commitUploadedRollCover,
   countPendingPhotoRepairs,
   findPendingPhotoUploads,
   repairPendingPhotoUploads,
+  saveDeferredContactSheetPhoto,
   saveDeferredPhotoUpload,
 } from '../services/photoUploadRecoveryService';
 import { deletePhotoFromCloud, uploadPhotoToCloud } from '../services/storageService';
@@ -261,5 +263,66 @@ describe('photo upload recovery service', () => {
       { ...createCloudPhoto('cleanup'), cloudDeletePending: true },
       createCloudPhoto('complete'),
     ])).toBe(2);
+  });
+
+  describe('contact-sheet photos (additive, isPinned: 0)', () => {
+    const createDeferredContactSheetPhoto = (id = 'sheet-photo') => ({
+      ...createDeferredPhoto(id),
+      isPinned: 0,
+    });
+
+    it('saves a deferred contact-sheet photo locally without touching Roll.coverPhotoId', async () => {
+      await addRoll('existing-cover');
+
+      await saveDeferredContactSheetPhoto(createDeferredContactSheetPhoto());
+
+      const photo = await db.photoAssets.get('sheet-photo');
+      expect(photo).toMatchObject({ cloudUploadPending: true, isPinned: 0 });
+      expect(photo?.blob).toBeDefined();
+      await expect(db.rolls.get(ROLL_ID)).resolves.toMatchObject({ coverPhotoId: 'existing-cover' });
+    });
+
+    it('commits an uploaded contact-sheet photo without touching Roll.coverPhotoId or any other photo', async () => {
+      await db.photoAssets.add(createCloudPhoto('existing-cover'));
+      await addRoll('existing-cover');
+
+      await commitUploadedContactSheetPhoto({
+        ...createCloudPhoto('sheet-photo'),
+        isPinned: 0,
+      });
+
+      await expect(db.rolls.get(ROLL_ID)).resolves.toMatchObject({ coverPhotoId: 'existing-cover' });
+      await expect(db.photoAssets.get('existing-cover')).resolves.toBeDefined();
+      await expect(db.photoAssets.get('sheet-photo')).resolves.toMatchObject({
+        storageKey: `${USER_ID}/${ROLL_ID}/sheet-photo.webp`,
+        cloudUploadPending: false,
+      });
+    });
+
+    it('repairs a pending cover and a pending contact-sheet photo in the same sweep via their own paths', async () => {
+      await addRoll();
+      await saveDeferredPhotoUpload(createDeferredPhoto('cover-photo'));
+      await saveDeferredContactSheetPhoto(createDeferredContactSheetPhoto('sheet-photo'));
+      await db.syncQueue.clear();
+
+      vi.mocked(uploadPhotoToCloud).mockImplementation(async (_file, userId, rollId, _onProgress, objectId) => ({
+        storageKey: `${userId}/${rollId}/${objectId}.webp`,
+        previewUrl: `https://signed.example/${objectId}`,
+        thumbnailUrl: `data:image/webp;base64,${objectId}`,
+      }));
+
+      await expect(repairPendingPhotoUploads(USER_ID)).resolves.toEqual({ found: 2, uploaded: 2, cleaned: 0, failed: 0 });
+
+      await expect(db.rolls.get(ROLL_ID)).resolves.toMatchObject({ coverPhotoId: 'cover-photo' });
+      await expect(db.photoAssets.get('cover-photo')).resolves.toMatchObject({
+        storageKey: `${USER_ID}/${ROLL_ID}/cover-photo.webp`,
+        cloudUploadPending: false,
+      });
+      await expect(db.photoAssets.get('sheet-photo')).resolves.toMatchObject({
+        storageKey: `${USER_ID}/${ROLL_ID}/sheet-photo.webp`,
+        cloudUploadPending: false,
+        isPinned: 0,
+      });
+    });
   });
 });

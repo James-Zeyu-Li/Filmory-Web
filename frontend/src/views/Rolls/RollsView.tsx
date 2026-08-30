@@ -47,6 +47,7 @@ import { adjustFilmStock, createRollWithInventory } from '../../services/invento
 
 import { CollectionsTab } from './CollectionsTab';
 import { RollCoverImage } from './RollCoverImage';
+import { RollContactSheet } from './components/RollContactSheet';
 import type { CameraTransfer, Collection, Roll } from '../../db/schema';
 
 interface RollsViewProps {
@@ -98,6 +99,7 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
   const initialSearchParams = new URLSearchParams(location.search);
   const shouldOpenNewRoll = initialSearchParams.get('newRoll') === '1';
   const openRollId = initialSearchParams.get('openRoll');
+  const rollDrawerView = initialSearchParams.get('rollView') === 'contactSheet' ? 'contactSheet' : 'details';
   const collectionIdParam = initialSearchParams.get('collectionId');
   const initialVisibleTabOrder = getVisibleRollsTabOrder(enableFilmMode);
   const [visibleTabOrder, setVisibleTabOrder] = useState<RollsTabId[]>(initialVisibleTabOrder);
@@ -283,7 +285,20 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
     const params = new URLSearchParams(location.search);
     params.delete('openRoll');
     params.delete('newRoll');
+    params.delete('rollView');
     navigate({ pathname: '/rolls', search: params.toString() ? `?${params.toString()}` : '' }, { replace: true });
+  };
+
+  // Switching between Details and Contact sheet is a mode change within the same
+  // drawer, not a new detail — same `replace` semantics as the library tab switch.
+  const setRollDrawerView = (view: 'details' | 'contactSheet') => {
+    const params = new URLSearchParams(location.search);
+    if (view === 'details') {
+      params.delete('rollView');
+    } else {
+      params.set('rollView', view);
+    }
+    navigate({ pathname: '/rolls', search: `?${params.toString()}` }, { replace: true });
   };
 
   const openCollectionDetail = (collection: Collection) => {
@@ -1607,7 +1622,32 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
               </button>
             </div>
             </div>
-            
+
+            <div className="roll-drawer-view-toggle" role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={rollDrawerView === 'details'}
+                className={`roll-drawer-view-tab ${rollDrawerView === 'details' ? 'active' : ''}`}
+                onClick={() => setRollDrawerView('details')}
+              >
+                {t('rolls.viewTabDetails')}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={rollDrawerView === 'contactSheet'}
+                className={`roll-drawer-view-tab ${rollDrawerView === 'contactSheet' ? 'active' : ''}`}
+                onClick={() => setRollDrawerView('contactSheet')}
+              >
+                {t('rolls.viewTabContactSheet')}
+              </button>
+            </div>
+
+            {rollDrawerView === 'contactSheet' ? (
+              <RollContactSheet roll={selectedRoll} />
+            ) : (
+            <>
             <div className="drawer-content roll-drawer-content">
               {/* Cover Upload Section */}
               <div className="drawer-section roll-drawer-section roll-drawer-cover-section">
@@ -1872,6 +1912,8 @@ export const RollsView: React.FC<RollsViewProps> = ({ enableFilmMode }) => {
                 {t('rolls.saveAllChanges')}
               </button>
             </div>
+            </>
+            )}
           </>
         )}
       </Drawer>

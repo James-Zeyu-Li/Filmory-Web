@@ -3,11 +3,12 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie, ComposedChart, Legend
 } from 'recharts';
-import { BarChart3, Camera, Film, Layers, ChevronDown } from 'lucide-react';
+import { BarChart3, Camera, Aperture, Film, Layers, ChevronDown } from 'lucide-react';
 import './StatsView.css';
 import { StatCard } from '../../components/ui/StatCard';
-import { useRolls, useCameras, useFilmStocks, usePhotoAssets, useCollections } from '../../hooks/useData';
+import { useRolls, useCameras, useLenses, useFilmStocks, usePhotoAssets, useCollections } from '../../hooks/useData';
 import type { CameraTransfer } from '../../db/schema';
+import { resolveLensUsageRanking } from '../../services/lensUsageRankingService';
 import { useLanguage } from '../../contexts/useLanguage';
 
 interface StatsViewProps {
@@ -28,6 +29,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
   // Live queries
   const rolls = useRolls();
   const cameras = useCameras();
+  const lenses = useLenses();
   const filmStocks = useFilmStocks();
   const collections = useCollections();
   const photoAssets = usePhotoAssets();
@@ -73,6 +75,9 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
+
+  // ===== Lens Usage Ranking =====
+  const lensChartData = resolveLensUsageRanking(rolls, lenses);
 
   const barColors = ['var(--chart-series-gold)', 'var(--chart-series-gold-soft)', 'var(--chart-series-gold-deep)', 'var(--chart-series-gold-dark)', 'var(--chart-series-gold-muted)'];
 
@@ -157,6 +162,35 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
                     />
                     <Bar dataKey="count" radius={[4, 4, 4, 4]} barSize={24} name={t('stats.cameraRecordUsage')}>
                       {cameraChartData.map((_, i) => (
+                        <Cell key={i} fill={barColors[i % barColors.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+
+          {/* 2. Lens Usage Chart */}
+          <div className="chart-card stats-chart-priority">
+            <div className="chart-header">
+              <Aperture size={18} />
+              <h3>{t('stats.lensRanking')}</h3>
+            </div>
+            <div className="chart-content">
+              {lensChartData.length === 0 ? (
+                <p className="no-data">{t('stats.noLensUsage')}</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={lensChartData} layout="vertical" margin={{ left: -10, right: 10 }}>
+                    <XAxis type="number" hide />
+                    <YAxis type="category" dataKey="name" width={110} tick={chartAxisTick} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      contentStyle={chartTooltipStyle}
+                      cursor={{ fill: 'var(--chart-hover-fill)' }}
+                    />
+                    <Bar dataKey="count" radius={[4, 4, 4, 4]} barSize={24} name={t('stats.lensRecordUsage')}>
+                      {lensChartData.map((_, i) => (
                         <Cell key={i} fill={barColors[i % barColors.length]} />
                       ))}
                     </Bar>

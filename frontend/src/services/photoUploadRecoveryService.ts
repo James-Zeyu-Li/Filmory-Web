@@ -163,6 +163,52 @@ export const commitUploadedRollCover = async (
 };
 
 /**
+ * Contact-sheet photos (Roll Contact Sheet, isPinned: 0) are additive, not a
+ * single-slot replacement like the cover — save/commit never touch
+ * Roll.coverPhotoId and never queue any other photo for deletion.
+ */
+export const saveDeferredContactSheetPhoto = async (photo: PhotoAsset): Promise<void> => {
+  if (!photo.id) throw new Error('Deferred photo uploads require an id.');
+
+  await db.transaction('rw', db.photoAssets, db.rolls, async () => {
+    suppressSyncRecordsForCurrentTransaction();
+    const roll = await db.rolls.get(photo.rollId);
+    if (!roll || roll.userId !== photo.userId) {
+      throw new Error('The related shooting record is no longer available.');
+    }
+
+    await db.photoAssets.add({ ...photo, replacesPhotoId: undefined });
+  });
+};
+
+const stageUploadedContactSheetPhoto = async (photo: PhotoAsset): Promise<void> => {
+  if (!photo.id || !photo.storageKey) {
+    throw new Error('Uploaded photo metadata requires an id and storage key.');
+  }
+
+  await db.transaction('rw', db.photoAssets, db.rolls, async () => {
+    const roll = await db.rolls.get(photo.rollId);
+    if (!roll || roll.userId !== photo.userId) {
+      throw new Error('The related shooting record is no longer available.');
+    }
+
+    await db.photoAssets.put({
+      ...photo,
+      blob: undefined,
+      cloudUploadPending: false,
+      cloudUploadError: undefined,
+      cloudDeletePending: false,
+      cloudDeleteError: undefined,
+      replacesPhotoId: undefined,
+    });
+  });
+};
+
+export const commitUploadedContactSheetPhoto = async (photo: PhotoAsset): Promise<void> => {
+  await stageUploadedContactSheetPhoto(photo);
+};
+
+/**
  * Upload local-only photo assets after a previous cloud upload failed and
  * retry any Storage deletions left from cover replacement.
  */
@@ -210,12 +256,19 @@ const repairPendingPhotosForUser = async (
       );
       const result = await uploadPhotoToCloud(file, userId, photo.rollId, undefined, photo.id);
       uploadedStorageKey = result.storageKey;
-      await stageUploadedRollCover({
+      const stagedPhoto = {
         ...photo,
         storageKey: result.storageKey,
         previewUrl: result.previewUrl,
         thumbnailUrl: result.thumbnailUrl,
-      });
+      };
+      // Contact-sheet photos (isPinned: 0) are additive and never touch
+      // Roll.coverPhotoId, unlike the cover slot (isPinned: 1) below.
+      if (photo.isPinned === 1) {
+        await stageUploadedRollCover(stagedPhoto);
+      } else {
+        await stageUploadedContactSheetPhoto(stagedPhoto);
+      }
       uploaded += 1;
     } catch (error) {
       failed += 1;
