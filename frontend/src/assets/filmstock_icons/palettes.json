@@ -1,34 +1,156 @@
 {
-  "Kodak": {
-    "primary": "#FFB700",
-    "secondary": ["#ED0000"]
-  },
-  "Fujifilm": {
-    "primary": "#008A3B",
-    "secondary": ["#E6001A", "#FFFFFF"]
-  },
-  "Ilford": {
-    "primary": "#111111",
-    "secondary": ["#F5F5F5"]
-  },
-  "Kentmere": {
-    "primary": "#6B3FA0",
-    "secondary": ["#E43B8B"],
-    "note": "Kentmere 包装常见紫/粉视觉"
-  },
-  "Lomography": {
-    "primary": "#FAE397"
-  },
-  "CineStill": {
-    "primary": "#D91F27",
-    "secondary": ["#F6F6F6"]
-  },
-  "Foma (福马)": {
-    "primary": "#A0820A",
-    "secondary": ["#FFFFFF"]
-  },
-  "乐凯 Lucky": {
-    "primary": "#EF2D29",
-    "secondary": ["#FDDE16", "#21A551"]
-  }
+  "Kodak": { "primary": "#FFC72C", "accent": "#ED1C24" },
+  "Kodak|ColorPlus 200": { "primary": "#FFC72C", "accent": "#ED1C24" },
+  "Kodak|Gold 200": { "primary": "#FFC72C", "accent": "#E6007E" },
+  "Kodak|Gold 400": { "primary": "#FFC72C", "accent": "#ED1C24" },
+  "Kodak|ProImage 100": { "primary": "#FFC72C", "accent": "#ED1C24" },
+  "Kodak|Ultramax 400": { "primary": "#FFC72C", "accent": "#ED1C24" },
+  "Kodak|Portra 160": { "primary": "#FFC72C", "accent": "#B7A8D9" },
+  "Kodak|Portra 400": { "primary": "#FFC72C", "accent": "#8E76B5" },
+  "Kodak|Portra 800": { "primary": "#FFC72C", "accent": "#B65A9E" },
+  "Kodak|Ektar 100": { "primary": "#FFC72C", "accent": "#1A1A1A" },
+  "Kodak|Vision3 50D": { "primary": "#FFC72C", "accent": "#D98E00" },
+  "Kodak|Vision3 250D": { "primary": "#FFC72C", "accent": "#E07B1F" },
+  "Kodak|Vision3 500T": { "primary": "#FFC72C", "accent": "#1B3E6F" },
+  "Kodak|Tri-X 400 (TX400)": { "primary": "#FFC72C", "accent": "#1A1A1A" },
+  "Kodak|T-Max 100": { "primary": "#FFC72C", "accent": "#1F7A5C" },
+  "Kodak|T-Max 400": { "primary": "#FFC72C", "accent": "#D07A2D" },
+  "Kodak|T-Max P3200": { "primary": "#FFC72C", "accent": "#2B2B2B" },
+  "Kodak|Double-X (5222)": { "primary": "#FFC72C", "accent": "#D8D8D8" },
+  "Kodak|Ektachrome E100": { "primary": "#FFC72C", "accent": "#1F6E5C" },
+
+  "Fujifilm": { "primary": "#00A651", "accent": "#E60012" },
+  "Fujifilm|C200": { "primary": "#00A651", "accent": "#6E4A9E" },
+  "Fujifilm|200": { "primary": "#00A651", "accent": "#C7A43A" },
+  "Fujifilm|400": { "primary": "#00A651", "accent": "#F2B705" },
+  "Fujifilm|Fujicolor 100": { "primary": "#00A651", "accent": "#F2B705" },
+  "Fujifilm|Superia X-TRA 400": { "primary": "#1F7A4C", "accent": "#E8B400" },
+  "Fujifilm|Superia Premium 400": { "primary": "#00A651", "accent": "#C7C7C7" },
+  "Fujifilm|Pro 400H": { "primary": "#00A651", "accent": "#E8A9B8" },
+  "Fujifilm|Reala 100": { "primary": "#00A651", "accent": "#2878B8" },
+  "Fujifilm|Neopan Acros 100 II": { "primary": "#2B2B2B", "accent": "#E0E0E0" },
+  "Fujifilm|Neopan 400": { "primary": "#2B2B2B", "accent": "#C7C7C7" },
+  "Fujifilm|Provia 100F": { "primary": "#00A651", "accent": "#2E5C8A" },
+  "Fujifilm|Velvia 50": { "primary": "#00A651", "accent": "#7650A8" },
+  "Fujifilm|Velvia 100": { "primary": "#00A651", "accent": "#6A4A96" },
+  "Fujifilm|Astia 100F": { "primary": "#00A651", "accent": "#E8A9C8" },
+
+  "Ilford": { "primary": "#101010", "accent": "#EA4335" },
+  "Ilford|Pan F Plus 50": { "primary": "#101010", "accent": "#D9B44A" },
+  "Ilford|FP4 Plus 125": { "primary": "#101010", "accent": "#3C8B41" },
+  "Ilford|HP5 Plus 400": { "primary": "#101010", "accent": "#E8501E" },
+  "Ilford|Delta 100 Professional": { "primary": "#101010", "accent": "#3E7CB8" },
+  "Ilford|Delta 400 Professional": { "primary": "#101010", "accent": "#6B8CAE" },
+  "Ilford|Delta 3200 Professional": { "primary": "#101010", "accent": "#5B3A8C" },
+  "Ilford|XP2 Super 400 (C41)": { "primary": "#101010", "accent": "#2E8B87" },
+  "Ilford|SFX 200": { "primary": "#101010", "accent": "#8B1E3F" },
+  "Ilford|Ortho Plus 80": { "primary": "#101010", "accent": "#2F7A6B" },
+
+  "Kentmere": { "primary": "#EDE6D2", "accent": "#4C8C5A" },
+  "Kentmere|100": { "primary": "#EDE6D2", "accent": "#4C8C5A" },
+  "Kentmere|200": { "primary": "#EDE6D2", "accent": "#D4A017" },
+  "Kentmere|400": { "primary": "#EDE6D2", "accent": "#C1442D" },
+
+  "Lomography": { "primary": "#E2001A", "accent": "#00AEEF" },
+  "Lomography|Color Negative 100": { "primary": "#F2E4A6", "accent": "#1A1A1A" },
+  "Lomography|Color Negative 400": { "primary": "#E8722C", "accent": "#1A1A1A" },
+  "Lomography|Color Negative 800": { "primary": "#A61B4A", "accent": "#1A1A1A" },
+  "Lomography|LomoChrome Purple": { "primary": "#6C3483", "accent": "#C2185B" },
+  "Lomography|LomoChrome Metropolis": { "primary": "#6E6E68", "accent": "#C99A2E" },
+  "Lomography|LomoChrome Turquoise": { "primary": "#16A6A3", "accent": "#E86F3D" },
+  "Lomography|Redscale XR 50-200": { "primary": "#C1440E", "accent": "#1A1A1A" },
+  "Lomography|Earl Grey B&W 100": { "primary": "#6E6E6E", "accent": "#EDEDED" },
+  "Lomography|Lady Grey B&W 400": { "primary": "#4A4A4A", "accent": "#EDEDED" },
+
+  "Fomapan": { "primary": "#EFE7D6", "accent": "#1B4F72" },
+  "Fomapan|100 Classic": { "primary": "#EFE7D6", "accent": "#1B4F72" },
+  "Fomapan|200 Creative": { "primary": "#EFE7D6", "accent": "#D68A2E" },
+  "Fomapan|400 Action": { "primary": "#4C7A4C", "accent": "#C0392B" },
+
+  "CineStill": { "primary": "#141414", "accent": "#C8102E" },
+  "CineStill|50D": { "primary": "#141414", "accent": "#F2B705" },
+  "CineStill|400D": { "primary": "#141414", "accent": "#3FA796" },
+  "CineStill|800T": { "primary": "#C62828", "accent": "#171717" },
+  "CineStill|BwXX (Double-X)": { "primary": "#141414", "accent": "#D8D8D8" },
+
+  "Lucky": { "primary": "#D8262C", "accent": "#FDD835" },
+  "Lucky|SHD 100": { "primary": "#D8262C", "accent": "#FDD835" },
+  "Lucky|Color 200": { "primary": "#D8262C", "accent": "#3E73A8" },
+
+  "Rollei": { "primary": "#111111", "accent": "#C8A951" },
+  "Rollei|RPX 25": { "primary": "#FFFFFF", "accent": "#2E8B77" },
+  "Rollei|RPX 100": { "primary": "#FFFFFF", "accent": "#3B73A8" },
+  "Rollei|RPX 400": { "primary": "#FFFFFF", "accent": "#D17A3A" },
+  "Rollei|Retro 80S": { "primary": "#C7BBA0", "accent": "#4B4B4B" },
+  "Rollei|Retro 400S": { "primary": "#555555", "accent": "#C7BBA0" },
+  "Rollei|Ortho 25": { "primary": "#FFFFFF", "accent": "#8A9A3A" },
+  "Rollei|Infrared 400": { "primary": "#111111", "accent": "#D71920" },
+
+  "Harman": { "primary": "#111111", "accent": "#D71920" },
+  "Harman|Phoenix 200 (Color)": { "primary": "#D71920", "accent": "#F2C94C" },
+  "Harman|Direct Positive Paper": { "primary": "#111111", "accent": "#E8E8E8" },
+
+  "Shanghai": { "primary": "#D4A72C", "accent": "#C62828" },
+  "Shanghai|GP3 100": { "primary": "#D4A72C", "accent": "#C62828" },
+  "Shanghai|Shenguang 400": { "primary": "#D4A72C", "accent": "#C85A35" },
+
+  "ORWO": { "primary": "#D71920", "accent": "#111111" },
+  "ORWO|UN54": { "primary": "#111111", "accent": "#D71920" },
+  "ORWO|N75": { "primary": "#111111", "accent": "#F2C94C" },
+
+  "AgfaPhoto": { "primary": "#E2231A", "accent": "#1A1A1A" },
+  "AgfaPhoto|Vista Plus 200": { "primary": "#2E7D46", "accent": "#E2231A" },
+  "AgfaPhoto|APX 100": { "primary": "#141414", "accent": "#C0392B" },
+  "AgfaPhoto|APX 400": { "primary": "#141414", "accent": "#D68A2E" },
+
+  "ADOX": { "primary": "#E8E8E8", "accent": "#1A1A1A" },
+  "ADOX|CHS 100 II": { "primary": "#E8E8E8", "accent": "#D71920" },
+  "ADOX|HR-50": { "primary": "#E8E8E8", "accent": "#315C7A" },
+  "ADOX|CMS 20 II": { "primary": "#111111", "accent": "#E0E0E0" },
+  "ADOX|Silvermax 100": { "primary": "#E8E8E8", "accent": "#4A7A8C" },
+
+  "Bergger": { "primary": "#1A1A1A", "accent": "#E8E5DC" },
+  "Bergger|Pancro 400": { "primary": "#1A1A1A", "accent": "#C9C2B0" },
+
+  "Ferrania": { "primary": "#C6A24A", "accent": "#1B3A57" },
+  "Ferrania|P30 Alpha": { "primary": "#C6A24A", "accent": "#1B3A57" },
+
+  "Kosmo Foto": { "primary": "#1B2A4A", "accent": "#F2C94C" },
+  "Kosmo Foto|Mono 100": { "primary": "#1B2A4A", "accent": "#4FC3D9" },
+  "Kosmo Foto|Agent Shadow 400": { "primary": "#2B2B2B", "accent": "#D9432E" },
+
+  "Svema": { "primary": "#1B3A57", "accent": "#C0392B" },
+  "Svema|Foto 100": { "primary": "#1B3A57", "accent": "#C0392B" },
+
+  "Reflx Lab": { "primary": "#111111", "accent": "#F2C94C" },
+  "Reflx Lab|400 Daylight": { "primary": "#111111", "accent": "#F2C94C" },
+  "Reflx Lab|250D": { "primary": "#111111", "accent": "#3B82C4" },
+  "Reflx Lab|200T": { "primary": "#111111", "accent": "#E28B32" },
+  "Reflx Lab|320D": { "primary": "#111111", "accent": "#4E9F8A" },
+  "Reflx Lab|640T": { "primary": "#111111", "accent": "#C94B4B" },
+
+  "Flic Film": { "primary": "#111111", "accent": "#F2C94C" },
+  "Flic Film|Aurora 400": { "primary": "#111111", "accent": "#5E8F9A" },
+  "Flic Film|Street Candy 400": { "primary": "#111111", "accent": "#E78A3D" },
+  "Flic Film|Psychedelic Street 400": { "primary": "#C9A66B", "accent": "#5C6670" },
+  "Flic Film|Street Savvy 400": { "primary": "#111111", "accent": "#E7A63B" },
+  "Flic Film|Apollo 18": { "primary": "#111111", "accent": "#6C73B8" },
+  "Flic Film|MTN100": { "primary": "#111111", "accent": "#5B8C75" },
+  "Flic Film|ATM400": { "primary": "#111111", "accent": "#E56B9B" },
+  "Flic Film|UltraPan 100": { "primary": "#E7E7E2", "accent": "#245A7A" },
+  "Flic Film|UltraPan 200": { "primary": "#E7E7E2", "accent": "#8A6F3D" },
+  "Flic Film|UltraPan 400": { "primary": "#E7E7E2", "accent": "#B44C45" },
+  "Flic Film|Cine Colour 50D": { "primary": "#111111", "accent": "#2E86C1" },
+  "Flic Film|Cine Colour 200T": { "primary": "#111111", "accent": "#D27A32" },
+  "Flic Film|Cine Colour 250D": { "primary": "#111111", "accent": "#2E86C1" },
+  "Flic Film|Cine Colour 500T": { "primary": "#111111", "accent": "#D04A3A" },
+  "Flic Film|Double-X Cine Film": { "primary": "#111111", "accent": "#E0E0E0" },
+
+  "Candido": { "primary": "#4E7F54", "accent": "#F2F0E6" },
+  "Candido|Candido 200": { "primary": "#4E7F54", "accent": "#D5A63A" },
+  "Candido|Candido 400": { "primary": "#4E7F54", "accent": "#C94C4C" },
+  "Candido|Candido 800": { "primary": "#4E7F54", "accent": "#3F70A8" },
+
+  "Digital": { "primary": "#9CA3AF", "accent": "#6B7280" },
+  "Generic": { "primary": "#9CA3AF", "accent": "#6B7280" }
 }

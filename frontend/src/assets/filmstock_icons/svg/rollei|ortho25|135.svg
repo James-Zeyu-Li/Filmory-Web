@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <style>
+      .brand { font-family: 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif; font-weight: 700; letter-spacing: 1px; }
+      .model { font-family: 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif; font-weight: 600; letter-spacing: 0.5px; }
+      .badge { font-family: 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif; font-weight: 700; }
+    </style>
+  </defs>
+  <rect x="24" y="24" width="976" height="976" rx="96" fill="#FFFFFF"/>
+  <rect x="24" y="729" width="976" height="153" fill="#8A9A3A"/>
+  <rect x="776" y="72" width="176" height="92" rx="20" fill="#8A9A3A"/>
+  <text x="864.0" y="133.0" font-size="44" class="badge" text-anchor="middle" fill="#F7F7F7">135</text>
+  <text x="512" y="450" font-size="124" class="brand" text-anchor="middle" fill="#1C1C1C">ROLLEI</text>
+  <text x="512" y="580" font-size="112" class="model" text-anchor="middle" fill="#1C1C1C"><tspan x="512" dy="0">Ortho 25</tspan></text>
+</svg>

@@ -1,682 +1,1982 @@
 [
   {
+    "id": "kodak|colorplus200|135",
+    "brand": "Kodak",
+    "name": "ColorPlus 200",
+    "displayName": "ColorPlus 200",
+    "filmFormat": "135",
+    "primary": "#FFC72C",
+    "accent": "#ED1C24"
+  },
+  {
+    "id": "kodak|colorplus200|120",
+    "brand": "Kodak",
+    "name": "ColorPlus 200",
+    "displayName": "ColorPlus 200",
+    "filmFormat": "120",
+    "primary": "#FFC72C",
+    "accent": "#ED1C24"
+  },
+  {
     "id": "kodak|gold200|135",
     "brand": "Kodak",
     "name": "Gold 200",
+    "displayName": "Gold 200",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|gold200|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|gold200|135.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
+    "primary": "#FFC72C",
+    "accent": "#E6007E"
   },
   {
     "id": "kodak|gold200|120",
     "brand": "Kodak",
     "name": "Gold 200",
+    "displayName": "Gold 200",
     "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|gold200|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|gold200|120.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
+    "primary": "#FFC72C",
+    "accent": "#E6007E"
   },
   {
-    "id": "kodak|color200|135",
+    "id": "kodak|gold400|135",
     "brand": "Kodak",
-    "name": "Color 200",
+    "name": "Gold 400",
+    "displayName": "Gold 400",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|color200|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|color200|135.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
+    "primary": "#FFC72C",
+    "accent": "#ED1C24"
   },
   {
-    "id": "kodak|color200|120",
+    "id": "kodak|gold400|120",
     "brand": "Kodak",
-    "name": "Color 200",
+    "name": "Gold 400",
+    "displayName": "Gold 400",
     "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|color200|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|color200|120.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
+    "primary": "#FFC72C",
+    "accent": "#ED1C24"
   },
   {
-    "id": "kodak|ektar100|135",
+    "id": "kodak|proimage100|135",
     "brand": "Kodak",
-    "name": "Ektar 100",
+    "name": "ProImage 100",
+    "displayName": "ProImage 100",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|ektar100|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|ektar100|135.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
+    "primary": "#FFC72C",
+    "accent": "#ED1C24"
   },
   {
-    "id": "kodak|ektar100|120",
+    "id": "kodak|proimage100|120",
     "brand": "Kodak",
-    "name": "Ektar 100",
+    "name": "ProImage 100",
+    "displayName": "ProImage 100",
     "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|ektar100|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|ektar100|120.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
+    "primary": "#FFC72C",
+    "accent": "#ED1C24"
+  },
+  {
+    "id": "kodak|ultramax400|135",
+    "brand": "Kodak",
+    "name": "Ultramax 400",
+    "displayName": "Ultramax 400",
+    "filmFormat": "135",
+    "primary": "#FFC72C",
+    "accent": "#ED1C24"
+  },
+  {
+    "id": "kodak|ultramax400|120",
+    "brand": "Kodak",
+    "name": "Ultramax 400",
+    "displayName": "Ultramax 400",
+    "filmFormat": "120",
+    "primary": "#FFC72C",
+    "accent": "#ED1C24"
   },
   {
     "id": "kodak|portra160|135",
     "brand": "Kodak",
     "name": "Portra 160",
+    "displayName": "Portra 160",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|portra160|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|portra160|135.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
+    "primary": "#FFC72C",
+    "accent": "#B7A8D9"
   },
   {
     "id": "kodak|portra160|120",
     "brand": "Kodak",
     "name": "Portra 160",
+    "displayName": "Portra 160",
     "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|portra160|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|portra160|120.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
+    "primary": "#FFC72C",
+    "accent": "#B7A8D9"
   },
   {
     "id": "kodak|portra400|135",
     "brand": "Kodak",
     "name": "Portra 400",
+    "displayName": "Portra 400",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|portra400|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|portra400|135.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
+    "primary": "#FFC72C",
+    "accent": "#8E76B5"
   },
   {
     "id": "kodak|portra400|120",
     "brand": "Kodak",
     "name": "Portra 400",
+    "displayName": "Portra 400",
     "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|portra400|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|portra400|120.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
+    "primary": "#FFC72C",
+    "accent": "#8E76B5"
   },
   {
     "id": "kodak|portra800|135",
     "brand": "Kodak",
     "name": "Portra 800",
+    "displayName": "Portra 800",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|portra800|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|portra800|135.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
+    "primary": "#FFC72C",
+    "accent": "#B65A9E"
   },
   {
     "id": "kodak|portra800|120",
     "brand": "Kodak",
     "name": "Portra 800",
+    "displayName": "Portra 800",
     "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|portra800|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|portra800|120.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
+    "primary": "#FFC72C",
+    "accent": "#B65A9E"
   },
   {
-    "id": "kodak|ultramax400|135",
+    "id": "kodak|ektar100|135",
     "brand": "Kodak",
-    "name": "UltraMax 400",
+    "name": "Ektar 100",
+    "displayName": "Ektar 100",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|ultramax400|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|ultramax400|135.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
+    "primary": "#FFC72C",
+    "accent": "#1A1A1A"
   },
   {
-    "id": "kodak|trix400|135",
+    "id": "kodak|ektar100|120",
     "brand": "Kodak",
-    "name": "Tri-X 400",
-    "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|trix400|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|trix400|135.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
-  },
-  {
-    "id": "kodak|trix400|120",
-    "brand": "Kodak",
-    "name": "Tri-X 400",
+    "name": "Ektar 100",
+    "displayName": "Ektar 100",
     "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|trix400|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|trix400|120.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
+    "primary": "#FFC72C",
+    "accent": "#1A1A1A"
+  },
+  {
+    "id": "kodak|vision350d|135",
+    "brand": "Kodak",
+    "name": "Vision3 50D",
+    "displayName": "Vision3 50D",
+    "filmFormat": "135",
+    "primary": "#FFC72C",
+    "accent": "#D98E00"
+  },
+  {
+    "id": "kodak|vision350d|120",
+    "brand": "Kodak",
+    "name": "Vision3 50D",
+    "displayName": "Vision3 50D",
+    "filmFormat": "120",
+    "primary": "#FFC72C",
+    "accent": "#D98E00"
+  },
+  {
+    "id": "kodak|vision3250d|135",
+    "brand": "Kodak",
+    "name": "Vision3 250D",
+    "displayName": "Vision3 250D",
+    "filmFormat": "135",
+    "primary": "#FFC72C",
+    "accent": "#E07B1F"
+  },
+  {
+    "id": "kodak|vision3250d|120",
+    "brand": "Kodak",
+    "name": "Vision3 250D",
+    "displayName": "Vision3 250D",
+    "filmFormat": "120",
+    "primary": "#FFC72C",
+    "accent": "#E07B1F"
+  },
+  {
+    "id": "kodak|vision3500t|135",
+    "brand": "Kodak",
+    "name": "Vision3 500T",
+    "displayName": "Vision3 500T",
+    "filmFormat": "135",
+    "primary": "#FFC72C",
+    "accent": "#1B3E6F"
+  },
+  {
+    "id": "kodak|vision3500t|120",
+    "brand": "Kodak",
+    "name": "Vision3 500T",
+    "displayName": "Vision3 500T",
+    "filmFormat": "120",
+    "primary": "#FFC72C",
+    "accent": "#1B3E6F"
+  },
+  {
+    "id": "kodak|trix400tx400|135",
+    "brand": "Kodak",
+    "name": "Tri-X 400 (TX400)",
+    "displayName": "Tri-X 400",
+    "filmFormat": "135",
+    "primary": "#FFC72C",
+    "accent": "#1A1A1A"
+  },
+  {
+    "id": "kodak|trix400tx400|120",
+    "brand": "Kodak",
+    "name": "Tri-X 400 (TX400)",
+    "displayName": "Tri-X 400",
+    "filmFormat": "120",
+    "primary": "#FFC72C",
+    "accent": "#1A1A1A"
   },
   {
     "id": "kodak|tmax100|135",
     "brand": "Kodak",
     "name": "T-Max 100",
+    "displayName": "T-Max 100",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|tmax100|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|tmax100|135.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
+    "primary": "#FFC72C",
+    "accent": "#1F7A5C"
   },
   {
     "id": "kodak|tmax100|120",
     "brand": "Kodak",
     "name": "T-Max 100",
+    "displayName": "T-Max 100",
     "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|tmax100|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|tmax100|120.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
+    "primary": "#FFC72C",
+    "accent": "#1F7A5C"
   },
   {
     "id": "kodak|tmax400|135",
     "brand": "Kodak",
     "name": "T-Max 400",
+    "displayName": "T-Max 400",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|tmax400|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|tmax400|135.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
+    "primary": "#FFC72C",
+    "accent": "#D07A2D"
   },
   {
     "id": "kodak|tmax400|120",
     "brand": "Kodak",
     "name": "T-Max 400",
+    "displayName": "T-Max 400",
     "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|tmax400|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|tmax400|120.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
+    "primary": "#FFC72C",
+    "accent": "#D07A2D"
+  },
+  {
+    "id": "kodak|tmaxp3200|135",
+    "brand": "Kodak",
+    "name": "T-Max P3200",
+    "displayName": "T-Max P3200",
+    "filmFormat": "135",
+    "primary": "#FFC72C",
+    "accent": "#2B2B2B"
+  },
+  {
+    "id": "kodak|tmaxp3200|120",
+    "brand": "Kodak",
+    "name": "T-Max P3200",
+    "displayName": "T-Max P3200",
+    "filmFormat": "120",
+    "primary": "#FFC72C",
+    "accent": "#2B2B2B"
+  },
+  {
+    "id": "kodak|doublex5222|135",
+    "brand": "Kodak",
+    "name": "Double-X (5222)",
+    "displayName": "Double-X 5222",
+    "filmFormat": "135",
+    "primary": "#FFC72C",
+    "accent": "#D8D8D8"
+  },
+  {
+    "id": "kodak|doublex5222|120",
+    "brand": "Kodak",
+    "name": "Double-X (5222)",
+    "displayName": "Double-X 5222",
+    "filmFormat": "120",
+    "primary": "#FFC72C",
+    "accent": "#D8D8D8"
   },
   {
     "id": "kodak|ektachromee100|135",
     "brand": "Kodak",
     "name": "Ektachrome E100",
+    "displayName": "Ektachrome E100",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|ektachromee100|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|ektachromee100|135.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
+    "primary": "#FFC72C",
+    "accent": "#1F6E5C"
   },
   {
     "id": "kodak|ektachromee100|120",
     "brand": "Kodak",
     "name": "Ektachrome E100",
+    "displayName": "Ektachrome E100",
     "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|ektachromee100|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|ektachromee100|120.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
+    "primary": "#FFC72C",
+    "accent": "#1F6E5C"
   },
   {
-    "id": "kodak|vision350d5203|135",
-    "brand": "Kodak",
-    "name": "Vision3 50D 5203",
-    "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|vision350d5203|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|vision350d5203|135.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
-  },
-  {
-    "id": "kodak|vision3250d5207|135",
-    "brand": "Kodak",
-    "name": "Vision3 250D 5207",
-    "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|vision3250d5207|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|vision3250d5207|135.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
-  },
-  {
-    "id": "kodak|vision3200t5213|135",
-    "brand": "Kodak",
-    "name": "Vision3 200T 5213",
-    "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|vision3200t5213|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|vision3200t5213|135.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
-  },
-  {
-    "id": "kodak|vision3500t5219|135",
-    "brand": "Kodak",
-    "name": "Vision3 500T 5219",
-    "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|vision3500t5219|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|vision3500t5219|135.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
-  },
-  {
-    "id": "kodak|eastmandoublex5222|135",
-    "brand": "Kodak",
-    "name": "Eastman Double-X 5222",
-    "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kodak|eastmandoublex5222|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kodak|eastmandoublex5222|135.png",
-    "primary": "#FFB700",
-    "accent": "#ED0000"
-  },
-  {
-    "id": "fujifilm|fujicolor200|135",
+    "id": "fujifilm|c200|135",
     "brand": "Fujifilm",
-    "name": "Fujicolor 200",
+    "name": "C200",
+    "displayName": "C200",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/fujifilm|fujicolor200|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/fujifilm|fujicolor200|135.png",
-    "primary": "#008A3B",
-    "accent": "#E6001A"
+    "primary": "#00A651",
+    "accent": "#6E4A9E"
   },
   {
-    "id": "fujifilm|fujifilm400|135",
+    "id": "fujifilm|c200|120",
     "brand": "Fujifilm",
-    "name": "FUJIFILM 400",
+    "name": "C200",
+    "displayName": "C200",
+    "filmFormat": "120",
+    "primary": "#00A651",
+    "accent": "#6E4A9E"
+  },
+  {
+    "id": "fujifilm|200|135",
+    "brand": "Fujifilm",
+    "name": "200",
+    "displayName": "200",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/fujifilm|fujifilm400|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/fujifilm|fujifilm400|135.png",
-    "primary": "#008A3B",
-    "accent": "#E6001A"
+    "primary": "#00A651",
+    "accent": "#C7A43A"
+  },
+  {
+    "id": "fujifilm|200|120",
+    "brand": "Fujifilm",
+    "name": "200",
+    "displayName": "200",
+    "filmFormat": "120",
+    "primary": "#00A651",
+    "accent": "#C7A43A"
+  },
+  {
+    "id": "fujifilm|400|135",
+    "brand": "Fujifilm",
+    "name": "400",
+    "displayName": "400",
+    "filmFormat": "135",
+    "primary": "#00A651",
+    "accent": "#F2B705"
+  },
+  {
+    "id": "fujifilm|400|120",
+    "brand": "Fujifilm",
+    "name": "400",
+    "displayName": "400",
+    "filmFormat": "120",
+    "primary": "#00A651",
+    "accent": "#F2B705"
+  },
+  {
+    "id": "fujifilm|fujicolor100|135",
+    "brand": "Fujifilm",
+    "name": "Fujicolor 100",
+    "displayName": "Fujicolor 100",
+    "filmFormat": "135",
+    "primary": "#00A651",
+    "accent": "#F2B705"
+  },
+  {
+    "id": "fujifilm|fujicolor100|120",
+    "brand": "Fujifilm",
+    "name": "Fujicolor 100",
+    "displayName": "Fujicolor 100",
+    "filmFormat": "120",
+    "primary": "#00A651",
+    "accent": "#F2B705"
   },
   {
     "id": "fujifilm|superiaxtra400|135",
     "brand": "Fujifilm",
     "name": "Superia X-TRA 400",
+    "displayName": "Superia X-TRA 400",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/fujifilm|superiaxtra400|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/fujifilm|superiaxtra400|135.png",
-    "primary": "#008A3B",
-    "accent": "#E6001A"
+    "primary": "#1F7A4C",
+    "accent": "#E8B400"
   },
   {
-    "id": "ilford|hp5plus400|135",
-    "brand": "Ilford",
-    "name": "HP5 Plus 400",
-    "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/ilford|hp5plus400|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/ilford|hp5plus400|135.png",
-    "primary": "#111111",
-    "accent": "#F5F5F5"
-  },
-  {
-    "id": "ilford|hp5plus400|120",
-    "brand": "Ilford",
-    "name": "HP5 Plus 400",
+    "id": "fujifilm|superiaxtra400|120",
+    "brand": "Fujifilm",
+    "name": "Superia X-TRA 400",
+    "displayName": "Superia X-TRA 400",
     "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/ilford|hp5plus400|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/ilford|hp5plus400|120.png",
-    "primary": "#111111",
-    "accent": "#F5F5F5"
+    "primary": "#1F7A4C",
+    "accent": "#E8B400"
+  },
+  {
+    "id": "fujifilm|superiapremium400|135",
+    "brand": "Fujifilm",
+    "name": "Superia Premium 400",
+    "displayName": "Superia Premium 400",
+    "filmFormat": "135",
+    "primary": "#00A651",
+    "accent": "#C7C7C7"
+  },
+  {
+    "id": "fujifilm|superiapremium400|120",
+    "brand": "Fujifilm",
+    "name": "Superia Premium 400",
+    "displayName": "Superia Premium 400",
+    "filmFormat": "120",
+    "primary": "#00A651",
+    "accent": "#C7C7C7"
+  },
+  {
+    "id": "fujifilm|pro400h|135",
+    "brand": "Fujifilm",
+    "name": "Pro 400H",
+    "displayName": "Pro 400H",
+    "filmFormat": "135",
+    "primary": "#00A651",
+    "accent": "#E8A9B8"
+  },
+  {
+    "id": "fujifilm|pro400h|120",
+    "brand": "Fujifilm",
+    "name": "Pro 400H",
+    "displayName": "Pro 400H",
+    "filmFormat": "120",
+    "primary": "#00A651",
+    "accent": "#E8A9B8"
+  },
+  {
+    "id": "fujifilm|reala100|135",
+    "brand": "Fujifilm",
+    "name": "Reala 100",
+    "displayName": "Reala 100",
+    "filmFormat": "135",
+    "primary": "#00A651",
+    "accent": "#2878B8"
+  },
+  {
+    "id": "fujifilm|reala100|120",
+    "brand": "Fujifilm",
+    "name": "Reala 100",
+    "displayName": "Reala 100",
+    "filmFormat": "120",
+    "primary": "#00A651",
+    "accent": "#2878B8"
+  },
+  {
+    "id": "fujifilm|neopanacros100ii|135",
+    "brand": "Fujifilm",
+    "name": "Neopan Acros 100 II",
+    "displayName": "Neopan Acros 100 II",
+    "filmFormat": "135",
+    "primary": "#2B2B2B",
+    "accent": "#E0E0E0"
+  },
+  {
+    "id": "fujifilm|neopanacros100ii|120",
+    "brand": "Fujifilm",
+    "name": "Neopan Acros 100 II",
+    "displayName": "Neopan Acros 100 II",
+    "filmFormat": "120",
+    "primary": "#2B2B2B",
+    "accent": "#E0E0E0"
+  },
+  {
+    "id": "fujifilm|neopan400|135",
+    "brand": "Fujifilm",
+    "name": "Neopan 400",
+    "displayName": "Neopan 400",
+    "filmFormat": "135",
+    "primary": "#2B2B2B",
+    "accent": "#C7C7C7"
+  },
+  {
+    "id": "fujifilm|neopan400|120",
+    "brand": "Fujifilm",
+    "name": "Neopan 400",
+    "displayName": "Neopan 400",
+    "filmFormat": "120",
+    "primary": "#2B2B2B",
+    "accent": "#C7C7C7"
+  },
+  {
+    "id": "fujifilm|provia100f|135",
+    "brand": "Fujifilm",
+    "name": "Provia 100F",
+    "displayName": "Provia 100F",
+    "filmFormat": "135",
+    "primary": "#00A651",
+    "accent": "#2E5C8A"
+  },
+  {
+    "id": "fujifilm|provia100f|120",
+    "brand": "Fujifilm",
+    "name": "Provia 100F",
+    "displayName": "Provia 100F",
+    "filmFormat": "120",
+    "primary": "#00A651",
+    "accent": "#2E5C8A"
+  },
+  {
+    "id": "fujifilm|velvia50|135",
+    "brand": "Fujifilm",
+    "name": "Velvia 50",
+    "displayName": "Velvia 50",
+    "filmFormat": "135",
+    "primary": "#00A651",
+    "accent": "#7650A8"
+  },
+  {
+    "id": "fujifilm|velvia50|120",
+    "brand": "Fujifilm",
+    "name": "Velvia 50",
+    "displayName": "Velvia 50",
+    "filmFormat": "120",
+    "primary": "#00A651",
+    "accent": "#7650A8"
+  },
+  {
+    "id": "fujifilm|velvia100|135",
+    "brand": "Fujifilm",
+    "name": "Velvia 100",
+    "displayName": "Velvia 100",
+    "filmFormat": "135",
+    "primary": "#00A651",
+    "accent": "#6A4A96"
+  },
+  {
+    "id": "fujifilm|velvia100|120",
+    "brand": "Fujifilm",
+    "name": "Velvia 100",
+    "displayName": "Velvia 100",
+    "filmFormat": "120",
+    "primary": "#00A651",
+    "accent": "#6A4A96"
+  },
+  {
+    "id": "fujifilm|astia100f|135",
+    "brand": "Fujifilm",
+    "name": "Astia 100F",
+    "displayName": "Astia 100F",
+    "filmFormat": "135",
+    "primary": "#00A651",
+    "accent": "#E8A9C8"
+  },
+  {
+    "id": "fujifilm|astia100f|120",
+    "brand": "Fujifilm",
+    "name": "Astia 100F",
+    "displayName": "Astia 100F",
+    "filmFormat": "120",
+    "primary": "#00A651",
+    "accent": "#E8A9C8"
+  },
+  {
+    "id": "ilford|panfplus50|135",
+    "brand": "Ilford",
+    "name": "Pan F Plus 50",
+    "displayName": "Pan F Plus 50",
+    "filmFormat": "135",
+    "primary": "#101010",
+    "accent": "#D9B44A"
+  },
+  {
+    "id": "ilford|panfplus50|120",
+    "brand": "Ilford",
+    "name": "Pan F Plus 50",
+    "displayName": "Pan F Plus 50",
+    "filmFormat": "120",
+    "primary": "#101010",
+    "accent": "#D9B44A"
   },
   {
     "id": "ilford|fp4plus125|135",
     "brand": "Ilford",
     "name": "FP4 Plus 125",
+    "displayName": "FP4 Plus 125",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/ilford|fp4plus125|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/ilford|fp4plus125|135.png",
-    "primary": "#111111",
-    "accent": "#F5F5F5"
+    "primary": "#101010",
+    "accent": "#3C8B41"
   },
   {
     "id": "ilford|fp4plus125|120",
     "brand": "Ilford",
     "name": "FP4 Plus 125",
+    "displayName": "FP4 Plus 125",
     "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/ilford|fp4plus125|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/ilford|fp4plus125|120.png",
-    "primary": "#111111",
-    "accent": "#F5F5F5"
+    "primary": "#101010",
+    "accent": "#3C8B41"
   },
   {
-    "id": "ilford|delta100|135",
+    "id": "ilford|hp5plus400|135",
     "brand": "Ilford",
-    "name": "Delta 100",
+    "name": "HP5 Plus 400",
+    "displayName": "HP5 Plus 400",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/ilford|delta100|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/ilford|delta100|135.png",
-    "primary": "#111111",
-    "accent": "#F5F5F5"
+    "primary": "#101010",
+    "accent": "#E8501E"
   },
   {
-    "id": "ilford|delta100|120",
+    "id": "ilford|hp5plus400|120",
     "brand": "Ilford",
-    "name": "Delta 100",
+    "name": "HP5 Plus 400",
+    "displayName": "HP5 Plus 400",
     "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/ilford|delta100|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/ilford|delta100|120.png",
-    "primary": "#111111",
-    "accent": "#F5F5F5"
+    "primary": "#101010",
+    "accent": "#E8501E"
   },
   {
-    "id": "kentmere|kentmere100|135",
+    "id": "ilford|delta100professional|135",
+    "brand": "Ilford",
+    "name": "Delta 100 Professional",
+    "displayName": "Delta 100",
+    "filmFormat": "135",
+    "primary": "#101010",
+    "accent": "#3E7CB8"
+  },
+  {
+    "id": "ilford|delta100professional|120",
+    "brand": "Ilford",
+    "name": "Delta 100 Professional",
+    "displayName": "Delta 100",
+    "filmFormat": "120",
+    "primary": "#101010",
+    "accent": "#3E7CB8"
+  },
+  {
+    "id": "ilford|delta400professional|135",
+    "brand": "Ilford",
+    "name": "Delta 400 Professional",
+    "displayName": "Delta 400",
+    "filmFormat": "135",
+    "primary": "#101010",
+    "accent": "#6B8CAE"
+  },
+  {
+    "id": "ilford|delta400professional|120",
+    "brand": "Ilford",
+    "name": "Delta 400 Professional",
+    "displayName": "Delta 400",
+    "filmFormat": "120",
+    "primary": "#101010",
+    "accent": "#6B8CAE"
+  },
+  {
+    "id": "ilford|delta3200professional|135",
+    "brand": "Ilford",
+    "name": "Delta 3200 Professional",
+    "displayName": "Delta 3200",
+    "filmFormat": "135",
+    "primary": "#101010",
+    "accent": "#5B3A8C"
+  },
+  {
+    "id": "ilford|delta3200professional|120",
+    "brand": "Ilford",
+    "name": "Delta 3200 Professional",
+    "displayName": "Delta 3200",
+    "filmFormat": "120",
+    "primary": "#101010",
+    "accent": "#5B3A8C"
+  },
+  {
+    "id": "ilford|xp2super400c41|135",
+    "brand": "Ilford",
+    "name": "XP2 Super 400 (C41)",
+    "displayName": "XP2 Super 400",
+    "filmFormat": "135",
+    "primary": "#101010",
+    "accent": "#2E8B87"
+  },
+  {
+    "id": "ilford|xp2super400c41|120",
+    "brand": "Ilford",
+    "name": "XP2 Super 400 (C41)",
+    "displayName": "XP2 Super 400",
+    "filmFormat": "120",
+    "primary": "#101010",
+    "accent": "#2E8B87"
+  },
+  {
+    "id": "ilford|sfx200|135",
+    "brand": "Ilford",
+    "name": "SFX 200",
+    "displayName": "SFX 200",
+    "filmFormat": "135",
+    "primary": "#101010",
+    "accent": "#8B1E3F"
+  },
+  {
+    "id": "ilford|sfx200|120",
+    "brand": "Ilford",
+    "name": "SFX 200",
+    "displayName": "SFX 200",
+    "filmFormat": "120",
+    "primary": "#101010",
+    "accent": "#8B1E3F"
+  },
+  {
+    "id": "ilford|orthoplus80|135",
+    "brand": "Ilford",
+    "name": "Ortho Plus 80",
+    "displayName": "Ortho Plus 80",
+    "filmFormat": "135",
+    "primary": "#101010",
+    "accent": "#2F7A6B"
+  },
+  {
+    "id": "ilford|orthoplus80|120",
+    "brand": "Ilford",
+    "name": "Ortho Plus 80",
+    "displayName": "Ortho Plus 80",
+    "filmFormat": "120",
+    "primary": "#101010",
+    "accent": "#2F7A6B"
+  },
+  {
+    "id": "kentmere|100|135",
     "brand": "Kentmere",
-    "name": "Kentmere 100",
+    "name": "100",
+    "displayName": "100",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kentmere|kentmere100|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kentmere|kentmere100|135.png",
-    "primary": "#6B3FA0",
-    "accent": "#E43B8B"
+    "primary": "#EDE6D2",
+    "accent": "#4C8C5A"
   },
   {
-    "id": "kentmere|kentmere100|120",
+    "id": "kentmere|100|120",
     "brand": "Kentmere",
-    "name": "Kentmere 100",
+    "name": "100",
+    "displayName": "100",
     "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kentmere|kentmere100|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kentmere|kentmere100|120.png",
-    "primary": "#6B3FA0",
-    "accent": "#E43B8B"
+    "primary": "#EDE6D2",
+    "accent": "#4C8C5A"
   },
   {
-    "id": "kentmere|kentmere400|135",
+    "id": "kentmere|200|135",
     "brand": "Kentmere",
-    "name": "Kentmere 400",
+    "name": "200",
+    "displayName": "200",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kentmere|kentmere400|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kentmere|kentmere400|135.png",
-    "primary": "#6B3FA0",
-    "accent": "#E43B8B"
+    "primary": "#EDE6D2",
+    "accent": "#D4A017"
   },
   {
-    "id": "kentmere|kentmere400|120",
+    "id": "kentmere|200|120",
     "brand": "Kentmere",
-    "name": "Kentmere 400",
+    "name": "200",
+    "displayName": "200",
     "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/kentmere|kentmere400|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/kentmere|kentmere400|120.png",
-    "primary": "#6B3FA0",
-    "accent": "#E43B8B"
+    "primary": "#EDE6D2",
+    "accent": "#D4A017"
   },
   {
-    "id": "foma(福马)|fomapan100classic|135",
-    "brand": "Foma (福马)",
-    "name": "Fomapan 100 Classic",
+    "id": "kentmere|400|135",
+    "brand": "Kentmere",
+    "name": "400",
+    "displayName": "400",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/foma(福马)|fomapan100classic|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/foma(福马)|fomapan100classic|135.png",
-    "primary": "#A0820A",
-    "accent": "#FFFFFF"
+    "primary": "#EDE6D2",
+    "accent": "#C1442D"
   },
   {
-    "id": "foma(福马)|fomapan100classic|120",
-    "brand": "Foma (福马)",
-    "name": "Fomapan 100 Classic",
+    "id": "kentmere|400|120",
+    "brand": "Kentmere",
+    "name": "400",
+    "displayName": "400",
     "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/foma(福马)|fomapan100classic|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/foma(福马)|fomapan100classic|120.png",
-    "primary": "#A0820A",
-    "accent": "#FFFFFF"
-  },
-  {
-    "id": "foma(福马)|fomapan200creative|135",
-    "brand": "Foma (福马)",
-    "name": "Fomapan 200 Creative",
-    "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/foma(福马)|fomapan200creative|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/foma(福马)|fomapan200creative|135.png",
-    "primary": "#A0820A",
-    "accent": "#FFFFFF"
-  },
-  {
-    "id": "foma(福马)|fomapan200creative|120",
-    "brand": "Foma (福马)",
-    "name": "Fomapan 200 Creative",
-    "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/foma(福马)|fomapan200creative|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/foma(福马)|fomapan200creative|120.png",
-    "primary": "#A0820A",
-    "accent": "#FFFFFF"
-  },
-  {
-    "id": "foma(福马)|fomapan400action|135",
-    "brand": "Foma (福马)",
-    "name": "Fomapan 400 Action",
-    "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/foma(福马)|fomapan400action|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/foma(福马)|fomapan400action|135.png",
-    "primary": "#A0820A",
-    "accent": "#FFFFFF"
-  },
-  {
-    "id": "foma(福马)|fomapan400action|120",
-    "brand": "Foma (福马)",
-    "name": "Fomapan 400 Action",
-    "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/foma(福马)|fomapan400action|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/foma(福马)|fomapan400action|120.png",
-    "primary": "#A0820A",
-    "accent": "#FFFFFF"
-  },
-  {
-    "id": "foma(福马)|retropan320soft|135",
-    "brand": "Foma (福马)",
-    "name": "Retropan 320 Soft",
-    "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/foma(福马)|retropan320soft|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/foma(福马)|retropan320soft|135.png",
-    "primary": "#A0820A",
-    "accent": "#FFFFFF"
-  },
-  {
-    "id": "foma(福马)|retropan320soft|120",
-    "brand": "Foma (福马)",
-    "name": "Retropan 320 Soft",
-    "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/foma(福马)|retropan320soft|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/foma(福马)|retropan320soft|120.png",
-    "primary": "#A0820A",
-    "accent": "#FFFFFF"
-  },
-  {
-    "id": "foma(福马)|ortho400|135",
-    "brand": "Foma (福马)",
-    "name": "Ortho 400",
-    "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/foma(福马)|ortho400|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/foma(福马)|ortho400|135.png",
-    "primary": "#A0820A",
-    "accent": "#FFFFFF"
-  },
-  {
-    "id": "foma(福马)|ortho400|120",
-    "brand": "Foma (福马)",
-    "name": "Ortho 400",
-    "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/foma(福马)|ortho400|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/foma(福马)|ortho400|120.png",
-    "primary": "#A0820A",
-    "accent": "#FFFFFF"
-  },
-  {
-    "id": "cinestill|50d|135",
-    "brand": "CineStill",
-    "name": "50D",
-    "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/cinestill|50d|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/cinestill|50d|135.png",
-    "primary": "#D91F27",
-    "accent": "#F6F6F6"
-  },
-  {
-    "id": "cinestill|50d|120",
-    "brand": "CineStill",
-    "name": "50D",
-    "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/cinestill|50d|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/cinestill|50d|120.png",
-    "primary": "#D91F27",
-    "accent": "#F6F6F6"
-  },
-  {
-    "id": "cinestill|400d|135",
-    "brand": "CineStill",
-    "name": "400D",
-    "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/cinestill|400d|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/cinestill|400d|135.png",
-    "primary": "#D91F27",
-    "accent": "#F6F6F6"
-  },
-  {
-    "id": "cinestill|400d|120",
-    "brand": "CineStill",
-    "name": "400D",
-    "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/cinestill|400d|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/cinestill|400d|120.png",
-    "primary": "#D91F27",
-    "accent": "#F6F6F6"
-  },
-  {
-    "id": "cinestill|800t|135",
-    "brand": "CineStill",
-    "name": "800T",
-    "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/cinestill|800t|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/cinestill|800t|135.png",
-    "primary": "#D91F27",
-    "accent": "#F6F6F6"
-  },
-  {
-    "id": "cinestill|800t|120",
-    "brand": "CineStill",
-    "name": "800T",
-    "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/cinestill|800t|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/cinestill|800t|120.png",
-    "primary": "#D91F27",
-    "accent": "#F6F6F6"
+    "primary": "#EDE6D2",
+    "accent": "#C1442D"
   },
   {
     "id": "lomography|colornegative100|135",
     "brand": "Lomography",
     "name": "Color Negative 100",
+    "displayName": "Color Negative 100",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/lomography|colornegative100|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/lomography|colornegative100|135.png",
-    "primary": "#FAE397",
-    "accent": "#F28C28"
+    "primary": "#F2E4A6",
+    "accent": "#1A1A1A"
+  },
+  {
+    "id": "lomography|colornegative100|120",
+    "brand": "Lomography",
+    "name": "Color Negative 100",
+    "displayName": "Color Negative 100",
+    "filmFormat": "120",
+    "primary": "#F2E4A6",
+    "accent": "#1A1A1A"
   },
   {
     "id": "lomography|colornegative400|135",
     "brand": "Lomography",
     "name": "Color Negative 400",
+    "displayName": "Color Negative 400",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/lomography|colornegative400|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/lomography|colornegative400|135.png",
-    "primary": "#FAE397",
-    "accent": "#F28C28"
+    "primary": "#E8722C",
+    "accent": "#1A1A1A"
   },
   {
     "id": "lomography|colornegative400|120",
     "brand": "Lomography",
     "name": "Color Negative 400",
+    "displayName": "Color Negative 400",
     "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/lomography|colornegative400|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/lomography|colornegative400|120.png",
-    "primary": "#FAE397",
-    "accent": "#F28C28"
+    "primary": "#E8722C",
+    "accent": "#1A1A1A"
   },
   {
     "id": "lomography|colornegative800|135",
     "brand": "Lomography",
     "name": "Color Negative 800",
+    "displayName": "Color Negative 800",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/lomography|colornegative800|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/lomography|colornegative800|135.png",
-    "primary": "#FAE397",
-    "accent": "#F28C28"
+    "primary": "#A61B4A",
+    "accent": "#1A1A1A"
   },
   {
     "id": "lomography|colornegative800|120",
     "brand": "Lomography",
     "name": "Color Negative 800",
+    "displayName": "Color Negative 800",
     "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/lomography|colornegative800|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/lomography|colornegative800|120.png",
-    "primary": "#FAE397",
-    "accent": "#F28C28"
+    "primary": "#A61B4A",
+    "accent": "#1A1A1A"
   },
   {
-    "id": "lomography|lomochromemetropolis100400|135",
+    "id": "lomography|lomochromepurple|135",
     "brand": "Lomography",
-    "name": "LomoChrome Metropolis 100-400",
+    "name": "LomoChrome Purple",
+    "displayName": "LomoChrome Purple",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/lomography|lomochromemetropolis100400|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/lomography|lomochromemetropolis100400|135.png",
-    "primary": "#FAE397",
-    "accent": "#F28C28"
+    "primary": "#6C3483",
+    "accent": "#C2185B"
   },
   {
-    "id": "lomography|lomochromemetropolis100400|120",
+    "id": "lomography|lomochromepurple|120",
     "brand": "Lomography",
-    "name": "LomoChrome Metropolis 100-400",
+    "name": "LomoChrome Purple",
+    "displayName": "LomoChrome Purple",
     "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/lomography|lomochromemetropolis100400|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/lomography|lomochromemetropolis100400|120.png",
-    "primary": "#FAE397",
-    "accent": "#F28C28"
+    "primary": "#6C3483",
+    "accent": "#C2185B"
   },
   {
-    "id": "lomography|lomochromecolor'92|135",
+    "id": "lomography|lomochromemetropolis|135",
     "brand": "Lomography",
-    "name": "LomoChrome Color '92",
+    "name": "LomoChrome Metropolis",
+    "displayName": "LomoChrome Metropolis",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/lomography|lomochromecolor'92|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/lomography|lomochromecolor'92|135.png",
-    "primary": "#FAE397",
-    "accent": "#F28C28"
+    "primary": "#6E6E68",
+    "accent": "#C99A2E"
   },
   {
-    "id": "lomography|lomochromecolor'92|120",
+    "id": "lomography|lomochromemetropolis|120",
     "brand": "Lomography",
-    "name": "LomoChrome Color '92",
+    "name": "LomoChrome Metropolis",
+    "displayName": "LomoChrome Metropolis",
     "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/lomography|lomochromecolor'92|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/lomography|lomochromecolor'92|120.png",
-    "primary": "#FAE397",
-    "accent": "#F28C28"
+    "primary": "#6E6E68",
+    "accent": "#C99A2E"
   },
   {
-    "id": "lomography|lomochromepurple100400|135",
+    "id": "lomography|lomochrometurquoise|135",
     "brand": "Lomography",
-    "name": "LomoChrome Purple 100-400",
+    "name": "LomoChrome Turquoise",
+    "displayName": "LomoChrome Turquoise",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/lomography|lomochromepurple100400|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/lomography|lomochromepurple100400|135.png",
-    "primary": "#FAE397",
-    "accent": "#F28C28"
+    "primary": "#16A6A3",
+    "accent": "#E86F3D"
   },
   {
-    "id": "lomography|lomochromepurple100400|120",
+    "id": "lomography|lomochrometurquoise|120",
     "brand": "Lomography",
-    "name": "LomoChrome Purple 100-400",
+    "name": "LomoChrome Turquoise",
+    "displayName": "LomoChrome Turquoise",
     "filmFormat": "120",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/lomography|lomochromepurple100400|120.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/lomography|lomochromepurple100400|120.png",
-    "primary": "#FAE397",
-    "accent": "#F28C28"
+    "primary": "#16A6A3",
+    "accent": "#E86F3D"
   },
   {
-    "id": "乐凯lucky|shd100|135",
-    "brand": "乐凯 Lucky",
-    "name": "SHD100",
+    "id": "lomography|redscalexr50200|135",
+    "brand": "Lomography",
+    "name": "Redscale XR 50-200",
+    "displayName": "Redscale XR 50-200",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/乐凯lucky|shd100|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/乐凯lucky|shd100|135.png",
-    "primary": "#EF2D29",
-    "accent": "#FDDE16"
+    "primary": "#C1440E",
+    "accent": "#1A1A1A"
   },
   {
-    "id": "乐凯lucky|shd400|135",
-    "brand": "乐凯 Lucky",
-    "name": "SHD400",
+    "id": "lomography|redscalexr50200|120",
+    "brand": "Lomography",
+    "name": "Redscale XR 50-200",
+    "displayName": "Redscale XR 50-200",
+    "filmFormat": "120",
+    "primary": "#C1440E",
+    "accent": "#1A1A1A"
+  },
+  {
+    "id": "lomography|earlgreybw100|135",
+    "brand": "Lomography",
+    "name": "Earl Grey B&W 100",
+    "displayName": "Earl Grey 100",
     "filmFormat": "135",
-    "svg": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/svg/乐凯lucky|shd400|135.svg",
-    "png": "/Users/james/Desktop/1.2-CS/00-projects/Grainfolio/docs/filmstock_icons/png/乐凯lucky|shd400|135.png",
-    "primary": "#EF2D29",
-    "accent": "#FDDE16"
+    "primary": "#6E6E6E",
+    "accent": "#EDEDED"
+  },
+  {
+    "id": "lomography|earlgreybw100|120",
+    "brand": "Lomography",
+    "name": "Earl Grey B&W 100",
+    "displayName": "Earl Grey 100",
+    "filmFormat": "120",
+    "primary": "#6E6E6E",
+    "accent": "#EDEDED"
+  },
+  {
+    "id": "lomography|ladygreybw400|135",
+    "brand": "Lomography",
+    "name": "Lady Grey B&W 400",
+    "displayName": "Lady Grey 400",
+    "filmFormat": "135",
+    "primary": "#4A4A4A",
+    "accent": "#EDEDED"
+  },
+  {
+    "id": "lomography|ladygreybw400|120",
+    "brand": "Lomography",
+    "name": "Lady Grey B&W 400",
+    "displayName": "Lady Grey 400",
+    "filmFormat": "120",
+    "primary": "#4A4A4A",
+    "accent": "#EDEDED"
+  },
+  {
+    "id": "fomapan|100classic|135",
+    "brand": "Fomapan",
+    "name": "100 Classic",
+    "displayName": "100 Classic",
+    "filmFormat": "135",
+    "primary": "#EFE7D6",
+    "accent": "#1B4F72"
+  },
+  {
+    "id": "fomapan|100classic|120",
+    "brand": "Fomapan",
+    "name": "100 Classic",
+    "displayName": "100 Classic",
+    "filmFormat": "120",
+    "primary": "#EFE7D6",
+    "accent": "#1B4F72"
+  },
+  {
+    "id": "fomapan|200creative|135",
+    "brand": "Fomapan",
+    "name": "200 Creative",
+    "displayName": "200 Creative",
+    "filmFormat": "135",
+    "primary": "#EFE7D6",
+    "accent": "#D68A2E"
+  },
+  {
+    "id": "fomapan|200creative|120",
+    "brand": "Fomapan",
+    "name": "200 Creative",
+    "displayName": "200 Creative",
+    "filmFormat": "120",
+    "primary": "#EFE7D6",
+    "accent": "#D68A2E"
+  },
+  {
+    "id": "fomapan|400action|135",
+    "brand": "Fomapan",
+    "name": "400 Action",
+    "displayName": "400 Action",
+    "filmFormat": "135",
+    "primary": "#4C7A4C",
+    "accent": "#C0392B"
+  },
+  {
+    "id": "fomapan|400action|120",
+    "brand": "Fomapan",
+    "name": "400 Action",
+    "displayName": "400 Action",
+    "filmFormat": "120",
+    "primary": "#4C7A4C",
+    "accent": "#C0392B"
+  },
+  {
+    "id": "cinestill|50d|135",
+    "brand": "CineStill",
+    "name": "50D",
+    "displayName": "50D",
+    "filmFormat": "135",
+    "primary": "#141414",
+    "accent": "#F2B705"
+  },
+  {
+    "id": "cinestill|50d|120",
+    "brand": "CineStill",
+    "name": "50D",
+    "displayName": "50D",
+    "filmFormat": "120",
+    "primary": "#141414",
+    "accent": "#F2B705"
+  },
+  {
+    "id": "cinestill|400d|135",
+    "brand": "CineStill",
+    "name": "400D",
+    "displayName": "400D",
+    "filmFormat": "135",
+    "primary": "#141414",
+    "accent": "#3FA796"
+  },
+  {
+    "id": "cinestill|400d|120",
+    "brand": "CineStill",
+    "name": "400D",
+    "displayName": "400D",
+    "filmFormat": "120",
+    "primary": "#141414",
+    "accent": "#3FA796"
+  },
+  {
+    "id": "cinestill|800t|135",
+    "brand": "CineStill",
+    "name": "800T",
+    "displayName": "800T",
+    "filmFormat": "135",
+    "primary": "#C62828",
+    "accent": "#171717"
+  },
+  {
+    "id": "cinestill|800t|120",
+    "brand": "CineStill",
+    "name": "800T",
+    "displayName": "800T",
+    "filmFormat": "120",
+    "primary": "#C62828",
+    "accent": "#171717"
+  },
+  {
+    "id": "cinestill|bwxxdoublex|135",
+    "brand": "CineStill",
+    "name": "BwXX (Double-X)",
+    "displayName": "BwXX",
+    "filmFormat": "135",
+    "primary": "#141414",
+    "accent": "#D8D8D8"
+  },
+  {
+    "id": "cinestill|bwxxdoublex|120",
+    "brand": "CineStill",
+    "name": "BwXX (Double-X)",
+    "displayName": "BwXX",
+    "filmFormat": "120",
+    "primary": "#141414",
+    "accent": "#D8D8D8"
+  },
+  {
+    "id": "lucky|shd100|135",
+    "brand": "Lucky",
+    "name": "SHD 100",
+    "displayName": "SHD 100",
+    "filmFormat": "135",
+    "primary": "#D8262C",
+    "accent": "#FDD835"
+  },
+  {
+    "id": "lucky|shd100|120",
+    "brand": "Lucky",
+    "name": "SHD 100",
+    "displayName": "SHD 100",
+    "filmFormat": "120",
+    "primary": "#D8262C",
+    "accent": "#FDD835"
+  },
+  {
+    "id": "lucky|color200|135",
+    "brand": "Lucky",
+    "name": "Color 200",
+    "displayName": "Color 200",
+    "filmFormat": "135",
+    "primary": "#D8262C",
+    "accent": "#3E73A8"
+  },
+  {
+    "id": "lucky|color200|120",
+    "brand": "Lucky",
+    "name": "Color 200",
+    "displayName": "Color 200",
+    "filmFormat": "120",
+    "primary": "#D8262C",
+    "accent": "#3E73A8"
+  },
+  {
+    "id": "rollei|retro80s|135",
+    "brand": "Rollei",
+    "name": "Retro 80S",
+    "displayName": "Retro 80S",
+    "filmFormat": "135",
+    "primary": "#C7BBA0",
+    "accent": "#4B4B4B"
+  },
+  {
+    "id": "rollei|retro80s|120",
+    "brand": "Rollei",
+    "name": "Retro 80S",
+    "displayName": "Retro 80S",
+    "filmFormat": "120",
+    "primary": "#C7BBA0",
+    "accent": "#4B4B4B"
+  },
+  {
+    "id": "rollei|retro400s|135",
+    "brand": "Rollei",
+    "name": "Retro 400S",
+    "displayName": "Retro 400S",
+    "filmFormat": "135",
+    "primary": "#555555",
+    "accent": "#C7BBA0"
+  },
+  {
+    "id": "rollei|retro400s|120",
+    "brand": "Rollei",
+    "name": "Retro 400S",
+    "displayName": "Retro 400S",
+    "filmFormat": "120",
+    "primary": "#555555",
+    "accent": "#C7BBA0"
+  },
+  {
+    "id": "rollei|rpx25|135",
+    "brand": "Rollei",
+    "name": "RPX 25",
+    "displayName": "RPX 25",
+    "filmFormat": "135",
+    "primary": "#FFFFFF",
+    "accent": "#2E8B77"
+  },
+  {
+    "id": "rollei|rpx25|120",
+    "brand": "Rollei",
+    "name": "RPX 25",
+    "displayName": "RPX 25",
+    "filmFormat": "120",
+    "primary": "#FFFFFF",
+    "accent": "#2E8B77"
+  },
+  {
+    "id": "rollei|rpx100|135",
+    "brand": "Rollei",
+    "name": "RPX 100",
+    "displayName": "RPX 100",
+    "filmFormat": "135",
+    "primary": "#FFFFFF",
+    "accent": "#3B73A8"
+  },
+  {
+    "id": "rollei|rpx100|120",
+    "brand": "Rollei",
+    "name": "RPX 100",
+    "displayName": "RPX 100",
+    "filmFormat": "120",
+    "primary": "#FFFFFF",
+    "accent": "#3B73A8"
+  },
+  {
+    "id": "rollei|rpx400|135",
+    "brand": "Rollei",
+    "name": "RPX 400",
+    "displayName": "RPX 400",
+    "filmFormat": "135",
+    "primary": "#FFFFFF",
+    "accent": "#D17A3A"
+  },
+  {
+    "id": "rollei|rpx400|120",
+    "brand": "Rollei",
+    "name": "RPX 400",
+    "displayName": "RPX 400",
+    "filmFormat": "120",
+    "primary": "#FFFFFF",
+    "accent": "#D17A3A"
+  },
+  {
+    "id": "rollei|ortho25|135",
+    "brand": "Rollei",
+    "name": "Ortho 25",
+    "displayName": "Ortho 25",
+    "filmFormat": "135",
+    "primary": "#FFFFFF",
+    "accent": "#8A9A3A"
+  },
+  {
+    "id": "rollei|ortho25|120",
+    "brand": "Rollei",
+    "name": "Ortho 25",
+    "displayName": "Ortho 25",
+    "filmFormat": "120",
+    "primary": "#FFFFFF",
+    "accent": "#8A9A3A"
+  },
+  {
+    "id": "rollei|infrared400|135",
+    "brand": "Rollei",
+    "name": "Infrared 400",
+    "displayName": "Infrared 400",
+    "filmFormat": "135",
+    "primary": "#111111",
+    "accent": "#D71920"
+  },
+  {
+    "id": "rollei|infrared400|120",
+    "brand": "Rollei",
+    "name": "Infrared 400",
+    "displayName": "Infrared 400",
+    "filmFormat": "120",
+    "primary": "#111111",
+    "accent": "#D71920"
+  },
+  {
+    "id": "harman|phoenix200color|135",
+    "brand": "Harman",
+    "name": "Phoenix 200 (Color)",
+    "displayName": "Phoenix 200",
+    "filmFormat": "135",
+    "primary": "#D71920",
+    "accent": "#F2C94C"
+  },
+  {
+    "id": "harman|phoenix200color|120",
+    "brand": "Harman",
+    "name": "Phoenix 200 (Color)",
+    "displayName": "Phoenix 200",
+    "filmFormat": "120",
+    "primary": "#D71920",
+    "accent": "#F2C94C"
+  },
+  {
+    "id": "harman|directpositivepaper|135",
+    "brand": "Harman",
+    "name": "Direct Positive Paper",
+    "displayName": "Direct Positive Paper",
+    "filmFormat": "135",
+    "primary": "#111111",
+    "accent": "#E8E8E8"
+  },
+  {
+    "id": "harman|directpositivepaper|120",
+    "brand": "Harman",
+    "name": "Direct Positive Paper",
+    "displayName": "Direct Positive Paper",
+    "filmFormat": "120",
+    "primary": "#111111",
+    "accent": "#E8E8E8"
+  },
+  {
+    "id": "shanghai|gp3100|135",
+    "brand": "Shanghai",
+    "name": "GP3 100",
+    "displayName": "GP3 100",
+    "filmFormat": "135",
+    "primary": "#D4A72C",
+    "accent": "#C62828"
+  },
+  {
+    "id": "shanghai|gp3100|120",
+    "brand": "Shanghai",
+    "name": "GP3 100",
+    "displayName": "GP3 100",
+    "filmFormat": "120",
+    "primary": "#D4A72C",
+    "accent": "#C62828"
+  },
+  {
+    "id": "shanghai|shenguang400|135",
+    "brand": "Shanghai",
+    "name": "Shenguang 400",
+    "displayName": "Shenguang 400",
+    "filmFormat": "135",
+    "primary": "#D4A72C",
+    "accent": "#C85A35"
+  },
+  {
+    "id": "shanghai|shenguang400|120",
+    "brand": "Shanghai",
+    "name": "Shenguang 400",
+    "displayName": "Shenguang 400",
+    "filmFormat": "120",
+    "primary": "#D4A72C",
+    "accent": "#C85A35"
+  },
+  {
+    "id": "orwo|un54|135",
+    "brand": "ORWO",
+    "name": "UN54",
+    "displayName": "UN54",
+    "filmFormat": "135",
+    "primary": "#111111",
+    "accent": "#D71920"
+  },
+  {
+    "id": "orwo|un54|120",
+    "brand": "ORWO",
+    "name": "UN54",
+    "displayName": "UN54",
+    "filmFormat": "120",
+    "primary": "#111111",
+    "accent": "#D71920"
+  },
+  {
+    "id": "orwo|n75|135",
+    "brand": "ORWO",
+    "name": "N75",
+    "displayName": "N75",
+    "filmFormat": "135",
+    "primary": "#111111",
+    "accent": "#F2C94C"
+  },
+  {
+    "id": "orwo|n75|120",
+    "brand": "ORWO",
+    "name": "N75",
+    "displayName": "N75",
+    "filmFormat": "120",
+    "primary": "#111111",
+    "accent": "#F2C94C"
+  },
+  {
+    "id": "agfaphoto|vistaplus200|135",
+    "brand": "AgfaPhoto",
+    "name": "Vista Plus 200",
+    "displayName": "Vista Plus 200",
+    "filmFormat": "135",
+    "primary": "#2E7D46",
+    "accent": "#E2231A"
+  },
+  {
+    "id": "agfaphoto|vistaplus200|120",
+    "brand": "AgfaPhoto",
+    "name": "Vista Plus 200",
+    "displayName": "Vista Plus 200",
+    "filmFormat": "120",
+    "primary": "#2E7D46",
+    "accent": "#E2231A"
+  },
+  {
+    "id": "agfaphoto|apx100|135",
+    "brand": "AgfaPhoto",
+    "name": "APX 100",
+    "displayName": "APX 100",
+    "filmFormat": "135",
+    "primary": "#141414",
+    "accent": "#C0392B"
+  },
+  {
+    "id": "agfaphoto|apx100|120",
+    "brand": "AgfaPhoto",
+    "name": "APX 100",
+    "displayName": "APX 100",
+    "filmFormat": "120",
+    "primary": "#141414",
+    "accent": "#C0392B"
+  },
+  {
+    "id": "agfaphoto|apx400|135",
+    "brand": "AgfaPhoto",
+    "name": "APX 400",
+    "displayName": "APX 400",
+    "filmFormat": "135",
+    "primary": "#141414",
+    "accent": "#D68A2E"
+  },
+  {
+    "id": "agfaphoto|apx400|120",
+    "brand": "AgfaPhoto",
+    "name": "APX 400",
+    "displayName": "APX 400",
+    "filmFormat": "120",
+    "primary": "#141414",
+    "accent": "#D68A2E"
+  },
+  {
+    "id": "adox|cms20ii|135",
+    "brand": "ADOX",
+    "name": "CMS 20 II",
+    "displayName": "CMS 20 II",
+    "filmFormat": "135",
+    "primary": "#111111",
+    "accent": "#E0E0E0"
+  },
+  {
+    "id": "adox|cms20ii|120",
+    "brand": "ADOX",
+    "name": "CMS 20 II",
+    "displayName": "CMS 20 II",
+    "filmFormat": "120",
+    "primary": "#111111",
+    "accent": "#E0E0E0"
+  },
+  {
+    "id": "adox|chs100ii|135",
+    "brand": "ADOX",
+    "name": "CHS 100 II",
+    "displayName": "CHS 100 II",
+    "filmFormat": "135",
+    "primary": "#E8E8E8",
+    "accent": "#D71920"
+  },
+  {
+    "id": "adox|chs100ii|120",
+    "brand": "ADOX",
+    "name": "CHS 100 II",
+    "displayName": "CHS 100 II",
+    "filmFormat": "120",
+    "primary": "#E8E8E8",
+    "accent": "#D71920"
+  },
+  {
+    "id": "adox|hr50|135",
+    "brand": "ADOX",
+    "name": "HR-50",
+    "displayName": "HR-50",
+    "filmFormat": "135",
+    "primary": "#E8E8E8",
+    "accent": "#315C7A"
+  },
+  {
+    "id": "adox|hr50|120",
+    "brand": "ADOX",
+    "name": "HR-50",
+    "displayName": "HR-50",
+    "filmFormat": "120",
+    "primary": "#E8E8E8",
+    "accent": "#315C7A"
+  },
+  {
+    "id": "adox|silvermax100|135",
+    "brand": "ADOX",
+    "name": "Silvermax 100",
+    "displayName": "Silvermax 100",
+    "filmFormat": "135",
+    "primary": "#E8E8E8",
+    "accent": "#4A7A8C"
+  },
+  {
+    "id": "adox|silvermax100|120",
+    "brand": "ADOX",
+    "name": "Silvermax 100",
+    "displayName": "Silvermax 100",
+    "filmFormat": "120",
+    "primary": "#E8E8E8",
+    "accent": "#4A7A8C"
+  },
+  {
+    "id": "bergger|pancro400|135",
+    "brand": "Bergger",
+    "name": "Pancro 400",
+    "displayName": "Pancro 400",
+    "filmFormat": "135",
+    "primary": "#1A1A1A",
+    "accent": "#C9C2B0"
+  },
+  {
+    "id": "bergger|pancro400|120",
+    "brand": "Bergger",
+    "name": "Pancro 400",
+    "displayName": "Pancro 400",
+    "filmFormat": "120",
+    "primary": "#1A1A1A",
+    "accent": "#C9C2B0"
+  },
+  {
+    "id": "ferrania|p30alpha|135",
+    "brand": "Ferrania",
+    "name": "P30 Alpha",
+    "displayName": "P30 Alpha",
+    "filmFormat": "135",
+    "primary": "#C6A24A",
+    "accent": "#1B3A57"
+  },
+  {
+    "id": "ferrania|p30alpha|120",
+    "brand": "Ferrania",
+    "name": "P30 Alpha",
+    "displayName": "P30 Alpha",
+    "filmFormat": "120",
+    "primary": "#C6A24A",
+    "accent": "#1B3A57"
+  },
+  {
+    "id": "kosmofoto|mono100|135",
+    "brand": "Kosmo Foto",
+    "name": "Mono 100",
+    "displayName": "Mono 100",
+    "filmFormat": "135",
+    "primary": "#1B2A4A",
+    "accent": "#4FC3D9"
+  },
+  {
+    "id": "kosmofoto|mono100|120",
+    "brand": "Kosmo Foto",
+    "name": "Mono 100",
+    "displayName": "Mono 100",
+    "filmFormat": "120",
+    "primary": "#1B2A4A",
+    "accent": "#4FC3D9"
+  },
+  {
+    "id": "kosmofoto|agentshadow400|135",
+    "brand": "Kosmo Foto",
+    "name": "Agent Shadow 400",
+    "displayName": "Agent Shadow 400",
+    "filmFormat": "135",
+    "primary": "#2B2B2B",
+    "accent": "#D9432E"
+  },
+  {
+    "id": "kosmofoto|agentshadow400|120",
+    "brand": "Kosmo Foto",
+    "name": "Agent Shadow 400",
+    "displayName": "Agent Shadow 400",
+    "filmFormat": "120",
+    "primary": "#2B2B2B",
+    "accent": "#D9432E"
+  },
+  {
+    "id": "svema|foto100|135",
+    "brand": "Svema",
+    "name": "Foto 100",
+    "displayName": "Foto 100",
+    "filmFormat": "135",
+    "primary": "#1B3A57",
+    "accent": "#C0392B"
+  },
+  {
+    "id": "svema|foto100|120",
+    "brand": "Svema",
+    "name": "Foto 100",
+    "displayName": "Foto 100",
+    "filmFormat": "120",
+    "primary": "#1B3A57",
+    "accent": "#C0392B"
+  },
+  {
+    "id": "reflxlab|400daylight|135",
+    "brand": "Reflx Lab",
+    "name": "400 Daylight",
+    "displayName": "400 Daylight",
+    "filmFormat": "135",
+    "primary": "#111111",
+    "accent": "#F2C94C"
+  },
+  {
+    "id": "reflxlab|400daylight|120",
+    "brand": "Reflx Lab",
+    "name": "400 Daylight",
+    "displayName": "400 Daylight",
+    "filmFormat": "120",
+    "primary": "#111111",
+    "accent": "#F2C94C"
+  },
+  {
+    "id": "reflxlab|250d|135",
+    "brand": "Reflx Lab",
+    "name": "250D",
+    "displayName": "250D",
+    "filmFormat": "135",
+    "primary": "#111111",
+    "accent": "#3B82C4"
+  },
+  {
+    "id": "reflxlab|250d|120",
+    "brand": "Reflx Lab",
+    "name": "250D",
+    "displayName": "250D",
+    "filmFormat": "120",
+    "primary": "#111111",
+    "accent": "#3B82C4"
+  },
+  {
+    "id": "reflxlab|200t|135",
+    "brand": "Reflx Lab",
+    "name": "200T",
+    "displayName": "200T",
+    "filmFormat": "135",
+    "primary": "#111111",
+    "accent": "#E28B32"
+  },
+  {
+    "id": "reflxlab|200t|120",
+    "brand": "Reflx Lab",
+    "name": "200T",
+    "displayName": "200T",
+    "filmFormat": "120",
+    "primary": "#111111",
+    "accent": "#E28B32"
+  },
+  {
+    "id": "reflxlab|320d|135",
+    "brand": "Reflx Lab",
+    "name": "320D",
+    "displayName": "320D",
+    "filmFormat": "135",
+    "primary": "#111111",
+    "accent": "#4E9F8A"
+  },
+  {
+    "id": "reflxlab|320d|120",
+    "brand": "Reflx Lab",
+    "name": "320D",
+    "displayName": "320D",
+    "filmFormat": "120",
+    "primary": "#111111",
+    "accent": "#4E9F8A"
+  },
+  {
+    "id": "reflxlab|640t|135",
+    "brand": "Reflx Lab",
+    "name": "640T",
+    "displayName": "640T",
+    "filmFormat": "135",
+    "primary": "#111111",
+    "accent": "#C94B4B"
+  },
+  {
+    "id": "reflxlab|640t|120",
+    "brand": "Reflx Lab",
+    "name": "640T",
+    "displayName": "640T",
+    "filmFormat": "120",
+    "primary": "#111111",
+    "accent": "#C94B4B"
+  },
+  {
+    "id": "flicfilm|aurora400|135",
+    "brand": "Flic Film",
+    "name": "Aurora 400",
+    "displayName": "Aurora 400",
+    "filmFormat": "135",
+    "primary": "#111111",
+    "accent": "#5E8F9A"
+  },
+  {
+    "id": "flicfilm|aurora400|120",
+    "brand": "Flic Film",
+    "name": "Aurora 400",
+    "displayName": "Aurora 400",
+    "filmFormat": "120",
+    "primary": "#111111",
+    "accent": "#5E8F9A"
+  },
+  {
+    "id": "flicfilm|streetcandy400|135",
+    "brand": "Flic Film",
+    "name": "Street Candy 400",
+    "displayName": "Street Candy 400",
+    "filmFormat": "135",
+    "primary": "#111111",
+    "accent": "#E78A3D"
+  },
+  {
+    "id": "flicfilm|streetcandy400|120",
+    "brand": "Flic Film",
+    "name": "Street Candy 400",
+    "displayName": "Street Candy 400",
+    "filmFormat": "120",
+    "primary": "#111111",
+    "accent": "#E78A3D"
+  },
+  {
+    "id": "flicfilm|psychedelicstreet400|135",
+    "brand": "Flic Film",
+    "name": "Psychedelic Street 400",
+    "displayName": "Psychedelic Street 400",
+    "filmFormat": "135",
+    "primary": "#C9A66B",
+    "accent": "#5C6670"
+  },
+  {
+    "id": "flicfilm|psychedelicstreet400|120",
+    "brand": "Flic Film",
+    "name": "Psychedelic Street 400",
+    "displayName": "Psychedelic Street 400",
+    "filmFormat": "120",
+    "primary": "#C9A66B",
+    "accent": "#5C6670"
+  },
+  {
+    "id": "flicfilm|streetsavvy400|135",
+    "brand": "Flic Film",
+    "name": "Street Savvy 400",
+    "displayName": "Street Savvy 400",
+    "filmFormat": "135",
+    "primary": "#111111",
+    "accent": "#E7A63B"
+  },
+  {
+    "id": "flicfilm|streetsavvy400|120",
+    "brand": "Flic Film",
+    "name": "Street Savvy 400",
+    "displayName": "Street Savvy 400",
+    "filmFormat": "120",
+    "primary": "#111111",
+    "accent": "#E7A63B"
+  },
+  {
+    "id": "flicfilm|apollo18|135",
+    "brand": "Flic Film",
+    "name": "Apollo 18",
+    "displayName": "Apollo 18",
+    "filmFormat": "135",
+    "primary": "#111111",
+    "accent": "#6C73B8"
+  },
+  {
+    "id": "flicfilm|apollo18|120",
+    "brand": "Flic Film",
+    "name": "Apollo 18",
+    "displayName": "Apollo 18",
+    "filmFormat": "120",
+    "primary": "#111111",
+    "accent": "#6C73B8"
+  },
+  {
+    "id": "flicfilm|mtn100|135",
+    "brand": "Flic Film",
+    "name": "MTN100",
+    "displayName": "MTN100",
+    "filmFormat": "135",
+    "primary": "#111111",
+    "accent": "#5B8C75"
+  },
+  {
+    "id": "flicfilm|mtn100|120",
+    "brand": "Flic Film",
+    "name": "MTN100",
+    "displayName": "MTN100",
+    "filmFormat": "120",
+    "primary": "#111111",
+    "accent": "#5B8C75"
+  },
+  {
+    "id": "flicfilm|atm400|135",
+    "brand": "Flic Film",
+    "name": "ATM400",
+    "displayName": "ATM400",
+    "filmFormat": "135",
+    "primary": "#111111",
+    "accent": "#E56B9B"
+  },
+  {
+    "id": "flicfilm|atm400|120",
+    "brand": "Flic Film",
+    "name": "ATM400",
+    "displayName": "ATM400",
+    "filmFormat": "120",
+    "primary": "#111111",
+    "accent": "#E56B9B"
+  },
+  {
+    "id": "flicfilm|ultrapan100|135",
+    "brand": "Flic Film",
+    "name": "UltraPan 100",
+    "displayName": "UltraPan 100",
+    "filmFormat": "135",
+    "primary": "#E7E7E2",
+    "accent": "#245A7A"
+  },
+  {
+    "id": "flicfilm|ultrapan100|120",
+    "brand": "Flic Film",
+    "name": "UltraPan 100",
+    "displayName": "UltraPan 100",
+    "filmFormat": "120",
+    "primary": "#E7E7E2",
+    "accent": "#245A7A"
+  },
+  {
+    "id": "flicfilm|ultrapan200|135",
+    "brand": "Flic Film",
+    "name": "UltraPan 200",
+    "displayName": "UltraPan 200",
+    "filmFormat": "135",
+    "primary": "#E7E7E2",
+    "accent": "#8A6F3D"
+  },
+  {
+    "id": "flicfilm|ultrapan200|120",
+    "brand": "Flic Film",
+    "name": "UltraPan 200",
+    "displayName": "UltraPan 200",
+    "filmFormat": "120",
+    "primary": "#E7E7E2",
+    "accent": "#8A6F3D"
+  },
+  {
+    "id": "flicfilm|ultrapan400|135",
+    "brand": "Flic Film",
+    "name": "UltraPan 400",
+    "displayName": "UltraPan 400",
+    "filmFormat": "135",
+    "primary": "#E7E7E2",
+    "accent": "#B44C45"
+  },
+  {
+    "id": "flicfilm|ultrapan400|120",
+    "brand": "Flic Film",
+    "name": "UltraPan 400",
+    "displayName": "UltraPan 400",
+    "filmFormat": "120",
+    "primary": "#E7E7E2",
+    "accent": "#B44C45"
+  },
+  {
+    "id": "flicfilm|cinecolour50d|135",
+    "brand": "Flic Film",
+    "name": "Cine Colour 50D",
+    "displayName": "Cine Colour 50D",
+    "filmFormat": "135",
+    "primary": "#111111",
+    "accent": "#2E86C1"
+  },
+  {
+    "id": "flicfilm|cinecolour50d|120",
+    "brand": "Flic Film",
+    "name": "Cine Colour 50D",
+    "displayName": "Cine Colour 50D",
+    "filmFormat": "120",
+    "primary": "#111111",
+    "accent": "#2E86C1"
+  },
+  {
+    "id": "flicfilm|cinecolour200t|135",
+    "brand": "Flic Film",
+    "name": "Cine Colour 200T",
+    "displayName": "Cine Colour 200T",
+    "filmFormat": "135",
+    "primary": "#111111",
+    "accent": "#D27A32"
+  },
+  {
+    "id": "flicfilm|cinecolour200t|120",
+    "brand": "Flic Film",
+    "name": "Cine Colour 200T",
+    "displayName": "Cine Colour 200T",
+    "filmFormat": "120",
+    "primary": "#111111",
+    "accent": "#D27A32"
+  },
+  {
+    "id": "flicfilm|cinecolour250d|135",
+    "brand": "Flic Film",
+    "name": "Cine Colour 250D",
+    "displayName": "Cine Colour 250D",
+    "filmFormat": "135",
+    "primary": "#111111",
+    "accent": "#2E86C1"
+  },
+  {
+    "id": "flicfilm|cinecolour250d|120",
+    "brand": "Flic Film",
+    "name": "Cine Colour 250D",
+    "displayName": "Cine Colour 250D",
+    "filmFormat": "120",
+    "primary": "#111111",
+    "accent": "#2E86C1"
+  },
+  {
+    "id": "flicfilm|cinecolour500t|135",
+    "brand": "Flic Film",
+    "name": "Cine Colour 500T",
+    "displayName": "Cine Colour 500T",
+    "filmFormat": "135",
+    "primary": "#111111",
+    "accent": "#D04A3A"
+  },
+  {
+    "id": "flicfilm|cinecolour500t|120",
+    "brand": "Flic Film",
+    "name": "Cine Colour 500T",
+    "displayName": "Cine Colour 500T",
+    "filmFormat": "120",
+    "primary": "#111111",
+    "accent": "#D04A3A"
+  },
+  {
+    "id": "flicfilm|doublexcinefilm|135",
+    "brand": "Flic Film",
+    "name": "Double-X Cine Film",
+    "displayName": "Double-X Cine Film",
+    "filmFormat": "135",
+    "primary": "#111111",
+    "accent": "#E0E0E0"
+  },
+  {
+    "id": "flicfilm|doublexcinefilm|120",
+    "brand": "Flic Film",
+    "name": "Double-X Cine Film",
+    "displayName": "Double-X Cine Film",
+    "filmFormat": "120",
+    "primary": "#111111",
+    "accent": "#E0E0E0"
+  },
+  {
+    "id": "candido|candido200|135",
+    "brand": "Candido",
+    "name": "Candido 200",
+    "displayName": "Candido 200",
+    "filmFormat": "135",
+    "primary": "#4E7F54",
+    "accent": "#D5A63A"
+  },
+  {
+    "id": "candido|candido200|120",
+    "brand": "Candido",
+    "name": "Candido 200",
+    "displayName": "Candido 200",
+    "filmFormat": "120",
+    "primary": "#4E7F54",
+    "accent": "#D5A63A"
+  },
+  {
+    "id": "candido|candido400|135",
+    "brand": "Candido",
+    "name": "Candido 400",
+    "displayName": "Candido 400",
+    "filmFormat": "135",
+    "primary": "#4E7F54",
+    "accent": "#C94C4C"
+  },
+  {
+    "id": "candido|candido400|120",
+    "brand": "Candido",
+    "name": "Candido 400",
+    "displayName": "Candido 400",
+    "filmFormat": "120",
+    "primary": "#4E7F54",
+    "accent": "#C94C4C"
+  },
+  {
+    "id": "candido|candido800|135",
+    "brand": "Candido",
+    "name": "Candido 800",
+    "displayName": "Candido 800",
+    "filmFormat": "135",
+    "primary": "#4E7F54",
+    "accent": "#3F70A8"
+  },
+  {
+    "id": "candido|candido800|120",
+    "brand": "Candido",
+    "name": "Candido 800",
+    "displayName": "Candido 800",
+    "filmFormat": "120",
+    "primary": "#4E7F54",
+    "accent": "#3F70A8"
   }
 ]

@@ -16,9 +16,13 @@ import type { CollectionGroup } from '../../services/rollCollectionGrouping';
 import type { FilmUsageSummary } from '../../services/filmInsightsService';
 import { Drawer } from '../../components/Drawer';
 import { EmptyState } from '../../components/EmptyState';
+import { FilmSvgAvatar } from '../../components/FilmSvgAvatar';
 import { IconButton } from '../../components/ui/IconButton';
 
 type Translate = (key: TranslationKey, values?: Record<string, string | number>) => string;
+
+const getAvatarUrl = (url?: string | null) =>
+  url && (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) ? url : null;
 
 interface FilmUsageDetailDrawerProps {
   isOpen: boolean;
@@ -73,6 +77,7 @@ export const FilmUsageDetailDrawer: React.FC<FilmUsageDetailDrawerProps> = ({
 
   const label = `${summary.film.brand} ${summary.film.name}`;
   const hasUsage = summary.activeRolls.length > 0 || summary.completedRolls.length > 0;
+  const avatarUrl = getAvatarUrl(summary.film.avatarUrl);
 
   const renderRollRow = (roll: Roll) => (
     <div
@@ -143,10 +148,19 @@ export const FilmUsageDetailDrawer: React.FC<FilmUsageDetailDrawerProps> = ({
     <Drawer isOpen={isOpen} onClose={onClose} width={580}>
       <section className="film-insights-drawer" role="dialog" aria-modal="true" aria-labelledby="film-insights-detail-title">
         <header className="film-insights-drawer-header">
-          <div>
-            <p className="film-insights-eyebrow">{t('filmInsights.detailEyebrow')}</p>
-            <h2 id="film-insights-detail-title">{label}</h2>
-            <p>ISO {summary.film.iso} · {summary.film.format} · {summary.film.colorType === 'color' ? t('filmInsights.color') : t('filmInsights.bw')}</p>
+          <div className="film-insights-identity">
+            <div className="film-insights-avatar">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" />
+              ) : (
+                <FilmSvgAvatar brand={summary.film.brand} name={summary.film.name} format={summary.film.format} size={64} />
+              )}
+            </div>
+            <div>
+              <p className="film-insights-eyebrow">{t('filmInsights.detailEyebrow')}</p>
+              <h2 id="film-insights-detail-title">{label}</h2>
+              <p>ISO {summary.film.iso} · {summary.film.format} · {summary.film.colorType === 'color' ? t('filmInsights.color') : t('filmInsights.bw')}</p>
+            </div>
           </div>
           <IconButton icon={<X size={20} />} title={t('filmInsights.closeDetails')} onClick={onClose} />
         </header>

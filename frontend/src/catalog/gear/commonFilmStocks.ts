@@ -69,8 +69,6 @@ const RAW_COMMON_FILM_STOCKS: RawCommonFilmStockPreset[] = [
   { brand: 'Ilford', name: 'XP2 Super 400 (C41)', iso: 400, colorType: 'bw' },
   { brand: 'Ilford', name: 'SFX 200', iso: 200, colorType: 'bw' },
   { brand: 'Ilford', name: 'Ortho Plus 80', iso: 80, colorType: 'bw' },
-  { brand: 'Ilford', name: 'Kentmere 100', iso: 100, colorType: 'bw' },
-  { brand: 'Ilford', name: 'Kentmere 400', iso: 400, colorType: 'bw' },
 
   // ─────────────────────────────────────────────
   // CineStill
@@ -155,11 +153,13 @@ const RAW_COMMON_FILM_STOCKS: RawCommonFilmStockPreset[] = [
   { brand: 'Lucky', name: 'Color 200', iso: 200, colorType: 'color' },
 
   // ─────────────────────────────────────────────
-  // Kentmere (Harman) — Black & White
-  // (already covered under Ilford above; separate brand entry for clarity)
+  // Kentmere (Harman/Ilford's budget line) — Black & White
+  // Kept as its own brand (not nested under Ilford) so it's findable by
+  // beginners who don't know Kentmere is made by Ilford/Harman.
   // ─────────────────────────────────────────────
-  // { brand: 'Kentmere', name: '100', iso: 100, colorType: 'bw' },
-  // { brand: 'Kentmere', name: '400', iso: 400, colorType: 'bw' },
+  { brand: 'Kentmere', name: '100', iso: 100, colorType: 'bw' },
+  { brand: 'Kentmere', name: '200', iso: 200, colorType: 'bw' },
+  { brand: 'Kentmere', name: '400', iso: 400, colorType: 'bw' },
 
   // ─────────────────────────────────────────────
   // Harman (Ilford sister brand) — Black & White
@@ -177,6 +177,41 @@ const RAW_COMMON_FILM_STOCKS: RawCommonFilmStockPreset[] = [
   // ─────────────────────────────────────────────
   { brand: 'ORWO', name: 'UN54', iso: 100, colorType: 'bw' },
   { brand: 'ORWO', name: 'N75', iso: 400, colorType: 'bw' },
+
+  // ─────────────────────────────────────────────
+  // Reflx Lab — motion-picture-derived color negative
+  // ─────────────────────────────────────────────
+  { brand: 'Reflx Lab', name: '400 Daylight', iso: 400, colorType: 'color' },
+  { brand: 'Reflx Lab', name: '250D', iso: 250, colorType: 'color' },
+  { brand: 'Reflx Lab', name: '200T', iso: 200, colorType: 'color' },
+  { brand: 'Reflx Lab', name: '320D', iso: 320, colorType: 'color' },
+  { brand: 'Reflx Lab', name: '640T', iso: 640, colorType: 'color' },
+
+  // ─────────────────────────────────────────────
+  // Flic Film — own line + re-spooled motion-picture stocks
+  // ─────────────────────────────────────────────
+  { brand: 'Flic Film', name: 'Aurora 400', iso: 400, colorType: 'color' },
+  { brand: 'Flic Film', name: 'Street Candy 400', iso: 400, colorType: 'color' },
+  { brand: 'Flic Film', name: 'Psychedelic Street 400', iso: 400, colorType: 'color' },
+  { brand: 'Flic Film', name: 'Street Savvy 400', iso: 400, colorType: 'bw' },
+  { brand: 'Flic Film', name: 'Apollo 18', iso: 200, colorType: 'bw' },
+  { brand: 'Flic Film', name: 'MTN100', iso: 100, colorType: 'bw' },
+  { brand: 'Flic Film', name: 'ATM400', iso: 400, colorType: 'color' },
+  { brand: 'Flic Film', name: 'UltraPan 100', iso: 100, colorType: 'bw' },
+  { brand: 'Flic Film', name: 'UltraPan 200', iso: 200, colorType: 'bw' },
+  { brand: 'Flic Film', name: 'UltraPan 400', iso: 400, colorType: 'bw' },
+  { brand: 'Flic Film', name: 'Cine Colour 50D', iso: 50, colorType: 'color' },
+  { brand: 'Flic Film', name: 'Cine Colour 200T', iso: 200, colorType: 'color' },
+  { brand: 'Flic Film', name: 'Cine Colour 250D', iso: 250, colorType: 'color' },
+  { brand: 'Flic Film', name: 'Cine Colour 500T', iso: 500, colorType: 'color' },
+  { brand: 'Flic Film', name: 'Double-X Cine Film', iso: 250, colorType: 'bw' },
+
+  // ─────────────────────────────────────────────
+  // Candido — 35mm C-41 color negative
+  // ─────────────────────────────────────────────
+  { brand: 'Candido', name: 'Candido 200', iso: 200, colorType: 'color' },
+  { brand: 'Candido', name: 'Candido 400', iso: 400, colorType: 'color' },
+  { brand: 'Candido', name: 'Candido 800', iso: 800, colorType: 'color' },
 ];
 
 const COMMON_120_FILM_STOCKS: CommonFilmStockPreset[] = [

@@ -21,9 +21,13 @@ export const FilmSvgAvatar: React.FC<FilmSvgAvatarProps> = ({
   format, 
   size = 80 
 }) => {
-  // Normalize parameters to match filenames (lowercase, spaces stripped)
-  const normBrand = brand.toLowerCase().trim();
-  const normName = name.toLowerCase().trim().replace(/\s+/g, '');
+  // Normalize parameters to match filenames: lowercase, strip everything
+  // except alphanumerics so punctuation differences (hyphens, parens,
+  // apostrophes) between catalog names and generated filenames don't
+  // cause a specific icon to silently miss and fall back to a generic one.
+  const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const normBrand = normalize(brand);
+  const normName = normalize(name);
   const normFormat = format.trim();
 
   // 1. Try specific film stock matching: e.g. "kodak|gold200|135.svg"

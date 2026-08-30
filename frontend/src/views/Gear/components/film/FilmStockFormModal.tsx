@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type KeyboardEvent, type WheelEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type WheelEvent } from 'react';
 import { Search } from 'lucide-react';
 import { COMMON_FILM_STOCKS, type CommonFilmStockPreset } from '../../../../catalog/gear';
 import { FilmSvgAvatar } from '../../../../components/FilmSvgAvatar';
@@ -24,6 +24,11 @@ interface FilmStockFormModalProps {
 }
 
 type FilmFormat = '135' | '120';
+
+// Shown by default before the brand list is searched or expanded; keeps the
+// picker scannable now that the catalog covers 20 brands.
+const POPULAR_FILM_BRANDS = ['Kodak', 'Fujifilm', 'Ilford', 'Lomography', 'CineStill', 'Fomapan', 'Lucky'];
+const DEFAULT_VISIBLE_MODEL_COUNT = 8;
 
 const createDefaultDraft = (format: FilmFormat = '135'): Partial<FilmStock> => ({
   brand: '',
@@ -61,6 +66,18 @@ export const FilmStockFormModal = ({
   const [brandSearch, setBrandSearch] = useState('');
   const [modelSearch, setModelSearch] = useState('');
   const [showManualForm, setShowManualForm] = useState(false);
+  const [showAllBrands, setShowAllBrands] = useState(false);
+  const [showAllModels, setShowAllModels] = useState(false);
+  const manualFormRef = useRef<HTMLDivElement>(null);
+
+  const jumpToManualForm = () => {
+    setIsDictionaryOpen(false);
+    setShowManualForm(true);
+  };
+
+  useEffect(() => {
+    if (showManualForm) manualFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [showManualForm]);
 
   const currentEditingFilm = editingFilmId
     ? filmStocks.find(film => film.id === editingFilmId) || editingFilmStock
@@ -68,15 +85,27 @@ export const FilmStockFormModal = ({
   const catalog = COMMON_FILM_STOCKS.filter(film => film.format === formatFilter);
   const brandOptions = Array.from(new Set(catalog.map(film => film.brand)))
     .sort((a, b) => a.localeCompare(b));
-  const visibleBrandOptions = brandOptions.filter(brand =>
+  const matchedBrandOptions = brandOptions.filter(brand =>
     brand.toLowerCase().includes(brandSearch.trim().toLowerCase()),
   );
+  const isBrandListCollapsed = !brandSearch.trim() && !showAllBrands;
+  const visibleBrandOptions = isBrandListCollapsed
+    ? POPULAR_FILM_BRANDS.filter(brand => matchedBrandOptions.includes(brand))
+    : matchedBrandOptions;
+  const hiddenBrandCount = matchedBrandOptions.length - visibleBrandOptions.length;
+
   const modelOptions = selectedBrand
     ? catalog.filter(film => film.brand === selectedBrand)
     : [];
-  const visibleModelOptions = modelOptions.filter(film =>
+  const matchedModelOptions = modelOptions.filter(film =>
     `${film.brand} ${film.name} ${film.iso}`.toLowerCase().includes(modelSearch.trim().toLowerCase()),
   );
+  const isModelListCollapsed = !modelSearch.trim() && !showAllModels
+    && matchedModelOptions.length > DEFAULT_VISIBLE_MODEL_COUNT;
+  const visibleModelOptions = isModelListCollapsed
+    ? matchedModelOptions.slice(0, DEFAULT_VISIBLE_MODEL_COUNT)
+    : matchedModelOptions;
+  const hiddenModelCount = matchedModelOptions.length - visibleModelOptions.length;
   const dictionaryResults = dictionarySearch
     ? COMMON_FILM_STOCKS
         .filter(film => `${film.brand} ${film.name} ${film.format}`
@@ -119,6 +148,8 @@ export const FilmStockFormModal = ({
     setBrandSearch('');
     setModelSearch('');
     setShowManualForm(false);
+    setShowAllBrands(false);
+    setShowAllModels(false);
   };
 
   const applyPreset = (preset: CommonFilmStockPreset) => {
@@ -136,6 +167,8 @@ export const FilmStockFormModal = ({
     setModelSearch('');
     setIsDictionaryOpen(false);
     setShowManualForm(false);
+    setShowAllBrands(false);
+    setShowAllModels(false);
   };
 
   const handleSave = async (event: FormEvent) => {
@@ -212,6 +245,8 @@ export const FilmStockFormModal = ({
                     setBrandSearch('');
                     setModelSearch('');
                     setShowManualForm(false);
+                    setShowAllBrands(false);
+                    setShowAllModels(false);
                   }}
                 >
                   {t('gear.reselectFilm')}
@@ -234,6 +269,8 @@ export const FilmStockFormModal = ({
                           setBrandSearch('');
                           setModelSearch('');
                           setDictionarySearch('');
+                          setShowAllBrands(false);
+                          setShowAllModels(false);
                           if (!draft.brand || !draft.name) setShowManualForm(false);
                         }}
                       >
@@ -257,6 +294,7 @@ export const FilmStockFormModal = ({
                           setSelectedBrand('');
                           setBrandSearch('');
                           setModelSearch('');
+                          setShowAllModels(false);
                         }}
                       >
                         {t('gear.changeBrand')}
@@ -273,7 +311,7 @@ export const FilmStockFormModal = ({
                           onChange={event => setBrandSearch(event.target.value)}
                         />
                       )}
-                      <div className="preset-chip-grid builder-scroll-grid">
+                      <div className="preset-chip-grid builder-scroll-grid film-picker-grid">
                         {visibleBrandOptions.map(brand => (
                           <button
                             key={brand}
@@ -282,15 +320,39 @@ export const FilmStockFormModal = ({
                             onClick={() => {
                               setSelectedBrand(brand);
                               setModelSearch('');
+                              setShowAllModels(false);
                             }}
                           >
                             {brand}
                           </button>
                         ))}
                         {visibleBrandOptions.length === 0 && (
-                          <span className="gear-preset-empty">{t('gear.noBrandMatch')}</span>
+                          <div className="gear-preset-empty">
+                            <span>{t('gear.noBrandMatch')}</span>
+                            <button type="button" className="text-btn btn-sm" onClick={jumpToManualForm}>
+                              {t('gear.manualFilmToggle')}
+                            </button>
+                          </div>
                         )}
                       </div>
+                      {isBrandListCollapsed && hiddenBrandCount > 0 && (
+                        <button
+                          type="button"
+                          className="text-btn btn-sm"
+                          onClick={() => setShowAllBrands(true)}
+                        >
+                          {t('gear.showMoreBrands', { count: hiddenBrandCount })}
+                        </button>
+                      )}
+                      {!isBrandListCollapsed && showAllBrands && !brandSearch.trim() && (
+                        <button
+                          type="button"
+                          className="text-btn btn-sm"
+                          onClick={() => setShowAllBrands(false)}
+                        >
+                          {t('gear.showFewerBrands')}
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
@@ -300,7 +362,7 @@ export const FilmStockFormModal = ({
                     <div className="builder-step-label">
                       3. {t('gear.recommendedModel', { count: modelOptions.length })}
                     </div>
-                    {modelOptions.length > 8 && (
+                    {modelOptions.length > DEFAULT_VISIBLE_MODEL_COUNT && (
                       <input
                         type="text"
                         className="form-control builder-option-search"
@@ -309,7 +371,7 @@ export const FilmStockFormModal = ({
                         onChange={event => setModelSearch(event.target.value)}
                       />
                     )}
-                    <div className="preset-chip-grid builder-scroll-grid model-grid">
+                    <div className="preset-chip-grid builder-scroll-grid model-grid film-picker-grid">
                       {visibleModelOptions.map(film => (
                         <button
                           key={`${film.brand}-${film.name}-${film.format}`}
@@ -321,9 +383,32 @@ export const FilmStockFormModal = ({
                         </button>
                       ))}
                       {visibleModelOptions.length === 0 && (
-                        <span className="gear-preset-empty">{t('gear.noFilmModelMatch')}</span>
+                        <div className="gear-preset-empty">
+                          <span>{t('gear.noFilmModelMatch')}</span>
+                          <button type="button" className="text-btn btn-sm" onClick={jumpToManualForm}>
+                            {t('gear.manualFilmToggle')}
+                          </button>
+                        </div>
                       )}
                     </div>
+                    {isModelListCollapsed && hiddenModelCount > 0 && (
+                      <button
+                        type="button"
+                        className="text-btn btn-sm"
+                        onClick={() => setShowAllModels(true)}
+                      >
+                        {t('gear.showMoreModels', { count: hiddenModelCount })}
+                      </button>
+                    )}
+                    {!isModelListCollapsed && showAllModels && !modelSearch.trim() && (
+                      <button
+                        type="button"
+                        className="text-btn btn-sm"
+                        onClick={() => setShowAllModels(false)}
+                      >
+                        {t('gear.showFewerModels')}
+                      </button>
+                    )}
                   </div>
                 )}
 
@@ -349,7 +434,19 @@ export const FilmStockFormModal = ({
                       onBlur={() => setTimeout(() => setIsDictionaryOpen(false), 200)}
                     />
                   </div>
-                  {isDictionaryOpen && dictionarySearch && (
+                  {isDictionaryOpen && dictionarySearch && dictionaryResults.length === 0 && (
+                    <ul className="custom-dropdown-menu gear-preset-dropdown">
+                      <li style={{ padding: '12px 16px' }}>
+                        <div style={{ marginBottom: 8, color: 'var(--text-secondary)', fontSize: 13 }}>
+                          {t('gear.noPresetFound')}
+                        </div>
+                        <button type="button" className="text-btn btn-sm" onMouseDown={jumpToManualForm}>
+                          {t('gear.manualFilmToggle')}
+                        </button>
+                      </li>
+                    </ul>
+                  )}
+                  {isDictionaryOpen && dictionarySearch && dictionaryResults.length > 0 && (
                     <ul className="custom-dropdown-menu gear-preset-dropdown">
                       {dictionaryResults.map(film => (
                         <li
@@ -455,7 +552,7 @@ export const FilmStockFormModal = ({
             </div>
           </div>
         ) : (
-          <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px', marginBottom: '16px' }}>
+          <div ref={manualFormRef} style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px', marginBottom: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
                 {t('gear.manualFilmConfig')}
