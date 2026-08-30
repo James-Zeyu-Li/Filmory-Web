@@ -62,7 +62,7 @@ describe('CameraFormModal migration', () => {
 
     await screen.findByText('Hasselblad 500CM');
     await user.click(screen.getByTitle('编辑相机'));
-    expect(screen.getByRole('heading', { name: '编辑相机' })).toBeInTheDocument();
+    await screen.findByRole('heading', { name: '编辑相机' });
     const nameInput = screen.getByPlaceholderText('例如: Minolta X-700');
     await user.clear(nameInput);
     await user.type(nameInput, 'Hasselblad 500CM Updated');

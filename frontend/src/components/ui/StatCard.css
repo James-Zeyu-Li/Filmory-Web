@@ -1,0 +1,128 @@
+/* Shared stat-card primitive used across Insights (Shooting / Spending / Film tabs).
+   One visual language for every summary metric card in the app: flat surface,
+   colored left border for category, no gradients. */
+
+.stat-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.stat-card {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-left-width: 3px;
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-normal), border-color var(--transition-fast), box-shadow var(--transition-normal);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.stat-card-icon {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.stat-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.stat-card-content span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stat-card-content h2 {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stat-card-content p {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.stat-card--gold {
+  border-left-color: var(--accent);
+}
+.stat-card--gold .stat-card-icon {
+  color: var(--accent);
+  background-color: var(--accent-bg);
+}
+
+.stat-card--sky {
+  border-left-color: var(--chart-series-blue);
+}
+.stat-card--sky .stat-card-icon {
+  color: var(--chart-series-blue);
+  background-color: var(--chart-surface-subtle);
+}
+
+.stat-card--emerald {
+  border-left-color: var(--success);
+}
+.stat-card--emerald .stat-card-icon {
+  color: var(--success);
+  background-color: var(--success-bg);
+}
+
+.stat-card--red {
+  border-left-color: var(--danger);
+}
+.stat-card--red .stat-card-icon {
+  color: var(--danger);
+  background-color: var(--danger-bg);
+}
+
+@media (max-width: 480px) {
+  .stat-card {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .stat-card-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .stat-card-content h2 {
+    font-size: 19px;
+  }
+}

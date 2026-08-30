@@ -36,12 +36,13 @@ Cloud/backend 的 Supabase、Auth/SMTP、Storage、RLS、migration/backfill、�
 - 架构与 Cloud：React/Vite + Dexie local-first、Supabase Auth/Postgres/RLS/private Storage/signed URL/RPC/sync 已完成 migration、schema parity、P0 security、sync smoke、双账号隔离、Realtime 与库存并发验证；长期 schema/LWW 边界增强独立排期。
 - 核心产品：Dashboard、拍摄记录/项目集、器材库、财务/统计/对比和 Excel 导入/导出已覆盖当前胶片工作流；导入已逐行校验，Photos/Albums 已隐藏，统计已改为胶片用户优先。`TagsManagement` 仍是未装配的 legacy 代码，不计入当前产品能力。
 - 器材与记录：相机/镜头/胶卷采用推荐 + 手动 fallback；120 后背、共享后背、固定后背、卷级镜头、装载冲突和封面刷新恢复已完成并有测试覆盖。Gear 已拆为独立 Tabs、领域表单、共享封面编辑器和 `useGearActions`，持久化仍复用原 Dexie transaction、库存 RPC 与 SyncService 路径。
-- 认证、会员与试用：Dev Bypass 已隔离到开发环境；注册、验证、登录、恢复密码和账号删除的前端流程，以及 RLS/private Storage、会员限制、试用入口/限制、Upgrade Modal 和 Account Center 已完成。正式域 OAuth、密码策略和观测仍按 P1 保持未完成。
+- 认证、会员与试用：Dev Bypass 已隔离到开发环境；注册、验证、登录、恢复密码和账号删除的前端流程，以及 RLS/private Storage、试用入口/限制、Upgrade Modal 和 Account Center 已完成。会员基础限制（active-roll 上限等）已在前端实现，但服务端权益写入安全 Gate（防止客户端自行改写 `tier`/`role`）尚未关闭，是支付接入前的共同前置条件，详见 [`CLD-07`](./CLOUD_TODO.md#cld-07-payment)。正式域 OAuth、密码策略和观测仍按 P1 保持未完成。
 - UI 与 i18n：Landing、Settings、tab 偏好、响应式/CSS 收口、图片压缩和核心界面中英文已完成；本轮 Settings 密度与 Landing 品牌导航的窄屏细化已分别由 UI-12/UI-13 完成。PWA 更新提示和危险操作取消态测试已完成。架构文档仍需按最新同步、图片恢复和 Gear 拆分状态更新，不再将文档同步笼统标为完成。
 - 同步与验证：Dexie transaction queue、500ms 防抖、明确提交立即同步、Realtime/fallback、队列失败恢复、Cloud DB migration 和双设备 smoke 已完成；库存 RPC 使用 operation outbox + 幂等 `operationId`，不再由 LWW 覆盖库存数。`lint`、同步相关测试与 `npm run build` 已通过；仅保留非阻塞 bundle chunk size warning。Cloud sync 仍由 `VITE_ENABLE_SUPABASE_SYNC` 控制。
 - 邮件认证：Resend 发信域/发件人、真实注册与 recovery、900 秒 OTP、recovery intent、站内回跳 allowlist 已完成；正式 HTTPS、OAuth 和观测仍待完成。
 - Cloud Storage：`grainfolio-assets` private、owner signed URL、跨用户拒绝、`delete_user()` 权限和 cascade 已验证；上传失败不会再把空图片 metadata 推到 Cloud。本地 blob 补上传、稳定对象路径、封面/关系原子提交、旧对象持久化清理与 Settings 修复入口已实现。剩余阻塞仅为真实 Cloud 双设备与 object/metadata 验收。
 - 器材/胶卷履历：相机与胶卷卡片默认打开只读拍摄履历（总记录/进行中/已完成/涉及项目/未归入项目），编辑降为明确次级操作；聚合逻辑落在纯函数 `gearHistoryService`、共享 `rollCollectionGrouping`，并扩展现有 `filmInsightsService` 复用 Film Insights Drawer，不新增 Cloud schema。2026-08-29 全量基线为 `68 passed / 3 skipped` 文件、`304 passed / 5 skipped` 测试，lint/build 通过；真实浏览器手工验证了创建相机/胶卷/拍摄记录、履历统计、项目分组与未归入项目、点击记录复用现有 Roll Drawer（`/rolls?tab=all&openRoll=<id>`）等桌面端全链路，并修复了一个连带发现的窄屏工具栏/空状态留白回归。键盘 Enter/Space 激活由组件测试覆盖，未能在本地浏览器自动化中逐项人工复核（工具对合成键盘事件的限制）。
+- 业务详情 URL 与浏览器导航语义收口（P1.5）：拍摄记录 Drawer、项目集详情、器材编辑 Modal（相机/镜头/胶卷/其他器材）三阶段全部完成，`tab`/`openRoll`/`collectionId`/`edit` 均以 URL 为唯一真源，History push/replace 规则在三个阶段间保持同构。Gear 的 `subTab` 已改为每次 render 直接从 URL 派生（不再是仅挂载时读取一次的 `useState`），并补齐了非法/隐藏 tab 的 canonicalize（含清理不再匹配的 `edit`）。详细测试清单与已知的既有 flaky 用例说明见下方 P1.5 阶段 3 完成情况；`npx tsc -b`、`npm run lint`、`npm run build` 通过。
 
 ## Next Up
 
@@ -49,13 +50,13 @@ Cloud/backend 的 Supabase、Auth/SMTP、Storage、RLS、migration/backfill、�
 
 1. **P1 图片完整性 Cloud 收口：** 代码与本地测试已完成；补真实 Cloud 跨设备显示、失败重试和 object/metadata 对照验证。
 2. **P1 公开环境安全：** 正式域 Auth/邮件验收、密码策略与恢复链路、最小错误观测。
-3. **P1.5 导航可靠性：** 按阶段完成项目集详情 URL，再完成四类器材编辑 Modal URL；拍摄记录 Drawer 阶段已完成，不重复开发。
-4. **P1 Activation + Hero Archive：** 按单功能循环依次完成历史导入激活、Camera Passport、Roll Passport、Quick Capture、Photography Inbox 和 Year in Film 视觉原型；分别见 [`UI-23`](./UI_UX_TODO.md#ui-history-import-onboarding) 至 [`UI-27`](./UI_UX_TODO.md#ui-photography-inbox) 及 [`UI-30`](./UI_UX_TODO.md#ui-year-in-film-prototype)，不得一次打包重写。
-5. **P2 Archive Depth：** 继续 Dashboard/报告/花费职责和胶卷洞察；P1.5 项目集导航后升级 Project Workspace，再实现 Contact Sheet、Archive Completeness、Film Guide/个人经验、分享卡片、Year in Film 和冲扫状态时间线。Auth、Compare、Insights 降噪已完成，不再列入 Next Up。
-6. **P3 商业化：** 先确认“核心本地功能永久免费、Pro 承担持续 Cloud 成本”的 entitlement 合同、图片配额与 `MON-01` 转化时机，再接自动支付 webhook；公开分享链接晚于本地导出卡片。
-7. **P4 发布与条件任务：** Cloudflare 部署、Worker、bundle、命名迁移、机会型模块抽取与长尾 i18n；只在前置条件满足时开始。
+3. **P1 Activation + Hero Archive：** 按单功能循环依次完成历史导入激活、Camera Passport、Roll Passport、Quick Capture、Photography Inbox 和 Year in Film 视觉原型；分别见 [`UI-23`](./UI_UX_TODO.md#ui-history-import-onboarding) 至 [`UI-27`](./UI_UX_TODO.md#ui-photography-inbox) 及 [`UI-30`](./UI_UX_TODO.md#ui-year-in-film-prototype)，不得一次打包重写。
+4. **P2 Archive Depth：** 继续 Dashboard/报告/花费职责和胶卷洞察；P1.5 项目集导航后升级 Project Workspace，再实现 Contact Sheet、Archive Completeness、Film Guide/个人经验、分享卡片、Year in Film 和冲扫状态时间线。Auth、Compare、Insights 降噪已完成，不再列入 Next Up。
+5. **P3 商业化：** 先确认“核心本地功能永久免费、Pro 承担持续 Cloud 成本”的 entitlement 合同、图片配额与 `MON-01` 转化时机，再接自动支付 webhook；公开分享链接晚于本地导出卡片。
+6. **P4 发布与条件任务：** Cloudflare 部署、Worker、bundle、命名迁移、机会型模块抽取与长尾 i18n；只在前置条件满足时开始。
 
 P1 器材与胶卷拍摄履历（原 Next Up 第 1 项）已完成，详见下方 P1 小节与已完成摘要，不再占用 Next Up 排位。
+P1.5 业务详情 URL 与浏览器导航语义收口（原 Next Up 第 3 项）三个阶段已全部完成，详见下方 P1.5 小节，不再占用 Next Up 排位。
 
 ## P1：器材履历与产品激活
 
@@ -80,6 +81,11 @@ P1 器材与胶卷拍摄履历（原 Next Up 第 1 项）已完成，详见下�
     - 回归必须保证 Film Insights 现有排序/Drawer、Gear 新建编辑、库存原子 delta、120 后背、Roll 相机转移和封面处理不变。
     - 完成 focused tests 后运行全量 Vitest、`npm run lint`、`npm run build`，并在桌面与移动宽度手工验证；详细视觉与交互验收见 [`UI-18`](./UI_UX_TODO.md#ui-gear-shoot-history)。
   - **完成情况（2026-08-29）：** 相机/胶卷卡片默认打开只读履历 Drawer，编辑降为次级操作；胶卷履历扩展现有 `FilmInsightsView` Drawer，未新建第二套报告页。真实浏览器手工验证桌面端全链路（创建相机/胶卷/拍摄记录 -> 履历统计 -> 项目分组/未归入项目 -> 点记录复用既有 Roll Drawer 深链接）；窄屏（320-768px）经修复后无横向溢出、无异常留白。全量 `68 passed / 3 skipped` 文件、`304 passed / 5 skipped` 测试，`lint`/`build` 通过。键盘 Enter/Space 由组件测试覆盖，未在真实浏览器逐项复核（自动化工具对合成键盘事件的已知限制，不影响原生 `<button>` 语义保证）；项目详情跳转目前仍只到 Collections 列表页，精确定位需 P1.5 阶段 2。
+
+- [ ] **试用数据迁移被跳过时的用户提示（Ready）**
+  - 现状（已核对代码）：`migrateTrialDataToUser()`（`frontend/src/services/trialDataMigration.ts`）在试用用户注册/登录到一个已有数据的账号时会返回 `target-has-data` 并跳过合并，本地试用记录不会归并进新账号；调用方 `AuthContext.tsx:143-145` 目前只写 `console.info`，界面上没有任何提示。用户可能误以为试用期间记录的数据丢失。
+  - 只需给这一条已存在的返回值补一个用户可见的反馈（复用现有 Toast/Feedback 机制），说明"检测到该账号已有数据，本次试用记录未自动合并"，不需要新增数据迁移逻辑或改变当前"目标账号已有数据则不合并"的既定行为。
+  - 不在本任务扩大范围去设计"手动选择合并/覆盖"的交互；如果后续需要，另开任务并先确认数据合同。
 
 - [ ] **Existing History Import：把现有 Excel 导入升级为新用户激活流程（Ready after P1.5）**
   - 复用现有类型化 Excel parser、行级校验和 Dexie transaction，增加官方模板、字段映射、预览、重复处理选择、导入报告和确定性的导入后摘要；不接 Notion/Google Sheets API，不用 AI 猜列，不允许跨用户导入。
@@ -155,7 +161,7 @@ P1 器材与胶卷拍摄履历（原 Next Up 第 1 项）已完成，详见下�
 
 ## P1.5：导航可靠性与页面状态
 
-- [ ] **业务详情 URL 与浏览器导航语义收口**
+- [x] **业务详情 URL 与浏览器导航语义收口**
   - 优先级与时机：P1.5，位于 P1 Cloud 图片/公开环境安全验收之后、P2 产品体验之前。严格按 `拍摄记录 Drawer -> 项目集详情 -> 器材编辑 Modal` 三个独立阶段实施；每个阶段单独修改、测试和验收，不一次重构全部页面。
   - 当前事实：
     - 拍摄记录 Drawer 阶段已完成：`?tab=all&openRoll=<id>` 由 `RollsView` 派生详情，刷新可以恢复，列表打开使用 history entry，浏览器后退可以关闭 Drawer；相关 focused tests 和 Dashboard E2E 已更新。
@@ -191,11 +197,15 @@ P1 器材与胶卷拍摄履历（原 Next Up 第 1 项）已完成，详见下�
     6. 验证：`RollsView.tabs.test.tsx` 新增 5 个 focused test（开卡片/URL同步/PageTabs可见/Back关闭、非法及跨用户 collectionId 深链接清理、切 tab/搜索离开时清理 collectionId、设置关闭 Collections 时回退到可见 tab），新增 `e2e/collection-deep-link.spec.ts`（Chromium 真实浏览器，覆盖开卡片、刷新恢复、Back 关闭、非法深链接清理）。全量 Vitest `309 passed / 5 skipped`，`npm run lint`、`npm run build` 均通过。移动端行为通过既有 `.has-active-collection` CSS 类切换规则静态复核（本阶段未改动该规则，仅改变其挂载位置的 state 来源），未逐项人工复核真实移动设备。
     7. 顺带修复一处连带发现的问题：Collections 网格卡片封面（`.roll-card-cover`）此前 `z-index` 高于卡片自身的无障碍「打开」按钮，导致精确点击/自动化按可访问名称点击会被封面拦截（鼠标用户不受影响，因为外层卡片的 onClick 仍会通过事件冒泡触发）；已加 `.collection-card .roll-card-cover { z-index: 0; }` 精确修正，不影响拍摄记录卡片封面本身需要更高层级以容纳上传/预览按钮的既有逻辑。同时给 `playwright.config.ts` 固定了 `locale: 'zh-CN'`，此前套件的中/英文断言完全依赖宿主机默认语言，不是确定性的。
     8. 修复 `e2e/dashboard.spec.ts` 两处与本阶段无关的既有测试缺陷：「库存胶卷分组」按格式/彩黑分列的断言对应的 UI 元素已随 Insights 降噪一并移除（当前只剩单一聚合数字），种子数据本身未变（135 共 11 卷、彩色 8/黑白 3 计算依旧成立），断言已改为核对聚合后的「11 卷」；「keeps rolls tab and list layout after refresh」在从未点击「项目集」tab 的情况下就直接找「新建项目集」按钮（该按钮只在 `libraryView==='collections'` 时才会渲染成这个文案），且用 `role=button` 误选本应是 `role=tab` 的「全部拍摄记录」——均已修正。`npx playwright test e2e/dashboard.spec.ts` 4/4 通过。
-  - 阶段 3：器材编辑 Modal（最后做）
+  - 阶段 3：器材编辑 Modal（已完成，2026-08-29）
     1. `tab` 决定实体表，`edit` 决定当前记录；只从对应当前用户数据集中解析实体，禁止在四张表间用同一个 ID 盲查或猜类型。
     2. 相机、镜头、胶卷、其他器材卡片打开编辑时写入 canonical URL；刷新恢复相同编辑 Modal，后退关闭并返回原 tab。新建入口继续兼容现有 query，除非另开任务统一创建 URL，不在本阶段顺手改名。
     3. 继续复用已拆分的领域表单、`useGearActions`、库存 delta operation 和 `GearAvatarEditor`；不得把保存逻辑搬回 `GearView`，也不得为路由改造重写 120 系统/后背模型。
     4. 本阶段不实现表单草稿持久化。刷新时只恢复“正在编辑哪条记录”及该记录最后已保存的数据；未提交输入是否需要离开确认，必须另行产品确认，不能宣称自动恢复。
+    5. **完成情况：** `GearView.tsx` 的 `subTab` 由 `useState` 改为每次 render 直接从 `tab` query 派生（不再是"仅挂载时读取一次"），`edit` 按当前 `tab` 派生 `editingCameraId/editingLensId/editingFilmId/editingEquipmentId`，对已按 `userId` 过滤的 `useCameras()`/`useLenses()`/`useFilmStocks()`/`useOtherEquipments()` 数组 `find`，天然满足"非法 tab/跨用户/已删除记录不打开 Modal"。新增共享 `openGearEditModal`/`closeGearEditModal`，History 语义与阶段 1/2 的 `openRollDrawer`/`closeRollDrawer` 同构。canonicalize effect 区分"tab 缺失"（补 tab、保留 `edit`）与"tab 非法或被 `enableFilmMode` 隐藏"（改 tab 且清空 `edit`，避免 ID 被跨实体误解析）两种情况；切 tab 一律 `replace` 写入 URL 并清空 `edit`，不再要求"仅当有编辑中的 Modal 才写 URL"。
+    6. **发现并修复的实现期 bug：** 四个 Modal 原本用独立计数器驱动 `key` 强制重挂载表单；点击"编辑"时该计数器与 `navigate()` 触发的 URL 更新不在同一次 render 落地，导致新挂载的表单在 `editingCamera` 还是 `null` 的那一帧完成挂载，其内部 `useState(editingCamera?.id)` 被永久锁死为"新建"模式。修复为 `key` 直接绑定 `editingXxx.id`，保证 key 变化与数据同一次 render 到达。
+    7. **验证：** `frontend/src/views/Gear/__tests__/GearView.urls.test.tsx`（15 个 focused test）分别对相机/镜头/胶卷/其他器材各自验证深链接打开；错 tab、不存在 ID、跨用户 ID 不打开 Modal；列表点击 push 更新 URL 且在**卸载后**以该 URL 重新挂载（模拟真实刷新）能恢复同一 Modal；无来源标记的深链接点取消会 replace 到 canonical URL；**从列表 push 打开后点取消**会正确 `navigate(-1)` 回到该 tab 自己的 URL 且不残留 `edit`；切 tab 在有/无编辑 Modal 时都会清空 `edit` 并 `replace` 新 tab；`tab` 缺失（保留 `edit`）、`tab` 合法但被 `enableFilmMode` 隐藏（清空 `edit`）、`tab` 是完全非法字符串（同样清空 `edit`）三种 canonicalize 分支分别有独立用例。`frontend/e2e/gear-edit-deep-link.spec.ts`（4 个 Chromium 真实浏览器用例）覆盖四类实体各自的列表打开、URL 更新、取消后 URL 回到该 tab 的 canonical 地址，相机额外覆盖刷新恢复与真实浏览器 Back。这是第二轮外部 review 后补齐的版本——第一版的单测标题声称"覆盖四类实体深链接"但只测了相机、"刷新恢复"测试未卸载首次挂载的实例、没有测"列表 push 打开后取消"这条路径的 URL 结果、E2E 缺胶卷代表路径且没有非法 tab 字符串用例，均已在这版修正。
+    8. **测试稳定性说明：** `npx tsc -b`、`npm run lint`、`npm run build` 均通过；`GearView.urls.test.tsx` 单独运行、`gear-edit-deep-link.spec.ts` 单独运行均多次 100% 通过。全量 `npm run test` 反复运行时，本任务新增的用例本身没有失败记录，但整个仓库的全量跑法存在一个已知的、与本任务无关的偶发失败——`RollsView.tabs.test.tsx`「falls back to the first visible tab, not tab=collections, when Collections is disabled while viewing a project detail」在并行跑测试时偶尔报 `act()` 警告并超时，单独运行 100% 通过；这是 P1.5 阶段 2 遗留的既有 flaky 用例，不是本次改动引入的回归。因此"全量 Vitest 多少条通过"不作为可反复复现的确定性事实写死，以"新增用例在隔离运行下稳定通过"为准。发现并另开任务修复了一处与本任务无关的既有测试缺陷（`e2e/gear-builder.spec.ts` 用 `role=button` 误查已经改成 `role=tab` 的胶卷标签页按钮，以及两处过期的表单文案断言）。
   - 自动测试要求：
     - 组件/集成测试：URL 初始化能打开正确详情；列表点击更新 URL；Tab 使用 `replace`；X/Esc/遮罩和浏览器 Back 行为符合来源规则；非法 tab、缺失 ID、已删除记录和其他用户 ID 不渲染详情。
     - 拍摄记录重点覆盖：Dashboard 深链接补齐 `tab=all` 后仍打开指定 Drawer；刷新保持 Drawer；Back 关闭 Drawer；删除/归档后 URL 不残留；本地尚未同步到记录时不崩溃、不伪造内容，并能在 Dexie live data 到达后自动显示。

@@ -864,6 +864,12 @@
 - 补 `200%` zoom、长本地化文案、键盘 focus、reduced-motion 和深色 Landing 的视觉 smoke；确认 Logo 在固定顶栏和 footer 中均清晰。
 - 关闭条件：focused tests、响应式 E2E、`npm run lint` 和 production build 全部通过；上述条件已满足，Roadmap 已标记完成。
 
+**后续收口（2026-08-29）**
+
+- 语言切换按钮（`.landing-language-switch button`）由 `min-width` 改为固定 `width`，切换中/英文时不再因文字长度不同而挤动相邻按钮。
+- 顶栏“登录”入口在 `<=768px` 隐藏（与试用入口同档收起），避免与品牌区、注册按钮挤占空间；同时在 Hero 区新增与“先试用一下”“长期保存”同等大小的“登录”按钮，保证已注册用户在窄屏下仍有和新用户同等显眼的入口，不因顶栏收起而降低可达性。
+- Hero 主 CTA（“先试用一下”）改为使用品牌暖金色 `--accent` 实色填充，替换此前与“选中态语言按钮”同一套黑白配色的处理，使其在视觉上区别于同排的“注册/登录”次级按钮。
+
 <a id="ui-landing-privacy-narrative"></a>
 ### UI-32 Landing / Onboarding Private-first 信任叙事
 
@@ -950,6 +956,12 @@
 - 覆盖 1025、1100、1249、1250、1440px，中英文、明暗主题、200% zoom；主内容宽度增加但导航不截断。
 - 展开、折叠及移动 Drawer 中所有图标轴线稳定，Account/Preferences/Collapse 不跳位；键盘 focus、tooltip 和可访问名称与当前动作一致。
 - Sidebar 动画不引起主内容水平抖动或断点闪现；reduced-motion 下立即稳定到最终状态。
+
+**回归修复与补充（2026-08-29）**
+
+- 修复：`.sidebar-brand` 此前用单边 `padding-left: 10px` 且未设 `justify-content`，实际并未做到"统一水平节奏"（品牌未真正居中）；改为 `justify-content: center` 并去掉该单边 padding，同时清理了两处已失效/冗余的 `.sidebar.collapsed .sidebar-brand` 覆盖规则。
+- 修复：手机宽度下打开侧边抽屉后横向调整窗口跨越 `1024px` 桌面断点时，`isOpen` 状态未被清理，导致固定遮罩层 `.sidebar-overlay` 残留在已变回常驻侧栏的桌面布局之上；resize 逻辑在检测到该跨越时补充调用关闭回调。
+- `MobileHeader` 的汉堡按钮从右侧移到左侧，与抽屉展开方向（从左滑出）和桌面侧栏固定停靠在左侧保持一致。
 
 <a id="ui-settings-disclosure-alignment"></a>
 ### UI-16 Settings 拍摄记录布局行视觉对齐

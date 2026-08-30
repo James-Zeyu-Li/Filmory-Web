@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { type Camera, type Lens, type FilmStock, type OtherEquipment } from '../../db/schema';
 import { Camera as CameraIcon, Check, Plus, X, Search, Aperture, Film, Package } from 'lucide-react';
 import './GearView.css';
@@ -57,29 +57,45 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
   const initialTab = initialSearchParams.get('tab');
   const shouldOpenNewCamera = initialSearchParams.get('newCamera') === '1';
   const shouldOpenNewFilm = initialSearchParams.get('newFilm') === '1';
-  const [subTab, setSubTab] = useState<SubTab>(() => {
+  // Single place that decides which tab a `tab` param (or the localStorage
+  // fallback) resolves to; reused by the initial state below and by the
+  // canonicalize effect so URL changes (Back/Forward, a hand-edited URL,
+  // enableFilmMode flipping) are corrected the same way on every render, not
+  // just at mount.
+  const resolveSubTab = useCallback((tabParam: string | null): SubTab => {
     const savedTab = localStorage.getItem(GEAR_SUB_TAB_KEY);
-    const candidate = isSubTab(initialTab) ? initialTab : isSubTab(savedTab) ? savedTab : 'cameras';
+    const candidate = isSubTab(tabParam) ? tabParam : isSubTab(savedTab) ? savedTab : 'cameras';
     return !enableFilmMode && candidate === 'filmStocks' ? 'cameras' : candidate;
-  });
-  const [isCameraModalOpen, setIsCameraModalOpen] = useState(shouldOpenNewCamera);
-  const [isLensModalOpen, setIsLensModalOpen] = useState(false);
-  const [isFilmModalOpen, setIsFilmModalOpen] = useState(shouldOpenNewFilm);
-  const [isEquipmentModalOpen, setIsEquipmentModalOpen] = useState(false);
+  }, [enableFilmMode]);
+  // Derived fresh every render from the URL (falling back to localStorage only
+  // when `tab` is absent) rather than mirrored into a separate `useState` —
+  // this is what keeps it following Back/Forward and hand-edited URLs without
+  // a setState-in-effect sync.
+  const subTab = resolveSubTab(initialTab);
+
+  // Edit target is URL-derived, not local state: the `edit` query param (scoped by
+  // the current `tab`) is the single source of truth, mirroring RollsView's
+  // openRoll/collectionId. "New" record modals keep their existing local-state /
+  // transient-query-flag behavior (out of scope for this URL-ification pass).
+  const editIdParam = initialSearchParams.get('edit');
+  const editingCameraId = subTab === 'cameras' ? editIdParam : null;
+  const editingLensId = subTab === 'lenses' ? editIdParam : null;
+  const editingFilmId = subTab === 'filmStocks' ? editIdParam : null;
+  const editingEquipmentId = subTab === 'otherEquipments' ? editIdParam : null;
+
+  const [isNewCameraModalOpen, setIsNewCameraModalOpen] = useState(shouldOpenNewCamera);
+  const [isNewLensModalOpen, setIsNewLensModalOpen] = useState(false);
+  const [isNewFilmModalOpen, setIsNewFilmModalOpen] = useState(shouldOpenNewFilm);
+  const [isNewEquipmentModalOpen, setIsNewEquipmentModalOpen] = useState(false);
   const [keepModalOpen, setKeepModalOpen] = useState(false);
 
   // Archive state
   const [archiveTarget, setArchiveTarget] = useState<{ id: string, type: 'camera' | 'lens', name: string } | null>(null);
   const [archivePrice, setArchivePrice] = useState<number | ''>('');
 
-  // Editing state
-  const [editingCameraId, setEditingCameraId] = useState<string | null>(null);
   const [cameraFormSession, setCameraFormSession] = useState(0);
-  const [editingLensId, setEditingLensId] = useState<string | null>(null);
   const [lensFormSession, setLensFormSession] = useState(0);
-  const [editingFilmId, setEditingFilmId] = useState<string | null>(null);
   const [filmFormSession, setFilmFormSession] = useState(0);
-  const [editingEquipmentId, setEditingEquipmentId] = useState<string | null>(null);
   const [equipmentFormSession, setEquipmentFormSession] = useState(0);
   const [nowTimestamp] = useState(Date.now);
 
@@ -99,9 +115,46 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
   const sortRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!location.search) return;
-    navigate('/gear', { replace: true });
-  }, [location.search, navigate]);
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab');
+    const resolvedTab = resolveSubTab(tabParam);
+    const hasTransientNewCamera = params.get('newCamera') === '1';
+    const hasTransientNewFilm = params.get('newFilm') === '1';
+
+    let mutated = false;
+    if (tabParam === null) {
+      // Missing tab: fill in the resolved one, but the `edit` id (if any) was
+      // always meant for this tab — keep it.
+      params.set('tab', resolvedTab);
+      mutated = true;
+    } else if (tabParam !== resolvedTab) {
+      // Present but invalid or currently hidden (e.g. filmStocks with
+      // enableFilmMode off): correct the tab. `edit` was scoped to whatever
+      // entity type that tab claimed to be, which no longer matches the
+      // resolved tab, so drop it rather than let it get reinterpreted as a
+      // different entity type.
+      params.set('tab', resolvedTab);
+      mutated = true;
+      if (params.has('edit')) {
+        params.delete('edit');
+      }
+    }
+    if (hasTransientNewCamera) {
+      params.delete('newCamera');
+      mutated = true;
+    }
+    if (hasTransientNewFilm) {
+      params.delete('newFilm');
+      mutated = true;
+    }
+
+    if (mutated) {
+      navigate({ pathname: '/gear', search: params.toString() ? `?${params.toString()}` : '' }, {
+        replace: true,
+        state: location.state,
+      });
+    }
+  }, [location.search, location.state, navigate, resolveSubTab]);
 
   useEffect(() => {
     localStorage.setItem(GEAR_SUB_TAB_KEY, subTab);
@@ -225,6 +278,18 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     () => buildFilmUsageSummaries(filmStocks, rolls, collections),
     [filmStocks, rolls, collections],
   );
+  // Resolving against the already user-scoped live-query arrays means an `edit`
+  // id that's missing, deleted, or belongs to another tab/user simply won't be
+  // found here — no separate ownership check needed before opening the modal.
+  const editingCamera = editingCameraId ? allCameras.find(camera => camera.id === editingCameraId) ?? null : null;
+  const editingLens = editingLensId ? allLenses.find(lens => lens.id === editingLensId) ?? null : null;
+  const editingFilmStock = editingFilmId ? filmStocks.find(film => film.id === editingFilmId) ?? null : null;
+  const editingEquipment = editingEquipmentId ? otherEquipments.find(item => item.id === editingEquipmentId) ?? null : null;
+  const isCameraModalOpen = isNewCameraModalOpen || Boolean(editingCamera);
+  const isLensModalOpen = isNewLensModalOpen || Boolean(editingLens);
+  const isFilmModalOpen = isNewFilmModalOpen || Boolean(editingFilmStock);
+  const isEquipmentModalOpen = isNewEquipmentModalOpen || Boolean(editingEquipment);
+
   const viewingCamera = viewingCameraId ? allCameras.find(camera => camera.id === viewingCameraId) ?? null : null;
   const viewingCameraSummary = viewingCameraId
     ? cameraHistorySummaries.find(summary => summary.camera.id === viewingCameraId) ?? null
@@ -262,22 +327,49 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
   const handleDeleteEquipment = gearActions.deleteOtherEquipment;
 
+  // Shared push/back-or-replace logic for the four gear edit modals, mirroring
+  // RollsView's openRollDrawer/closeRollDrawer History rules: opening from the
+  // current list pushes a new entry so Back closes the modal; closing otherwise
+  // (X/Esc/backdrop) returns to that entry when it exists, or replaces down to
+  // the canonical tab URL when there's no reliable list origin (refresh/deep link).
+  const openGearEditModal = (tab: SubTab, id: string) => {
+    const params = new URLSearchParams(location.search);
+    params.set('tab', tab);
+    params.set('edit', id);
+    navigate({ pathname: '/gear', search: `?${params.toString()}` }, {
+      state: { ...location.state, grainfolioGearEditOrigin: 'gear-list' },
+    });
+  };
+
+  const closeGearEditModal = () => {
+    if (!editIdParam) return;
+    if (location.state?.grainfolioGearEditOrigin === 'gear-list') {
+      navigate(-1);
+      return;
+    }
+    const params = new URLSearchParams(location.search);
+    params.delete('edit');
+    navigate({ pathname: '/gear', search: params.toString() ? `?${params.toString()}` : '' }, { replace: true });
+  };
+
+  // No form-session bump needed here: the modal's `key` below is derived
+  // directly from `editingCamera.id` (resolved in the same render as the URL),
+  // so it's already guaranteed to remount fresh with the right record — bumping
+  // a separately-timed counter here previously raced the URL update and could
+  // mount the form before `editingCamera` caught up, locking in create-mode.
   const openEditCamera = (c: Camera) => {
-    setEditingCameraId(c.id!);
-    setCameraFormSession(previous => previous + 1);
-    setIsCameraModalOpen(true);
+    if (!c.id) return;
+    openGearEditModal('cameras', c.id);
   };
 
   const openEditLens = (l: Lens) => {
-    setEditingLensId(l.id!);
-    setLensFormSession(previous => previous + 1);
-    setIsLensModalOpen(true);
+    if (!l.id) return;
+    openGearEditModal('lenses', l.id);
   };
 
   const openEditFilm = (f: FilmStock) => {
-    setEditingFilmId(f.id!);
-    setFilmFormSession(previous => previous + 1);
-    setIsFilmModalOpen(true);
+    if (!f.id) return;
+    openGearEditModal('filmStocks', f.id);
   };
 
   const openCameraHistory = (camera: Camera) => setViewingCameraId(camera.id!);
@@ -289,33 +381,35 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
   const openNewRollFromHistory = () => navigate('/rolls?newRoll=1');
 
   const openEditEquipment = (eq: OtherEquipment) => {
-    setEditingEquipmentId(eq.id!);
-    setEquipmentFormSession(previous => previous + 1);
-    setIsEquipmentModalOpen(true);
+    if (!eq.id) return;
+    openGearEditModal('otherEquipments', eq.id);
   };
 
   const openNewCamera = () => {
-    setEditingCameraId(null);
     setCameraFormSession(previous => previous + 1);
-    setIsCameraModalOpen(true);
+    setIsNewCameraModalOpen(true);
   };
 
   const openNewLens = () => {
-    setEditingLensId(null);
     setLensFormSession(previous => previous + 1);
-    setIsLensModalOpen(true);
+    setIsNewLensModalOpen(true);
   };
 
   const openNewFilm = () => {
-    setEditingFilmId(null);
     setFilmFormSession(previous => previous + 1);
-    setIsFilmModalOpen(true);
+    setIsNewFilmModalOpen(true);
   };
 
   const openNewEquipment = () => {
-    setEditingEquipmentId(null);
     setEquipmentFormSession(previous => previous + 1);
-    setIsEquipmentModalOpen(true);
+    setIsNewEquipmentModalOpen(true);
+  };
+
+  const handleSubTabChange = (nextTab: SubTab) => {
+    const params = new URLSearchParams(location.search);
+    params.set('tab', nextTab);
+    params.delete('edit');
+    navigate({ pathname: '/gear', search: `?${params.toString()}` }, { replace: true });
   };
 
   const renderActiveTab = () => {
@@ -386,7 +480,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
               { id: 'otherEquipments', label: <><Package size={16} /> {t('gear.otherTab')} ({otherEquipments.length})</>, mobileLabel: <><Package size={16} /> {t('gear.otherMobileTab')} ({otherEquipments.length})</>, ariaLabel: `${t('gear.otherTab')} (${otherEquipments.length})` },
             ]}
             activeId={subTab}
-            onChange={setSubTab}
+            onChange={handleSubTabChange}
             ariaLabel={t('nav.gear')}
             idPrefix="gear"
           />
@@ -464,53 +558,53 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
 
       {/* --- MODALS --- */}
       <CameraFormModal
-        key={`camera-form-${cameraFormSession}`}
+        key={editingCamera ? `camera-edit-${editingCamera.id}` : `camera-new-${cameraFormSession}`}
         isOpen={isCameraModalOpen}
-        editingCamera={editingCameraId ? allCameras.find(camera => camera.id === editingCameraId) || null : null}
+        editingCamera={editingCamera}
         keepModalOpen={keepModalOpen}
         uploadingEntityId={uploadingEntityId}
         onKeepModalOpenChange={setKeepModalOpen}
-        onClose={() => setIsCameraModalOpen(false)}
+        onClose={() => { setIsNewCameraModalOpen(false); closeGearEditModal(); }}
         onPreview={openAvatarPreview}
         onUpload={triggerAvatarUpload}
         onRemoveAvatar={(id, type, label) => { void handleRemoveAvatar(id, type, label); }}
       />
 
       <LensFormModal
-        key={`lens-form-${lensFormSession}`}
+        key={editingLens ? `lens-edit-${editingLens.id}` : `lens-new-${lensFormSession}`}
         isOpen={isLensModalOpen}
-        editingLens={editingLensId ? allLenses.find(lens => lens.id === editingLensId) || null : null}
+        editingLens={editingLens}
         keepModalOpen={keepModalOpen}
         uploadingEntityId={uploadingEntityId}
         onKeepModalOpenChange={setKeepModalOpen}
-        onClose={() => setIsLensModalOpen(false)}
+        onClose={() => { setIsNewLensModalOpen(false); closeGearEditModal(); }}
         onPreview={openAvatarPreview}
         onUpload={triggerAvatarUpload}
         onRemoveAvatar={(id, type, label) => { void handleRemoveAvatar(id, type, label); }}
       />
 
       <FilmStockFormModal
-        key={`film-stock-form-${filmFormSession}`}
+        key={editingFilmStock ? `film-edit-${editingFilmStock.id}` : `film-new-${filmFormSession}`}
         isOpen={isFilmModalOpen}
-        editingFilmStock={editingFilmId ? filmStocks.find(film => film.id === editingFilmId) || null : null}
+        editingFilmStock={editingFilmStock}
         filmStocks={filmStocks}
         keepModalOpen={keepModalOpen}
         uploadingEntityId={uploadingEntityId}
         onKeepModalOpenChange={setKeepModalOpen}
-        onClose={() => setIsFilmModalOpen(false)}
+        onClose={() => { setIsNewFilmModalOpen(false); closeGearEditModal(); }}
         onPreview={openAvatarPreview}
         onUpload={triggerAvatarUpload}
         onRemoveAvatar={(id, type, label) => { void handleRemoveAvatar(id, type, label); }}
       />
       <OtherEquipmentFormModal
-        key={`equipment-form-${equipmentFormSession}`}
+        key={editingEquipment ? `equipment-edit-${editingEquipment.id}` : `equipment-new-${equipmentFormSession}`}
         isOpen={isEquipmentModalOpen}
-        editingEquipment={editingEquipmentId ? otherEquipments.find(item => item.id === editingEquipmentId) || null : null}
+        editingEquipment={editingEquipment}
         equipment={otherEquipments}
         keepModalOpen={keepModalOpen}
         uploadingEntityId={uploadingEntityId}
         onKeepModalOpenChange={setKeepModalOpen}
-        onClose={() => setIsEquipmentModalOpen(false)}
+        onClose={() => { setIsNewEquipmentModalOpen(false); closeGearEditModal(); }}
         onPreview={openAvatarPreview}
         onUpload={triggerAvatarUpload}
         onRemoveAvatar={(id, type, label) => { void handleRemoveAvatar(id, type, label); }}
