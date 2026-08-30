@@ -161,6 +161,25 @@ html.theme-transitioning *::after {
   transition-timing-function: ease !important;
 }
 
+/* Language switches swap every visible string at once, so a color transition
+   wouldn't smooth anything — dip the whole page's opacity, swap the text
+   underneath, then recover. The transition lives on the base rule (not the
+   class) so it applies symmetrically on both the dip and the recovery. */
+html {
+  transition: opacity 180ms ease;
+}
+
+html.language-transitioning {
+  opacity: 0.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.language-transitioning {
+    opacity: 1;
+    transition: none;
+  }
+}
+
 /* Custom Web Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
@@ -433,6 +452,16 @@ html.theme-transitioning *::after {
 .rolls-toolbar-actions > .sort-dropdown-container,
 .rolls-toolbar-actions > .rolls-sort-menu {
   flex: 0 0 auto;
+}
+
+@media (max-width: 1024px) {
+  /* .rolls-toolbar switches to flex-direction: column at this breakpoint (see
+     above), which turns the base rule's 240px flex-basis into a vertical
+     size instead of a horizontal one, stretching this row far past its
+     content. Reset it back to a content-sized row here. */
+  .rolls-toolbar-actions {
+    flex: 0 0 auto;
+  }
 }
 
 @media (max-width: 950px) {

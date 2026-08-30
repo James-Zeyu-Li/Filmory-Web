@@ -1,17 +1,17 @@
+/* Landing reuses the app's own design tokens directly (--bg-*, --text-*, --accent*,
+   --border-color, --shadow-*, --brand-lightbox-*) instead of a parallel palette, so
+   Landing / Auth / the signed-in app all render identically in both themes. Only the
+   nav's translucent backdrop and the wordmark's dark-mode invert filter need a small
+   theme-scoped value of their own. */
 .landing-container {
-  /* Brand accent chip stays a constant warm cream across themes (paper/film identity);
-     everything else is theme-scoped below via [data-theme]. Opacity-varied colors use
-     an RGB triplet + rgba(), not dozens of named tokens, so every tint/shade stays in
-     sync automatically when the theme switches. */
-  --landing-brand-surface: #f4efe2;
   min-height: 100vh;
   min-height: 100dvh;
   width: 100%;
   max-width: 100%;
   flex: 1 1 auto;
   min-width: 0;
-  background-color: var(--landing-bg);
-  color: rgb(var(--landing-text-rgb));
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   overflow-x: clip;
   position: relative;
@@ -21,30 +21,12 @@
 }
 
 [data-theme='dark'] .landing-container {
-  --landing-bg: #0b0b0a;
-  --landing-surface: #121210;
-  --landing-surface-raised: #171714;
-  --landing-border: rgba(255, 255, 255, 0.09);
-  --landing-nav-bg: rgba(11, 11, 10, 0.96);
-  --landing-accent: #e2b028;
-  --landing-accent-rgb: 226, 176, 40;
-  --landing-text-rgb: 255, 255, 255;
-  --landing-invert-text-rgb: 0, 0, 0;
-  --landing-brand-border: rgba(255, 248, 225, 0.72);
+  --landing-nav-bg: rgba(15, 16, 19, 0.96);
   --landing-wordmark-filter: invert(1) grayscale(1) brightness(1.35) drop-shadow(0 1px 5px rgba(0, 0, 0, 0.5));
 }
 
 [data-theme='light'] .landing-container {
-  --landing-bg: #fbfaf7;
-  --landing-surface: #ffffff;
-  --landing-surface-raised: #f2efe8;
-  --landing-border: rgba(20, 19, 15, 0.1);
-  --landing-nav-bg: rgba(251, 250, 247, 0.96);
-  --landing-accent: #b45309;
-  --landing-accent-rgb: 180, 83, 9;
-  --landing-text-rgb: 20, 19, 15;
-  --landing-invert-text-rgb: 255, 255, 255;
-  --landing-brand-border: rgba(120, 103, 70, 0.35);
+  --landing-nav-bg: rgba(249, 250, 251, 0.96);
   --landing-wordmark-filter: none;
 }
 
@@ -64,7 +46,7 @@
   min-width: 0;
   z-index: 100;
   background: var(--landing-nav-bg);
-  border-bottom: 1px solid var(--landing-border);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .landing-brand {
@@ -78,6 +60,7 @@
   letter-spacing: -0.02em;
 }
 
+/* Same recipe as the Sidebar's .brand-logo-wrapper, for a pixel-consistent mark. */
 .landing-brand-mark,
 .footer-brand-mark {
   display: inline-flex;
@@ -87,10 +70,14 @@
   width: 32px;
   height: 32px;
   padding: 5px;
-  border: 1px solid var(--landing-brand-border);
+  border: 1px solid var(--brand-lightbox-border);
   border-radius: 8px;
-  background-color: var(--landing-brand-surface);
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.24);
+  background: linear-gradient(180deg, var(--brand-lightbox-start) 0%, var(--brand-lightbox-end) 100%);
+  box-shadow:
+    inset 0 0 12px var(--brand-lightbox-inset),
+    0 0 16px var(--brand-lightbox-glow),
+    0 2px 5px var(--brand-lightbox-shadow),
+    0 8px 14px -9px var(--brand-lightbox-drop-shadow);
 }
 
 .landing-brand-mark img,
@@ -122,44 +109,65 @@
   font: inherit;
 }
 
+.landing-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.landing-theme-toggle:hover {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+}
+
 .landing-language-switch {
   display: inline-flex;
   align-items: center;
   gap: 3px;
   padding: 3px;
   border-radius: 8px;
-  background: var(--landing-surface);
-  border: 1px solid var(--landing-border);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
 }
 
 .landing-language-switch button {
-  min-width: 42px;
-  padding: 6px 10px;
+  width: 42px;
+  padding: 6px 0;
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: rgba(var(--landing-text-rgb), 0.64);
+  color: var(--text-secondary);
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.01em;
+  text-align: center;
   cursor: pointer;
   transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease;
 }
 
 .landing-language-switch button:hover {
-  color: rgb(var(--landing-text-rgb));
+  color: var(--text-primary);
 }
 
 .landing-language-switch button.active {
-  color: rgb(var(--landing-invert-text-rgb));
-  background: rgb(var(--landing-text-rgb));
+  color: var(--bg-primary);
+  background: var(--text-primary);
   box-shadow: none;
 }
 
 .btn-ghost-trial {
-  color: rgba(var(--landing-text-rgb), 0.86);
-  background: var(--landing-surface);
-  border: 1px solid var(--landing-border);
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   text-decoration: none;
   font-weight: 600;
   font-size: 0.92rem;
@@ -170,13 +178,12 @@
 }
 
 .btn-ghost-trial:hover {
-  color: rgb(var(--landing-text-rgb));
-  background: var(--landing-surface-raised);
+  background: var(--bg-tertiary);
   transform: translateY(-1px);
 }
 
 .landing-nav-actions .btn-secondary {
-  color: rgba(var(--landing-text-rgb), 0.8);
+  color: var(--text-secondary);
   text-decoration: none;
   font-weight: 500;
   font-size: 0.95rem;
@@ -186,13 +193,13 @@
 }
 
 .landing-nav-actions .btn-secondary:hover {
-  color: rgb(var(--landing-text-rgb));
-  background: rgba(var(--landing-text-rgb), 0.05);
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
 }
 
 .landing-nav-actions .btn-primary {
-  background: rgb(var(--landing-text-rgb));
-  color: rgb(var(--landing-invert-text-rgb));
+  background: var(--text-primary);
+  color: var(--bg-primary);
   text-decoration: none;
   font-weight: 600;
   font-size: 0.95rem;
@@ -203,7 +210,7 @@
 
 .landing-nav-actions .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(var(--landing-text-rgb), 0.2);
+  box-shadow: var(--shadow-md);
 }
 
 /* Hero Section */
@@ -236,20 +243,20 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: var(--landing-surface);
-  border: 1px solid var(--landing-border);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   padding: 6px 16px;
   border-radius: 100px;
   font-size: 0.85rem;
   font-weight: 500;
-  color: rgba(var(--landing-text-rgb), 0.8);
+  color: var(--text-secondary);
   margin-bottom: 32px;
 }
 
 .pulse-dot {
   width: 6px;
   height: 6px;
-  background-color: var(--landing-accent);
+  background-color: var(--accent);
   border-radius: 50%;
 }
 
@@ -264,13 +271,13 @@
 .hero-title-accent {
   display: inline-block;
   max-width: 100%;
-  color: var(--landing-accent);
+  color: var(--accent);
 }
 
 .hero-subtitle {
   font-size: clamp(1rem, 2.5vw, 1.25rem);
   line-height: 1.6;
-  color: rgba(var(--landing-text-rgb), 0.6);
+  color: var(--text-secondary);
   max-width: 600px;
   margin: 0 0 48px 0;
 }
@@ -300,20 +307,20 @@
 }
 
 .btn-primary.large {
-  background: rgb(var(--landing-text-rgb));
-  color: rgb(var(--landing-invert-text-rgb));
+  background: var(--accent);
+  color: #000;
 }
 
 .btn-secondary.large {
-  color: rgba(var(--landing-text-rgb), 0.88);
-  background: rgba(var(--landing-text-rgb), 0.06);
-  border: 1px solid rgba(var(--landing-text-rgb), 0.12);
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
 }
 
 .btn-primary.large:hover,
 .btn-secondary.large:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(var(--landing-text-rgb), 0.15);
+  box-shadow: var(--shadow-lg);
 }
 
 /* Features */
@@ -339,16 +346,16 @@
 
 .feature-card {
   min-width: 0;
-  background: var(--landing-surface);
-  border: 1px solid var(--landing-border);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 32px;
   transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
 .feature-card:hover {
-  background: var(--landing-surface-raised);
-  border-color: rgba(var(--landing-accent-rgb), 0.35);
+  background: var(--bg-tertiary);
+  border-color: var(--accent-border);
 }
 
 .feature-icon {
@@ -359,27 +366,27 @@
   align-items: center;
   justify-content: center;
   margin-bottom: 24px;
-  background: rgba(var(--landing-accent-rgb), 0.1);
-  color: var(--landing-accent);
+  background: var(--accent-bg);
+  color: var(--accent);
 }
 
 .feature-card h3 {
   font-size: 1.25rem;
   font-weight: 600;
   margin: 0 0 12px 0;
-  color: rgba(var(--landing-text-rgb), 0.9);
+  color: var(--text-primary);
 }
 
 .feature-card p {
   font-size: 0.95rem;
   line-height: 1.6;
-  color: rgba(var(--landing-text-rgb), 0.5);
+  color: var(--text-secondary);
   margin: 0;
 }
 
 /* Footer */
 .landing-footer {
-  border-top: 1px solid var(--landing-border);
+  border-top: 1px solid var(--border-color);
   padding: 48px 0;
   margin-top: auto;
   width: 100%;
@@ -417,7 +424,7 @@
 }
 
 .footer-copyright {
-  color: rgba(var(--landing-text-rgb), 0.4);
+  color: var(--text-muted);
   font-size: 0.85rem;
   margin: 0;
 }
@@ -432,7 +439,8 @@
     min-width: 0;
   }
 
-  .landing-nav-actions .btn-ghost-trial {
+  .landing-nav-actions .btn-ghost-trial,
+  .landing-nav-actions .landing-nav-login {
     display: none;
   }
 
@@ -452,8 +460,8 @@
   }
 
   .landing-language-switch button {
-    min-width: 34px;
-    padding: 5px 7px;
+    width: 34px;
+    padding: 5px 0;
     font-size: 0.76rem;
   }
 

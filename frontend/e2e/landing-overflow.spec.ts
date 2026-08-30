@@ -49,6 +49,9 @@ test.describe('Landing layout', () => {
 
       if (viewport.width <= 768) {
         await expect(page.locator('.landing-nav-actions .btn-ghost-trial')).toBeHidden();
+        await expect(page.locator('.landing-nav-actions .landing-nav-login')).toBeHidden();
+      } else {
+        await expect(page.locator('.landing-nav-actions .landing-nav-login')).toBeVisible();
       }
     });
   }

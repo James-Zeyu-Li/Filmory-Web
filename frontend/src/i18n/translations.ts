@@ -30,6 +30,8 @@ export const detectBrowserLanguage = (
 export const translations = {
   'zh-CN': {
     'common.cancel': '取消',
+    'common.switchToLightTheme': '切换到浅色模式',
+    'common.switchToDarkTheme': '切换到深色模式',
     'common.loading': '处理中...',
     'common.unknownCamera': '未知相机',
     'common.unknownFilm': '未知胶卷',
@@ -1135,6 +1137,8 @@ export const translations = {
   },
   'en-US': {
     'common.cancel': 'Cancel',
+    'common.switchToLightTheme': 'Switch to light mode',
+    'common.switchToDarkTheme': 'Switch to dark mode',
     'common.loading': 'Processing...',
     'common.unknownCamera': 'Unknown camera',
     'common.unknownFilm': 'Unknown film',

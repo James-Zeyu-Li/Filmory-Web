@@ -1,9 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Camera, Image, Layers, Wallet } from 'lucide-react';
+import { ArrowRight, Camera, Image, Layers, Moon, Sun, Wallet } from 'lucide-react';
 import { useAuth } from '../../contexts/useAuth';
 import { useLanguage } from '../../contexts/useLanguage';
+import { useTheme } from '../../contexts/useTheme';
 import { LANGUAGE_OPTIONS, type LanguageCode } from '../../i18n/translations';
 import { AUTH_ROUTES } from '../../services/authFlow';
 import './LandingView.css';
@@ -25,6 +26,7 @@ export const LandingView: React.FC = () => {
   const navigate = useNavigate();
   const { startTrial } = useAuth();
   const { t, language, setLanguage } = useLanguage();
+  const { actualTheme, setTheme } = useTheme();
 
   const handleStartTrial = () => {
     startTrial();
@@ -42,6 +44,15 @@ export const LandingView: React.FC = () => {
           <img src="/word-logo.webp" alt="Grainfolio" className="landing-brand-wordmark" />
         </div>
         <div className="landing-nav-actions">
+          <button
+            type="button"
+            className="landing-theme-toggle"
+            onClick={() => setTheme(actualTheme === 'dark' ? 'light' : 'dark')}
+            aria-label={actualTheme === 'dark' ? t('common.switchToLightTheme') : t('common.switchToDarkTheme')}
+            title={actualTheme === 'dark' ? t('common.switchToLightTheme') : t('common.switchToDarkTheme')}
+          >
+            {actualTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
           <div className="landing-language-switch" aria-label={t('landing.languageSwitch')}>
             {LANGUAGE_OPTIONS.map(option => (
               <button
@@ -58,7 +69,7 @@ export const LandingView: React.FC = () => {
           <button type="button" className="btn-ghost-trial" onClick={handleStartTrial}>
             {t('landing.trial')}
           </button>
-          <Link to={AUTH_ROUTES.login} className="btn-secondary">{t('landing.login')}</Link>
+          <Link to={AUTH_ROUTES.login} className="btn-secondary landing-nav-login">{t('landing.login')}</Link>
           <Link to={AUTH_ROUTES.signup} className="btn-primary">{t('landing.signup')}</Link>
         </div>
       </nav>
@@ -89,6 +100,9 @@ export const LandingView: React.FC = () => {
             </button>
             <Link to={AUTH_ROUTES.signup} className="btn-secondary large">
               {t('landing.saveLongTerm')}
+            </Link>
+            <Link to={AUTH_ROUTES.login} className="btn-secondary large">
+              {t('landing.login')}
             </Link>
           </motion.div>
         </motion.div>

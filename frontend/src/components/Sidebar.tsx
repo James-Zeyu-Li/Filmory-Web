@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Camera, 
   Settings, 
@@ -29,7 +29,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenAccountC
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
   const [isResizing, setIsResizing] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
-  
+  const onCloseRef = useRef(onClose);
+
+  React.useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   const handleClose = () => {
     setIsClosing(true);
     onClose();
@@ -67,6 +72,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenAccountC
         setIsMobile(true);
       } else if (currentWidth > 1024 && lastWidth <= 1024) {
         setIsMobile(false);
+        // Desktop has no open/closed drawer state — the sidebar just sits in
+        // normal flow. Clear any mobile-open state left over from resizing
+        // past this breakpoint, otherwise the fixed backdrop below keeps
+        // rendering (isOpen is untouched by width) on top of the now in-flow
+        // desktop sidebar.
+        onCloseRef.current();
       }
       
       lastWidth = currentWidth;

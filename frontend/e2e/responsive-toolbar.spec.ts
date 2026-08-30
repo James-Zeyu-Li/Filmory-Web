@@ -23,6 +23,16 @@ async function expectAllInViewport(page: Page, locator: Locator) {
   }
 }
 
+// Regression guard: between 769-1024px, .rolls-toolbar switches to a column
+// layout but .rolls-toolbar-actions previously kept its row-layout 240px
+// flex-basis, which becomes a vertical size in a column and stretches the
+// search/sort row far past its content (a large dead-space gap under the tabs).
+async function expectCompactToolbarActions(page: Page, toolbar: Locator) {
+  const actionsBox = await toolbar.locator('.rolls-toolbar-actions').boundingBox();
+  expect(actionsBox).not.toBeNull();
+  expect(actionsBox!.height).toBeLessThanOrEqual(60);
+}
+
 async function loginForResponsiveTest(page: Page) {
   await resetBrowserData(page);
   await page.goto('/login', { waitUntil: 'domcontentloaded' });
@@ -31,7 +41,7 @@ async function loginForResponsiveTest(page: Page) {
 
 test.describe('Responsive page toolbars', () => {
   for (const language of ['zh-CN', 'en-US'] as const) {
-    for (const width of [320, 375, 390, 430, 768, 1024, 1280]) {
+    for (const width of [320, 375, 390, 430, 768, 868, 1024, 1280]) {
       test(`keeps Gear and Shoot Log controls usable at ${width}px in ${language}`, async ({ page }) => {
         await page.setViewportSize({ width, height: 900 });
         await loginForResponsiveTest(page);
@@ -45,6 +55,7 @@ test.describe('Responsive page toolbars', () => {
         await expectInViewport(page, page.getByRole('textbox', { name: language === 'en-US' ? 'Search gear' : '搜索器材' }));
         await expectInViewport(page, gearToolbar.getByRole('button', { name: /Sort by date|按时间排序/ }));
         await expectNoHorizontalOverflow(page);
+        if (width <= 1024) await expectCompactToolbarActions(page, gearToolbar);
 
         await page.goto('/rolls?tab=all', { waitUntil: 'domcontentloaded' });
         const rollsToolbar = page.locator('.rolls-library-content .rolls-toolbar');
@@ -54,6 +65,7 @@ test.describe('Responsive page toolbars', () => {
         await expectInViewport(page, page.getByRole('textbox', { name: language === 'en-US' ? 'Search shooting records' : '搜索拍摄记录' }));
         await expectInViewport(page, rollsToolbar.getByRole('button', { name: /By date|按日期/ }));
         await expectNoHorizontalOverflow(page);
+        if (width <= 1024) await expectCompactToolbarActions(page, rollsToolbar);
       });
     }
   }
