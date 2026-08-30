@@ -8,11 +8,11 @@ test.describe('Dashboard film workspace', () => {
 
   test('shows film-first operational metrics instead of photo counters', async ({ page }) => {
     await expect(page.getByRole('heading', { name: /控制中心/ })).toBeVisible();
-    await expect(page.locator('.metric-card').filter({ hasText: '进行中' })).toBeVisible();
+    await expect(page.locator('.metric-card-button').filter({ hasText: '进行中' })).toBeVisible();
     // The per-format/color stock breakdown was removed as part of the Insights noise-reduction
     // pass; the metric card now shows a single aggregate count (11 rolls across the seeded stock).
-    await expect(page.locator('.metric-card').filter({ hasText: '库存胶卷' })).toContainText('11 卷');
-    await expect(page.locator('.metric-card').filter({ hasText: '使用中机器' })).toBeVisible();
+    await expect(page.locator('.metric-card-button').filter({ hasText: '库存胶卷' })).toContainText('11 卷');
+    await expect(page.locator('.metric-card-button').filter({ hasText: '使用中机器' })).toBeVisible();
     await expect(page.locator('.active-roll-dash-card').filter({ hasText: '春日公园' })).toContainText('装片组合：Minolta X-700');
     await expect(page.getByText('30 天完成')).toHaveCount(0);
     await expect(page.getByRole('heading', { name: '库存预警' })).toHaveCount(0);

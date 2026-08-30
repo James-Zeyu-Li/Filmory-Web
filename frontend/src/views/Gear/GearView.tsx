@@ -20,13 +20,14 @@ import { removeGearAvatar, updateGearAvatar, type GearAvatarTableName } from '..
 import { useLocation, useNavigate } from 'react-router-dom';
 import { GEAR_SUB_TAB_KEY } from '../../services/workspacePreferences';
 import { requestImmediateSync } from '../../services/syncEvents';
-import { buildCameraHistorySummaries } from '../../services/gearHistoryService';
+import { buildCameraHistorySummaries, buildLensHistorySummaries } from '../../services/gearHistoryService';
 import { buildFilmUsageSummaries } from '../../services/filmInsightsService';
 import { CamerasTab } from './components/camera/CamerasTab';
 import { CameraFormModal } from './components/camera/CameraFormModal';
 import { CameraHistoryDrawer } from './components/camera/CameraHistoryDrawer';
 import { LensesTab } from './components/lens/LensesTab';
 import { LensFormModal } from './components/lens/LensFormModal';
+import { LensHistoryDrawer } from './components/lens/LensHistoryDrawer';
 import { FilmStocksTab } from './components/film/FilmStocksTab';
 import { FilmStockFormModal } from './components/film/FilmStockFormModal';
 import { FilmUsageDetailDrawer } from '../FilmInsights/FilmUsageDetailDrawer';
@@ -102,6 +103,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
   // Detail/history viewing state (separate from the edit-form state above).
   const [viewingCameraId, setViewingCameraId] = useState<string | null>(null);
   const [viewingFilmStockId, setViewingFilmStockId] = useState<string | null>(null);
+  const [viewingLensId, setViewingLensId] = useState<string | null>(null);
 
   // Upload and Lightbox states
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -274,6 +276,10 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     () => buildCameraHistorySummaries(allCameras, rolls, collections),
     [allCameras, rolls, collections],
   );
+  const lensHistorySummaries = useMemo(
+    () => buildLensHistorySummaries(allLenses, rolls, collections),
+    [allLenses, rolls, collections],
+  );
   const filmUsageSummaries = useMemo(
     () => buildFilmUsageSummaries(filmStocks, rolls, collections),
     [filmStocks, rolls, collections],
@@ -296,6 +302,10 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
     : null;
   const viewingFilmSummary = viewingFilmStockId
     ? filmUsageSummaries.find(summary => summary.film.id === viewingFilmStockId) ?? null
+    : null;
+  const viewingLens = viewingLensId ? allLenses.find(lens => lens.id === viewingLensId) ?? null : null;
+  const viewingLensSummary = viewingLensId
+    ? lensHistorySummaries.find(summary => summary.lens.id === viewingLensId) ?? null
     : null;
 
   // Actions
@@ -376,6 +386,8 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
   const closeCameraHistory = () => setViewingCameraId(null);
   const openFilmHistory = (film: FilmStock) => setViewingFilmStockId(film.id!);
   const closeFilmHistory = () => setViewingFilmStockId(null);
+  const openLensHistory = (lens: Lens) => setViewingLensId(lens.id!);
+  const closeLensHistory = () => setViewingLensId(null);
   const openRollFromHistory = (rollId: string) => navigate(`/rolls?tab=all&openRoll=${rollId}`);
   const openCollectionFromHistory = (collectionId: string) => navigate(`/rolls?tab=collections&collectionId=${collectionId}`);
   const openNewRollFromHistory = () => navigate('/rolls?newRoll=1');
@@ -417,7 +429,7 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
       return <CamerasTab cameras={allCameras} cameraSystems={cameraSystems} filmBacks={filmBacks} searchQuery={searchQuery} sortBy={sortBy} t={t} uploadingEntityId={uploadingEntityId} onAdd={openNewCamera} onView={openCameraHistory} onEdit={openEditCamera} onDelete={handleDeleteCamera} onArchive={camera => setArchiveTarget({ id: camera.id!, type: 'camera', name: camera.name })} onUpload={id => triggerAvatarUpload(id, 'cameras')} onPreview={openAvatarPreview} />;
     }
     if (subTab === 'lenses') {
-      return <LensesTab lenses={allLenses} searchQuery={searchQuery} sortBy={sortBy} t={t} uploadingEntityId={uploadingEntityId} onAdd={openNewLens} onEdit={openEditLens} onDelete={handleDeleteLens} onArchive={lens => setArchiveTarget({ id: lens.id!, type: 'lens', name: lens.name })} onUpload={id => triggerAvatarUpload(id, 'lenses')} onPreview={openAvatarPreview} />;
+      return <LensesTab lenses={allLenses} searchQuery={searchQuery} sortBy={sortBy} t={t} uploadingEntityId={uploadingEntityId} onAdd={openNewLens} onView={openLensHistory} onEdit={openEditLens} onDelete={handleDeleteLens} onArchive={lens => setArchiveTarget({ id: lens.id!, type: 'lens', name: lens.name })} onUpload={id => triggerAvatarUpload(id, 'lenses')} onPreview={openAvatarPreview} />;
     }
     if (subTab === 'filmStocks' && enableFilmMode) {
       return <FilmStocksTab filmStocks={filmStocks} searchQuery={searchQuery} sortBy={sortBy} t={t} uploadingEntityId={uploadingEntityId} onAdd={openNewFilm} onView={openFilmHistory} onEdit={openEditFilm} onDelete={handleDeleteFilm} onUpload={id => triggerAvatarUpload(id, 'filmStocks')} onPreview={openAvatarPreview} onAdjustStock={(id, delta) => { void handleUpdateStock(id, delta); }} />;
@@ -616,10 +628,25 @@ export const GearView: React.FC<GearViewProps> = ({ enableFilmMode }) => {
         summary={viewingCameraSummary}
         cameraSystems={cameraSystems}
         filmBacks={filmBacks}
+        lenses={allLenses}
+        filmStocks={filmStocks}
         language={language}
         t={t}
         onClose={closeCameraHistory}
         onEdit={camera => { closeCameraHistory(); openEditCamera(camera); }}
+        onOpenRoll={openRollFromHistory}
+        onOpenCollection={openCollectionFromHistory}
+      />
+
+      <LensHistoryDrawer
+        isOpen={Boolean(viewingLensId)}
+        lens={viewingLens}
+        summary={viewingLensSummary}
+        cameras={allCameras}
+        language={language}
+        t={t}
+        onClose={closeLensHistory}
+        onEdit={lens => { closeLensHistory(); openEditLens(lens); }}
         onOpenRoll={openRollFromHistory}
         onOpenCollection={openCollectionFromHistory}
       />

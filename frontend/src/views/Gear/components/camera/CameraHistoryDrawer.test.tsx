@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useLanguage } from '../../../../contexts/useLanguage';
-import type { Camera, Collection, Roll } from '../../../../db/schema';
+import type { Camera, Collection, FilmStock, Lens, Roll } from '../../../../db/schema';
 import type { CameraHistorySummary } from '../../../../services/gearHistoryService';
 import { CameraHistoryDrawer } from './CameraHistoryDrawer';
 
@@ -13,6 +13,14 @@ const camera: Camera = {
   type: 'film',
   format: '135',
   addedAt: 1,
+};
+
+const lens: Lens = {
+  id: 'lens-1', userId: 'mock-user-id', name: 'Nikkor 50mm', focalLength: 50, maxAperture: 'f/1.8', type: 'prime', addedAt: 1,
+};
+
+const filmStock: FilmStock = {
+  id: 'film-1', userId: 'mock-user-id', brand: 'Kodak', name: 'Portra 400', iso: 400, colorType: 'color', format: '135', isSystem: 0, addedAt: 1,
 };
 
 const collection: Collection = {
@@ -38,6 +46,8 @@ const buildSummary = (overrides: Partial<CameraHistorySummary> = {}): CameraHist
   collectionGroups: [{ collection, rolls: [rollInProject] }],
   unassignedRolls: [rollUnassigned],
   lastUsedAt: 500,
+  lensUsage: [],
+  filmStockUsage: [],
   ...overrides,
 });
 
@@ -56,6 +66,8 @@ const Harness = (props: {
       {...props}
       cameraSystems={[]}
       filmBacks={[]}
+      lenses={[lens]}
+      filmStocks={[filmStock]}
       language={language}
       t={t}
     />
@@ -170,5 +182,58 @@ describe('CameraHistoryDrawer', () => {
 
     await user.click(screen.getByRole('button', { name: '编辑相机' }));
     expect(onEdit).toHaveBeenCalledWith(camera);
+  });
+
+  it('renders resolved lens and film stock usage chips with their counts', () => {
+    render(
+      <Harness
+        isOpen
+        camera={camera}
+        summary={buildSummary({ lensUsage: [{ id: 'lens-1', count: 3 }], filmStockUsage: [{ id: 'film-1', count: 2 }] })}
+        onClose={vi.fn()}
+        onEdit={vi.fn()}
+        onOpenRoll={vi.fn()}
+        onOpenCollection={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Nikkor 50mm')).toBeInTheDocument();
+    expect(screen.getByText('3 次')).toBeInTheDocument();
+    expect(screen.getByText('Kodak Portra 400')).toBeInTheDocument();
+    expect(screen.getByText('2 次')).toBeInTheDocument();
+  });
+
+  it('falls back to the unknown-lens/film label for a usage id that no longer resolves (soft-deleted gear)', () => {
+    render(
+      <Harness
+        isOpen
+        camera={camera}
+        summary={buildSummary({ lensUsage: [{ id: 'lens-removed', count: 1 }], filmStockUsage: [{ id: 'film-removed', count: 1 }] })}
+        onClose={vi.fn()}
+        onEdit={vi.fn()}
+        onOpenRoll={vi.fn()}
+        onOpenCollection={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('未知镜头')).toBeInTheDocument();
+    expect(screen.getByText('未知胶卷')).toBeInTheDocument();
+  });
+
+  it('shows the empty-usage inline message when there is no lens or film stock history yet', () => {
+    render(
+      <Harness
+        isOpen
+        camera={camera}
+        summary={buildSummary()}
+        onClose={vi.fn()}
+        onEdit={vi.fn()}
+        onOpenRoll={vi.fn()}
+        onOpenCollection={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('这台相机还没有搭配镜头的记录。')).toBeInTheDocument();
+    expect(screen.getByText('这台相机还没有胶卷使用记录。')).toBeInTheDocument();
   });
 });

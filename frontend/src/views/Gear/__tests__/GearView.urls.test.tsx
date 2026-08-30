@@ -146,7 +146,8 @@ describe('GearView edit modal URL contract', () => {
     const lensId = await addLens();
     const firstRender = renderGearView('/gear?tab=lenses');
 
-    await user.click(await screen.findByRole('button', { name: `编辑镜头: MD 50mm f/1.7` }));
+    await screen.findByText('MD 50mm f/1.7');
+    await user.click(screen.getByTitle('编辑镜头'));
     await screen.findByRole('heading', { name: '编辑镜头' });
     let producedUrl = '';
     await waitFor(() => {

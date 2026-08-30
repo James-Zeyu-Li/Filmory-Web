@@ -7,14 +7,13 @@ import {
   ChevronDown,
   CircleDot,
   Edit2,
-  Film as FilmIcon,
   FolderKanban,
   Layers,
   X,
 } from 'lucide-react';
-import type { Camera, FilmBack, FilmStock, Lens, Roll } from '../../../../db/schema';
+import type { Camera, Lens, Roll } from '../../../../db/schema';
 import type { TranslationKey } from '../../../../i18n/translations';
-import type { CameraHistorySummary } from '../../../../services/gearHistoryService';
+import type { LensHistorySummary } from '../../../../services/gearHistoryService';
 import type { CollectionGroup } from '../../../../services/rollCollectionGrouping';
 import { Drawer } from '../../../../components/Drawer';
 import { EmptyState } from '../../../../components/EmptyState';
@@ -23,18 +22,15 @@ import { UsageChipList } from '../../../../components/ui/UsageChipList';
 
 type Translate = (key: TranslationKey, values?: Record<string, string | number>) => string;
 
-interface CameraHistoryDrawerProps {
+interface LensHistoryDrawerProps {
   isOpen: boolean;
-  camera: Camera | null;
-  summary: CameraHistorySummary | null;
-  cameraSystems: readonly { id?: string; name: string }[];
-  filmBacks: readonly FilmBack[];
-  lenses: readonly Lens[];
-  filmStocks: readonly FilmStock[];
+  lens: Lens | null;
+  summary: LensHistorySummary | null;
+  cameras: readonly Camera[];
   language: string;
   t: Translate;
   onClose: () => void;
-  onEdit: (camera: Camera) => void;
+  onEdit: (lens: Lens) => void;
   onOpenRoll: (rollId: string) => void;
   onOpenCollection: (collectionId: string) => void;
 }
@@ -55,14 +51,15 @@ const mostRecentDate = (rolls: readonly Roll[]): number | undefined => {
   return dates.length > 0 ? Math.max(...dates) : undefined;
 };
 
-export const CameraHistoryDrawer: React.FC<CameraHistoryDrawerProps> = ({
+// Reuses the `.camera-history-*` class names verbatim (same shared drawer
+// layout as CameraHistoryDrawer) rather than a parallel `.lens-history-*`
+// stylesheet — mirrors how `.collection-card` already reuses `.roll-card`'s
+// CSS in RollsView instead of duplicating it.
+export const LensHistoryDrawer: React.FC<LensHistoryDrawerProps> = ({
   isOpen,
-  camera,
+  lens,
   summary,
-  cameraSystems,
-  filmBacks,
-  lenses,
-  filmStocks,
+  cameras,
   language,
   t,
   onClose,
@@ -72,15 +69,7 @@ export const CameraHistoryDrawer: React.FC<CameraHistoryDrawerProps> = ({
 }) => {
   const [expandedCollectionId, setExpandedCollectionId] = useState<string | null>(null);
 
-  const getSystemName = (id?: string) => cameraSystems.find(system => system.id === id)?.name ?? t('gear.unknownSystem');
-  const getLensLabel = (id: string) => lenses.find(lens => lens.id === id)?.name ?? t('common.unknownLens');
-  const getFilmLabel = (id: string) => {
-    const film = filmStocks.find(stock => stock.id === id);
-    return film ? `${film.brand} ${film.name}` : t('common.unknownFilm');
-  };
-  const getBackCount = (targetCamera: Camera) => filmBacks.filter(back => (
-    back.cameraSystemId === targetCamera.cameraSystemId && back.status !== 'archived'
-  )).length;
+  const getCameraLabel = (id: string) => cameras.find(camera => camera.id === id)?.name ?? t('common.unknownCamera');
 
   const renderRollRow = (roll: Roll) => (
     <div
@@ -150,50 +139,45 @@ export const CameraHistoryDrawer: React.FC<CameraHistoryDrawerProps> = ({
     );
   };
 
-  const avatarUrl = camera ? getAvatarFullUrl(camera.avatarUrl) : null;
+  const avatarUrl = lens ? getAvatarFullUrl(lens.avatarUrl) : null;
   const hasHistory = summary ? summary.linkedRolls.length > 0 : false;
 
   return (
     <Drawer isOpen={isOpen} onClose={onClose} width={620}>
-      {!camera || !summary ? (
-        <section className="camera-history-drawer" role="dialog" aria-modal="true" aria-labelledby="camera-history-unavailable-title">
+      {!lens || !summary ? (
+        <section className="camera-history-drawer" role="dialog" aria-modal="true" aria-labelledby="lens-history-unavailable-title">
           <header className="camera-history-drawer-header">
-            <h2 id="camera-history-unavailable-title">{t('gear.cameraHistoryUnavailableTitle')}</h2>
-            <IconButton icon={<X size={20} />} title={t('gear.closeCameraHistory')} onClick={onClose} />
+            <h2 id="lens-history-unavailable-title">{t('gear.lensHistoryUnavailableTitle')}</h2>
+            <IconButton icon={<X size={20} />} title={t('gear.closeLensHistory')} onClick={onClose} />
           </header>
           <div className="camera-history-drawer-content">
             <EmptyState
-              icon={CameraIcon}
-              title={t('gear.cameraHistoryUnavailableTitle')}
-              description={t('gear.cameraHistoryUnavailableDesc')}
+              icon={Aperture}
+              title={t('gear.lensHistoryUnavailableTitle')}
+              description={t('gear.lensHistoryUnavailableDesc')}
             />
           </div>
         </section>
       ) : (
-        <section className="camera-history-drawer" role="dialog" aria-modal="true" aria-labelledby="camera-history-title">
+        <section className="camera-history-drawer" role="dialog" aria-modal="true" aria-labelledby="lens-history-title">
           <header className="camera-history-drawer-header">
             <div className="camera-history-identity">
               <div className="camera-history-avatar">
-                {avatarUrl ? <img src={avatarUrl} alt="" /> : <CameraIcon size={22} aria-hidden="true" />}
+                {avatarUrl ? <img src={avatarUrl} alt="" /> : <Aperture size={22} aria-hidden="true" />}
               </div>
               <div>
-                <p className="camera-history-eyebrow">{t('gear.cameraHistoryEyebrow')}</p>
-                <h2 id="camera-history-title">{camera.name}</h2>
+                <p className="camera-history-eyebrow">{t('gear.lensHistoryEyebrow')}</p>
+                <h2 id="lens-history-title">{lens.name}</h2>
                 <p className="camera-history-subline">
-                  {camera.type === 'film' ? t('gear.film') : t('gear.digital')} · {camera.format}
-                  {camera.format === '120' && (
-                    <> · {camera.backType === 'interchangeable'
-                      ? `${getBackCount(camera)} ${t('common.backUnit')} · ${getSystemName(camera.cameraSystemId)}`
-                      : t('gear.fixedBack')}</>
-                  )}
+                  {lens.type === 'prime' ? t('gear.prime') : t('gear.zoom')} · {lens.focalLength}mm · {lens.maxAperture}
                 </p>
               </div>
             </div>
             <div className="camera-history-drawer-actions">
-              <button type="button" className="secondary camera-history-edit-btn" onClick={() => onEdit(camera)}>
-                <Edit2 size={16} /> {t('gear.editCamera')}
+              <button type="button" className="secondary camera-history-edit-btn" onClick={() => onEdit(lens)}>
+                <Edit2 size={16} /> {t('gear.editLens')}
               </button>
-              <IconButton icon={<X size={20} />} title={t('gear.closeCameraHistory')} onClick={onClose} />
+              <IconButton icon={<X size={20} />} title={t('gear.closeLensHistory')} onClick={onClose} />
             </div>
           </header>
 
@@ -208,43 +192,29 @@ export const CameraHistoryDrawer: React.FC<CameraHistoryDrawerProps> = ({
 
             {!hasHistory ? (
               <EmptyState
-                icon={CameraIcon}
+                icon={Aperture}
                 title={t('gear.historyEmptyTitle')}
-                description={t('gear.historyEmptyDesc')}
+                description={t('gear.lensHistoryEmptyDesc')}
               />
             ) : (
               <>
-                <section aria-labelledby="camera-history-lenses-title">
+                <section aria-labelledby="lens-history-cameras-title">
                   <div className="camera-history-section-heading">
-                    <h3 id="camera-history-lenses-title"><Aperture size={16} /> {t('gear.historyLensesTitle')}</h3>
+                    <h3 id="lens-history-cameras-title"><CameraIcon size={16} /> {t('gear.historyCamerasTitle')}</h3>
                   </div>
-                  {summary.lensUsage.length === 0 ? (
-                    <p className="camera-history-empty-inline">{t('gear.historyNoLenses')}</p>
+                  {summary.cameraUsage.length === 0 ? (
+                    <p className="camera-history-empty-inline">{t('gear.historyNoCameras')}</p>
                   ) : (
                     <UsageChipList
-                      items={summary.lensUsage.map(usage => ({ id: usage.id, label: getLensLabel(usage.id), count: usage.count }))}
+                      items={summary.cameraUsage.map(usage => ({ id: usage.id, label: getCameraLabel(usage.id), count: usage.count }))}
                       t={t}
                     />
                   )}
                 </section>
 
-                <section aria-labelledby="camera-history-film-stocks-title">
+                <section aria-labelledby="lens-history-projects-title">
                   <div className="camera-history-section-heading">
-                    <h3 id="camera-history-film-stocks-title"><FilmIcon size={16} /> {t('gear.historyFilmStocksTitle')}</h3>
-                  </div>
-                  {summary.filmStockUsage.length === 0 ? (
-                    <p className="camera-history-empty-inline">{t('gear.historyNoFilmStocks')}</p>
-                  ) : (
-                    <UsageChipList
-                      items={summary.filmStockUsage.map(usage => ({ id: usage.id, label: getFilmLabel(usage.id), count: usage.count }))}
-                      t={t}
-                    />
-                  )}
-                </section>
-
-                <section aria-labelledby="camera-history-projects-title">
-                  <div className="camera-history-section-heading">
-                    <h3 id="camera-history-projects-title"><FolderKanban size={16} /> {t('gear.historyProjectsTitle')}</h3>
+                    <h3 id="lens-history-projects-title"><FolderKanban size={16} /> {t('gear.historyProjectsTitle')}</h3>
                     <span>{summary.collectionGroups.length}</span>
                   </div>
                   {summary.collectionGroups.length === 0 ? (
@@ -256,9 +226,9 @@ export const CameraHistoryDrawer: React.FC<CameraHistoryDrawerProps> = ({
                   )}
                 </section>
 
-                <section aria-labelledby="camera-history-unassigned-title">
+                <section aria-labelledby="lens-history-unassigned-title">
                   <div className="camera-history-section-heading">
-                    <h3 id="camera-history-unassigned-title"><Layers size={16} /> {t('gear.historyUnassignedTitle')}</h3>
+                    <h3 id="lens-history-unassigned-title"><Layers size={16} /> {t('gear.historyUnassignedTitle')}</h3>
                     <span>{summary.unassignedRolls.length}</span>
                   </div>
                   {summary.unassignedRolls.length === 0 ? (

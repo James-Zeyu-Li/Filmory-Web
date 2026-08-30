@@ -61,7 +61,8 @@ describe('LensFormModal migration', () => {
       mountKey: 'hasselblad-v',
     }));
 
-    await user.click(await screen.findByText('Hasselblad Carl Zeiss Planar 80mm f/2.8 C'));
+    await screen.findByText('Hasselblad Carl Zeiss Planar 80mm f/2.8 C');
+    await user.click(screen.getByTitle('编辑镜头'));
     expect(screen.getByRole('heading', { name: '编辑镜头' })).toBeInTheDocument();
     const nameInput = screen.getByPlaceholderText('例如: MD 50mm f/1.7');
     await user.clear(nameInput);

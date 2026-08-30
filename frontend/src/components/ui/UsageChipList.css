@@ -1,0 +1,28 @@
+.usage-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.usage-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.usage-chip-count {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.usage-chip-overflow {
+  color: var(--text-secondary);
+  font-weight: 700;
+}

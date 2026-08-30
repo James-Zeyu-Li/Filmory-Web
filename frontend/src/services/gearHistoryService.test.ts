@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import type { Camera, Collection, Roll } from '../db/schema';
-import { buildCameraHistorySummaries } from './gearHistoryService';
+import type { Camera, Collection, Lens, Roll } from '../db/schema';
+import { buildCameraHistorySummaries, buildLensHistorySummaries } from './gearHistoryService';
 
 const cameras: Camera[] = [
   { id: 'camera-a', userId: 'user-1', name: 'Leica M6', type: 'film', format: '135', addedAt: 1 },
   { id: 'camera-b', userId: 'user-1', name: 'Nikon F3', type: 'film', format: '135', addedAt: 2 },
+];
+
+const lenses: Lens[] = [
+  { id: 'lens-a', userId: 'user-1', name: 'Summicron 50mm', focalLength: 50, maxAperture: 'f/2', type: 'prime', addedAt: 1 },
+  { id: 'lens-b', userId: 'user-1', name: 'Nikkor 35mm', focalLength: 35, maxAperture: 'f/2.8', type: 'prime', addedAt: 2 },
 ];
 
 const collections: Collection[] = [
@@ -13,26 +18,28 @@ const collections: Collection[] = [
 ];
 
 const rolls: Roll[] = [
-  // camera-a only, in project X, active.
-  { id: 'roll-active-x', userId: 'user-1', name: 'Roll 1', cameraIds: ['camera-a'], collectionId: 'collection-x', status: 'active', startDate: 100 },
-  // camera transfer mid-roll: started on camera-a, transferred to camera-b. Must remain in BOTH histories.
+  // camera-a only, in project X, active. lens-a, film-portra.
+  { id: 'roll-active-x', userId: 'user-1', name: 'Roll 1', cameraIds: ['camera-a'], lensIds: ['lens-a'], filmStockId: 'film-portra', collectionId: 'collection-x', status: 'active', startDate: 100 },
+  // camera transfer mid-roll: started on camera-a, transferred to camera-b. Must remain in BOTH histories. lens-a + lens-b, film-portra.
   {
     id: 'roll-transfer',
     userId: 'user-1',
     name: 'Roll 2',
     cameraIds: ['camera-a', 'camera-b'],
+    lensIds: ['lens-a', 'lens-b'],
+    filmStockId: 'film-portra',
     currentCameraId: 'camera-b',
     cameraTransfers: [{ fromCameraId: 'camera-a', toCameraId: 'camera-b', changedAt: 150 }],
     collectionId: 'collection-x',
     status: 'archived',
     endDate: 200,
   },
-  // camera-a only, in project Y, archived.
-  { id: 'roll-y', userId: 'user-1', name: 'Roll 3', cameraIds: ['camera-a'], collectionId: 'collection-y', status: 'archived', endDate: 50 },
-  // camera-b only, unassigned (no collectionId), active.
-  { id: 'roll-unassigned-active', userId: 'user-1', name: 'Roll 4', cameraIds: ['camera-b'], status: 'active', startDate: 10 },
-  // camera-a, dangling collectionId pointing at a collection absent from the passed collections (deleted/not visible).
-  { id: 'roll-dangling-collection', userId: 'user-1', name: 'Roll 5', cameraIds: ['camera-a'], collectionId: 'collection-deleted', status: 'archived', endDate: 400 },
+  // camera-a only, in project Y, archived. lens-b, digital placeholder (must be excluded from filmStockUsage).
+  { id: 'roll-y', userId: 'user-1', name: 'Roll 3', cameraIds: ['camera-a'], lensIds: ['lens-b'], filmStockId: 'digital-placeholder', collectionId: 'collection-y', status: 'archived', endDate: 50 },
+  // camera-b only, unassigned (no collectionId), active. lens-b, film-trix.
+  { id: 'roll-unassigned-active', userId: 'user-1', name: 'Roll 4', cameraIds: ['camera-b'], lensIds: ['lens-b'], filmStockId: 'film-trix', status: 'active', startDate: 10 },
+  // camera-a, dangling collectionId pointing at a collection absent from the passed collections (deleted/not visible). No lens recorded.
+  { id: 'roll-dangling-collection', userId: 'user-1', name: 'Roll 5', cameraIds: ['camera-a'], filmStockId: 'film-portra', collectionId: 'collection-deleted', status: 'archived', endDate: 400 },
   // no camera at all - must not appear anywhere.
   { id: 'roll-no-camera', userId: 'user-1', name: 'Roll 6', cameraIds: [], status: 'archived', endDate: 999 },
 ];
@@ -128,5 +135,83 @@ describe('buildCameraHistorySummaries', () => {
     const cameraA = summaries.find(summary => summary.camera.id === 'camera-a');
 
     expect(cameraA?.linkedRolls.map(roll => roll.id)).toContain('roll-foreign');
+  });
+
+  it('ranks lens usage by count with a stable first-appearance tie-break, ignoring rolls with no lens recorded', () => {
+    const summaries = buildCameraHistorySummaries(cameras, rolls, collections);
+    const cameraA = summaries.find(summary => summary.camera.id === 'camera-a');
+    const cameraB = summaries.find(summary => summary.camera.id === 'camera-b');
+
+    // camera-a rolls: roll-active-x(lens-a), roll-transfer(lens-a,lens-b), roll-y(lens-b), roll-dangling-collection(none) -> 2/2 tie, lens-a seen first.
+    expect(cameraA?.lensUsage).toEqual([{ id: 'lens-a', count: 2 }, { id: 'lens-b', count: 2 }]);
+    // camera-b rolls: roll-transfer(lens-a,lens-b), roll-unassigned-active(lens-b) -> lens-b clearly ahead.
+    expect(cameraB?.lensUsage).toEqual([{ id: 'lens-b', count: 2 }, { id: 'lens-a', count: 1 }]);
+  });
+
+  it('ranks film stock usage by count, excluding the digital placeholder and rolls with no film stock', () => {
+    const summaries = buildCameraHistorySummaries(cameras, rolls, collections);
+    const cameraA = summaries.find(summary => summary.camera.id === 'camera-a');
+
+    // camera-a rolls: roll-active-x(portra), roll-transfer(portra), roll-y(digital-placeholder, excluded), roll-dangling-collection(portra).
+    expect(cameraA?.filmStockUsage).toEqual([{ id: 'film-portra', count: 3 }]);
+  });
+
+  it('never throws and returns an empty ranking for a camera with no lens or film stock history', () => {
+    const noHistoryCamera: Camera = { id: 'camera-unused', userId: 'user-1', name: 'Unused body', type: 'film', format: '135', addedAt: 5 };
+    const summaries = buildCameraHistorySummaries([...cameras, noHistoryCamera], rolls, collections);
+    const unused = summaries.find(summary => summary.camera.id === 'camera-unused');
+
+    expect(unused?.lensUsage).toEqual([]);
+    expect(unused?.filmStockUsage).toEqual([]);
+  });
+});
+
+describe('buildLensHistorySummaries', () => {
+  it('links a lens to every roll whose lensIds array includes it, regardless of which camera was used', () => {
+    const summaries = buildLensHistorySummaries(lenses, rolls, collections);
+    const lensA = summaries.find(summary => summary.lens.id === 'lens-a');
+    const lensB = summaries.find(summary => summary.lens.id === 'lens-b');
+
+    expect(lensA?.linkedRolls.map(roll => roll.id)).toEqual(
+      expect.arrayContaining(['roll-active-x', 'roll-transfer']),
+    );
+    expect(lensB?.linkedRolls.map(roll => roll.id)).toEqual(
+      expect.arrayContaining(['roll-transfer', 'roll-y', 'roll-unassigned-active']),
+    );
+  });
+
+  it('ranks camera usage by count with a stable first-appearance tie-break', () => {
+    const summaries = buildLensHistorySummaries(lenses, rolls, collections);
+    const lensA = summaries.find(summary => summary.lens.id === 'lens-a');
+    const lensB = summaries.find(summary => summary.lens.id === 'lens-b');
+
+    // lens-a rolls: roll-active-x(camera-a), roll-transfer(camera-a,camera-b) -> camera-a ahead.
+    expect(lensA?.cameraUsage).toEqual([{ id: 'camera-a', count: 2 }, { id: 'camera-b', count: 1 }]);
+    // lens-b rolls: roll-transfer(camera-a,camera-b), roll-y(camera-a), roll-unassigned-active(camera-b) -> 2/2 tie, camera-a seen first.
+    expect(lensB?.cameraUsage).toEqual([{ id: 'camera-a', count: 2 }, { id: 'camera-b', count: 2 }]);
+  });
+
+  it('groups a lens across multiple projects and keeps rolls with no/deleted collectionId in unassignedRolls', () => {
+    const summaries = buildLensHistorySummaries(lenses, rolls, collections);
+    const lensB = summaries.find(summary => summary.lens.id === 'lens-b');
+
+    expect(lensB?.collectionGroups).toHaveLength(2);
+    expect(lensB?.unassignedRolls.map(roll => roll.id)).toEqual(['roll-unassigned-active']);
+  });
+
+  it('never produces a summary for a lens without an id, and never throws on a dangling lens id in a roll', () => {
+    const lensWithoutId: Lens = { name: 'Broken fixture', focalLength: 24, maxAperture: 'f/2.8', type: 'prime', addedAt: 9 };
+    const rollsWithDanglingLens: Roll[] = [
+      ...rolls,
+      { id: 'roll-dangling-lens', userId: 'user-1', name: 'Roll 8', cameraIds: ['camera-a'], lensIds: ['lens-removed'], status: 'archived', endDate: 1 },
+    ];
+
+    expect(() => buildLensHistorySummaries([...lenses, lensWithoutId], rollsWithDanglingLens, collections)).not.toThrow();
+    const summaries = buildLensHistorySummaries([...lenses, lensWithoutId], rollsWithDanglingLens, collections);
+
+    expect(summaries).toHaveLength(2);
+    expect(summaries.every(summary => Boolean(summary.lens.id))).toBe(true);
+    const allLinkedIds = summaries.flatMap(summary => summary.linkedRolls.map(roll => roll.id));
+    expect(allLinkedIds).not.toContain('roll-dangling-lens');
   });
 });
