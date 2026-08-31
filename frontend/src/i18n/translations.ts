@@ -1164,6 +1164,9 @@ export const translations = {
     'stats.moreInsights': '更多洞察',
     'stats.showMoreInsights': '展开更多洞察',
     'stats.hideMoreInsights': '收起更多洞察',
+    'stats.bestFramesTitle': '精选照片',
+    'stats.bestFramesCount': '共 {{count}} 张 4 星及以上的照片',
+    'stats.bestFramesOpenRoll': '查看所在拍摄记录',
 
     'compare.title': '照片对照',
     'compare.subtitle': '对照两张照片的颗粒、锐度、色彩和构图。',
@@ -2340,6 +2343,9 @@ export const translations = {
     'stats.moreInsights': 'More insights',
     'stats.showMoreInsights': 'Show more insights',
     'stats.hideMoreInsights': 'Hide more insights',
+    'stats.bestFramesTitle': 'Best frames',
+    'stats.bestFramesCount': '{{count}} photos rated 4 stars or higher',
+    'stats.bestFramesOpenRoll': 'View the shooting record',
 
     'compare.title': 'Photo compare',
     'compare.subtitle': 'Compare grain, sharpness, color, and framing between two photos.',

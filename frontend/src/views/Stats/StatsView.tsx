@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie, ComposedChart, Legend
 } from 'recharts';
-import { BarChart3, Camera, Aperture, Film, Layers, ChevronDown } from 'lucide-react';
+import { BarChart3, Camera, Aperture, Film, Layers, ChevronDown, Star } from 'lucide-react';
 import './StatsView.css';
 import { StatCard } from '../../components/ui/StatCard';
 import { useRolls, useCameras, useLenses, useFilmStocks, usePhotoAssets, useCollections } from '../../hooks/useData';
 import type { CameraTransfer } from '../../db/schema';
 import { resolveLensUsageRanking } from '../../services/lensUsageRankingService';
+import { resolveBestFrames } from '../../services/bestFramesService';
 import { useLanguage } from '../../contexts/useLanguage';
 
 interface StatsViewProps {
@@ -26,6 +28,7 @@ const chartTooltipStyle = {
 };
 
 export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded }) => {
+  const navigate = useNavigate();
   // Live queries
   const rolls = useRolls();
   const cameras = useCameras();
@@ -42,6 +45,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
   const archivedRolls = rolls.filter(r => r.status === 'archived').length;
   const totalCollections = collections.length;
   const savedSamplePhotos = photoAssets.length;
+  const bestFrames = resolveBestFrames(photoAssets);
 
   // ===== Color vs B&W Ratio =====
   const filmRolls = rolls.filter(r => {
@@ -284,6 +288,38 @@ export const StatsView: React.FC<StatsViewProps> = ({ enableFilmMode, isEmbedded
               </ResponsiveContainer>
             </div>
           </div>
+
+          {/* 6. Best Frames — actual rated photos, not another distribution chart. */}
+          {bestFrames.totalCount > 0 && (
+            <div className="chart-card stats-chart-priority stats-chart-wide">
+              <div className="chart-header">
+                <Star size={18} />
+                <h3>{t('stats.bestFramesTitle')}</h3>
+              </div>
+              <div className="chart-content">
+                <p className="stats-best-frames-count">{t('stats.bestFramesCount', { count: bestFrames.totalCount })}</p>
+                <div className="stats-best-frames-grid">
+                  {bestFrames.photos.map(photo => (
+                    <button
+                      key={photo.id}
+                      type="button"
+                      className="stats-best-frames-tile"
+                      onClick={() => navigate(`/rolls?tab=all&openRoll=${photo.rollId}&rollView=contactSheet`)}
+                      aria-label={t('stats.bestFramesOpenRoll')}
+                    >
+                      {(photo.thumbnailUrl || photo.previewUrl) && (
+                        <img src={photo.thumbnailUrl || photo.previewUrl} alt="" decoding="async" />
+                      )}
+                      <span className="stats-best-frames-rating">
+                        <Star size={12} fill="var(--accent)" color="var(--accent)" />
+                        {photo.rating}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
       </div>
