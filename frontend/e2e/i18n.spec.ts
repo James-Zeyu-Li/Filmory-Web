@@ -24,8 +24,9 @@ test.describe('Language preferences', () => {
     await expect(page.getByRole('heading', { name: '控制中心' })).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
-    await page.getByRole('button', { name: /偏好设置/ }).click();
+    await page.getByRole('button', { name: /^设置$/ }).click();
     const settingsModal = page.locator('.modal-content').last();
+    await settingsModal.getByRole('tab', { name: '界面' }).click();
     await settingsModal.locator('select[aria-label="界面语言"]').selectOption('en-US');
 
     await expect(settingsModal.getByRole('heading', { name: 'Settings & Data Protection' })).toBeVisible();

@@ -151,6 +151,14 @@
   gap: 16px;
 }
 
+@media (max-width: 600px) {
+  .metrics-grid {
+    /* Below this width only one 240px column fits anyway, which just leaves
+       a dead gap next to it — let the single card fill the row instead. */
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Bare click wrapper — all visual styling lives in <StatCard>. */
 .metric-card-button {
   background: none;

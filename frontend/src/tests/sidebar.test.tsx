@@ -11,8 +11,7 @@ vi.mock('../contexts/useLanguage', () => ({
       'nav.gear': '器材库',
       'nav.insights': '洞察',
       'nav.compare': '照片对照',
-      'nav.account': '我的账号',
-      'nav.preferences': '偏好设置',
+      'nav.settings': '设置',
       'nav.collapse': '收起侧边栏',
       'nav.expandTitle': '展开侧边栏',
       'nav.collapseTitle': '收起侧边栏',
@@ -24,7 +23,6 @@ const renderSidebar = () => render(
   <MemoryRouter>
     <Sidebar
       onOpenSettings={vi.fn()}
-      onOpenAccountCenter={vi.fn()}
       isOpen={false}
       onClose={vi.fn()}
     />
@@ -64,7 +62,6 @@ describe('Sidebar', () => {
       <MemoryRouter>
         <Sidebar
           onOpenSettings={vi.fn()}
-          onOpenAccountCenter={vi.fn()}
           isOpen
           onClose={onClose}
         />

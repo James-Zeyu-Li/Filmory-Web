@@ -135,10 +135,6 @@
   text-align: left;
 }
 
-.nav-spacer {
-  height: 6px;
-}
-
 .sidebar.is-resizing {
   transition: none !important;
 }
@@ -249,10 +245,6 @@
 
 .nav-item svg {
   flex-shrink: 0;
-}
-
-.nav-spacer {
-  flex: 1;
 }
 
 .sidebar-footer {

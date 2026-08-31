@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
-import { AccountCenterModal } from './components/AccountCenterModal';
 import { DashboardView } from './views/Dashboard/DashboardView';
 import { RollsView } from './views/Rolls/RollsView';
 import { GearView } from './views/Gear/GearView';
 import { CompareView } from './views/Compare/CompareView';
 import { InsightsView } from './views/Insights/InsightsView';
-import { SettingsView } from './views/Settings/SettingsView';
+import { SettingsView, type SettingsTabId } from './views/Settings/SettingsView';
 import { seedDatabaseIfNeeded } from './services/seedService';
 import { SyncService } from './services/syncService';
 import { Film } from 'lucide-react';
@@ -42,9 +41,43 @@ function AppContent() {
   const userId = user?.id;
   
   const [sidebarOpenPath, setSidebarOpenPath] = useState<string | null>(null);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isAccountCenterOpen, setIsAccountCenterOpen] = useState(false);
   const isSidebarOpen = sidebarOpenPath === location.pathname;
+
+  // Settings is a global overlay reachable from any route, so its open/active-tab
+  // state is a query param layered on top of whatever page is currently showing
+  // (`?settings=<tab>`) rather than owned by any one route — mirrors the
+  // push-to-open/replace-to-switch/back-or-replace-to-close rules already used
+  // for Gear's edit modals (see GearView.tsx openGearEditModal/closeGearEditModal).
+  const settingsTabParam = new URLSearchParams(location.search).get('settings');
+  const isSettingsOpen = settingsTabParam !== null;
+  const activeSettingsTab: SettingsTabId = settingsTabParam === 'interface' || settingsTabParam === 'data'
+    ? settingsTabParam
+    : 'account';
+
+  const openSettings = (tab: SettingsTabId = 'account') => {
+    const params = new URLSearchParams(location.search);
+    params.set('settings', tab);
+    navigate({ pathname: location.pathname, search: `?${params.toString()}` }, {
+      state: { ...location.state, grainfolioSettingsOrigin: true },
+    });
+  };
+
+  const changeSettingsTab = (tab: SettingsTabId) => {
+    const params = new URLSearchParams(location.search);
+    params.set('settings', tab);
+    navigate({ pathname: location.pathname, search: `?${params.toString()}` }, { replace: true });
+  };
+
+  const closeSettings = () => {
+    if (!isSettingsOpen) return;
+    if (location.state?.grainfolioSettingsOrigin) {
+      navigate(-1);
+      return;
+    }
+    const params = new URLSearchParams(location.search);
+    params.delete('settings');
+    navigate({ pathname: location.pathname, search: params.toString() ? `?${params.toString()}` : '' }, { replace: true });
+  };
   
   const [enableFilmMode, setEnableFilmMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('grainfolio_enable_film_mode');
@@ -171,11 +204,10 @@ function AppContent() {
   return (
     <div className="app-container">
       <MobileHeader onOpenSidebar={() => setSidebarOpenPath(location.pathname)} />
-      <Sidebar 
-        isOpen={isSidebarOpen} 
-        onClose={() => setSidebarOpenPath(null)} 
-        onOpenAccountCenter={() => setIsAccountCenterOpen(true)}
-        onOpenSettings={() => setIsSettingsOpen(true)}
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setSidebarOpenPath(null)}
+        onOpenSettings={() => openSettings('account')}
       />
       
       <main className={`app-main-content ${authMode === 'supabase' ? 'has-sync-status' : ''}`}>
@@ -202,17 +234,13 @@ function AppContent() {
       )}
 
       <AnimatePresence>
-        {isAccountCenterOpen && (
-          <AccountCenterModal
-            isOpen={isAccountCenterOpen}
-            onClose={() => setIsAccountCenterOpen(false)}
-          />
-        )}
         {isSettingsOpen && (
-          <SettingsView 
-            enableFilmMode={enableFilmMode} 
-            setEnableFilmMode={setEnableFilmMode} 
-            onClose={() => setIsSettingsOpen(false)}
+          <SettingsView
+            activeTab={activeSettingsTab}
+            onTabChange={changeSettingsTab}
+            enableFilmMode={enableFilmMode}
+            setEnableFilmMode={setEnableFilmMode}
+            onClose={closeSettings}
           />
         )}
       </AnimatePresence>

@@ -8,16 +8,14 @@ test.describe('Sidebar layout', () => {
 
     const sidebar = page.locator('.sidebar');
     const dashboard = page.getByRole('link', { name: /控制中心|Dashboard/ });
-    const account = page.getByRole('button', { name: /我的账户|My Account/ });
-    const preferences = page.getByRole('button', { name: /偏好设置|Preferences/ });
+    const settings = page.getByRole('button', { name: /^设置$|^Settings$/ });
     const collapse = page.getByRole('button', { name: /收起侧边栏|Collapse sidebar/ });
 
     await expect(sidebar).toHaveCSS('width', '240px');
 
     const iconBoxes = await Promise.all([
       dashboard.locator('svg').boundingBox(),
-      account.locator('svg').boundingBox(),
-      preferences.locator('svg').boundingBox(),
+      settings.locator('svg').boundingBox(),
       collapse.locator('svg').boundingBox(),
     ]);
     expect(iconBoxes.every(Boolean)).toBe(true);
@@ -26,8 +24,7 @@ test.describe('Sidebar layout', () => {
 
     const labelBoxes = await Promise.all([
       dashboard.locator('span').boundingBox(),
-      account.locator('span').boundingBox(),
-      preferences.locator('span').boundingBox(),
+      settings.locator('span').boundingBox(),
       collapse.locator('span').boundingBox(),
     ]);
     expect(labelBoxes.every(Boolean)).toBe(true);
@@ -42,8 +39,7 @@ test.describe('Sidebar layout', () => {
     // not stretch across the full 56px inner width of the 72px sidebar.
     for (const control of [
       dashboard,
-      account,
-      preferences,
+      settings,
       page.getByRole('button', { name: /展开侧边栏|Expand sidebar/ }),
     ]) {
       await expect(control).toHaveCSS('width', '44px');

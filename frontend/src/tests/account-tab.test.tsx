@@ -1,13 +1,13 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { AccountCenterModal } from '../components/AccountCenterModal';
+import { AccountTab } from '../views/Settings/AccountTab';
 import { db } from '../db/schema';
 import { supabase } from '../services/supabaseClient';
 
 const mockNotify = vi.fn();
 const mockLogout = vi.fn();
-const mockOnClose = vi.fn();
+const mockOnCloseSettings = vi.fn();
 
 const mockAuthState = {
   user: { id: 'user-1', email: 'user@grainfolio.app', user_metadata: {} },
@@ -53,12 +53,6 @@ vi.mock('../contexts/useFeedback', () => ({
   }),
 }));
 
-vi.mock('../contexts/useConfirm', () => ({
-  useConfirm: () => ({
-    confirm: vi.fn().mockResolvedValue(true),
-  }),
-}));
-
 vi.mock('../services/accountService', () => ({
   deleteCurrentAccount: vi.fn().mockResolvedValue(undefined),
 }));
@@ -71,14 +65,6 @@ vi.mock('../hooks/useUserTier', () => ({
   useUserTier: () => mockTierState,
 }));
 
-vi.mock('../services/syncService', () => ({
-  SYNC_STATUS_EVENT: 'grainfolio-sync-status',
-  SyncService: {
-    isAutoSyncEnabled: () => false,
-    getStatus: () => 'local',
-  },
-}));
-
 vi.mock('../components/UpgradeModal', () => ({
   UpgradeModal: () => null,
 }));
@@ -88,20 +74,20 @@ const LocationProbe = () => {
   return <div data-testid="location">{location.pathname}{location.search}</div>;
 };
 
-const renderAccountCenter = () => render(
+const renderAccountTab = () => render(
   <MemoryRouter initialEntries={['/dashboard']}>
     <LocationProbe />
     <Routes>
       <Route
         path="/dashboard"
-        element={<AccountCenterModal isOpen={true} onClose={mockOnClose} />}
+        element={<AccountTab onCloseSettings={mockOnCloseSettings} />}
       />
       <Route path="/login" element={<div>Login Page</div>} />
     </Routes>
   </MemoryRouter>
 );
 
-describe('AccountCenterModal', () => {
+describe('AccountTab', () => {
   const mockedAuth = supabase.auth as unknown as {
     updateUser: ReturnType<typeof vi.fn>;
   };
@@ -111,7 +97,7 @@ describe('AccountCenterModal', () => {
     mockNotify.mockReset();
     mockLogout.mockReset();
     mockLogout.mockResolvedValue(undefined);
-    mockOnClose.mockReset();
+    mockOnCloseSettings.mockReset();
     mockAuthState.user = { id: 'user-1', email: 'user@grainfolio.app', user_metadata: {} };
     mockAuthState.authMode = 'supabase';
     mockAuthState.accountRole = 'user';
@@ -136,41 +122,45 @@ describe('AccountCenterModal', () => {
     mockAuthState.authMode = 'trial';
     mockAuthState.isTrial = true;
 
-    renderAccountCenter();
+    renderAccountTab();
 
-    expect(screen.getByRole('heading', { name: '我的账户' })).toBeInTheDocument();
     expect(screen.getByText('当前是本地试用')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '免费注册并开启云同步' }));
 
-    expect(mockOnClose).toHaveBeenCalled();
+    expect(mockOnCloseSettings).toHaveBeenCalled();
     expect(screen.getByTestId('location')).toHaveTextContent('/auth/signup?trial=1');
   });
 
   it('shows account details and logs out a signed-in user', async () => {
-    renderAccountCenter();
+    renderAccountTab();
 
     expect(screen.getByText('Analog James')).toBeInTheDocument();
     expect(screen.getByText('user@grainfolio.app')).toBeInTheDocument();
     expect(screen.getByText('免费版')).toBeInTheDocument();
-    expect(screen.getByText('本地模式')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '退出登录' }));
 
     await waitFor(() => expect(mockLogout).toHaveBeenCalled());
-    expect(mockOnClose).toHaveBeenCalled();
+    expect(mockOnCloseSettings).toHaveBeenCalled();
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/auth/login'));
   });
 
-  it('does not render account deletion inside AccountCenterModal', () => {
-    renderAccountCenter();
+  it('does not render account deletion inside AccountTab', () => {
+    renderAccountTab();
 
     expect(screen.queryByText('永久注销账号')).not.toBeInTheDocument();
     expect(screen.queryByText('注销我的账号')).not.toBeInTheDocument();
   });
 
+  it('does not render cloud sync status inside AccountTab (moved to Data tab)', () => {
+    renderAccountTab();
+
+    expect(screen.queryByText('自动云同步')).not.toBeInTheDocument();
+  });
+
   it('saves display name to local profile and Supabase metadata for a real account', async () => {
-    renderAccountCenter();
+    renderAccountTab();
 
     fireEvent.change(screen.getByPlaceholderText('输入你想显示的名字'), {
       target: { value: 'Analog James Studio' },
@@ -202,7 +192,7 @@ describe('AccountCenterModal', () => {
   });
 
   it('blocks invalid display name before saving', async () => {
-    renderAccountCenter();
+    renderAccountTab();
 
     fireEvent.change(screen.getByPlaceholderText('输入你想显示的名字'), {
       target: { value: '   ' },
@@ -229,7 +219,7 @@ describe('AccountCenterModal', () => {
     mockProfile.id = 'trial-user';
     mockProfile.userId = 'trial-user';
 
-    renderAccountCenter();
+    renderAccountTab();
 
     fireEvent.change(screen.getByPlaceholderText('输入你想显示的名字'), {
       target: { value: 'Trial Notes' },
@@ -257,7 +247,7 @@ describe('AccountCenterModal', () => {
     mockTierState.tier = 'vip';
     mockTierState.capabilities.activeRollLimit = null;
 
-    renderAccountCenter();
+    renderAccountTab();
 
     expect(screen.getByText('Developer Mode')).toBeInTheDocument();
     expect(screen.queryByText('管理员')).not.toBeInTheDocument();

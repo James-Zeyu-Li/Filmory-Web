@@ -1,14 +1,13 @@
 import React, { useRef, useState } from 'react';
 import {
-  Camera, 
-  Settings, 
+  Camera,
+  Settings,
   Film,
   LayoutDashboard,
   BarChart2,
   Columns,
   ChevronLeft,
-  ChevronRight,
-  UserRound
+  ChevronRight
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useLanguage } from '../contexts/useLanguage';
@@ -18,12 +17,11 @@ export type ActiveTab = 'dashboard' | 'rolls' | 'gear' | 'settings' | 'insights'
 
 interface SidebarProps {
   onOpenSettings: () => void;
-  onOpenAccountCenter: () => void;
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenAccountCenter, isOpen, onClose }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, isOpen, onClose }) => {
   const { t } = useLanguage();
   const [isCollapsed, setIsCollapsed] = useState(window.innerWidth < 1250 && window.innerWidth > 1024);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
@@ -41,8 +39,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenAccountC
     setTimeout(() => setIsClosing(false), 300);
   };
 
-  const handleOpenAccountCenter = () => {
-    onOpenAccountCenter();
+  const handleOpenSettings = () => {
+    onOpenSettings();
     onClose();
   };
 
@@ -175,23 +173,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenAccountC
       <div className="sidebar-footer">
         <button
           className="nav-item"
-          onClick={handleOpenAccountCenter}
-          aria-label={t('nav.account')}
-          title={t('nav.account')}
-        >
-          <UserRound size={20} />
-          <span>{t('nav.account')}</span>
-        </button>
-        <div className="nav-spacer" />
-
-        <button
-          className="nav-item"
-          onClick={onOpenSettings}
-          aria-label={t('nav.preferences')}
-          title={t('nav.preferences')}
+          onClick={handleOpenSettings}
+          aria-label={t('nav.settings')}
+          title={t('nav.settings')}
         >
           <Settings size={20} />
-          <span>{t('nav.preferences')}</span>
+          <span>{t('nav.settings')}</span>
         </button>
 
         <div className="sidebar-collapse-divider" />
