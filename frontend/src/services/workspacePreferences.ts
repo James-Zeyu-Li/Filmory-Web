@@ -2,6 +2,7 @@ export const GEAR_SUB_TAB_KEY = 'grainfolio_gear_sub_tab';
 export const ROLLS_LIBRARY_VIEW_KEY = 'grainfolio_rolls_library_view';
 export const ROLLS_TAB_ORDER_KEY = 'grainfolio_rolls_tab_order';
 export const ROLLS_COLLECTIONS_TAB_ENABLED_KEY = 'grainfolio_rolls_collections_tab_enabled';
+export const DASHBOARD_WELCOME_DISMISSED_KEY = 'grainfolio_dashboard_welcome_dismissed';
 export const WORKSPACE_PREFERENCES_CHANGED_EVENT = 'grainfolio:workspace-preferences-changed';
 
 export type RollsTabId = 'collections' | 'all' | 'loose';
@@ -57,6 +58,14 @@ export const readRollsCollectionsTabEnabled = () => {
 export const writeRollsCollectionsTabEnabled = (enabled: boolean) => {
   localStorage.setItem(ROLLS_COLLECTIONS_TAB_ENABLED_KEY, String(enabled));
   dispatchWorkspacePreferencesChanged();
+};
+
+export const readDashboardWelcomeDismissed = (): boolean => {
+  return localStorage.getItem(DASHBOARD_WELCOME_DISMISSED_KEY) === 'true';
+};
+
+export const writeDashboardWelcomeDismissed = () => {
+  localStorage.setItem(DASHBOARD_WELCOME_DISMISSED_KEY, 'true');
 };
 
 export const getVisibleRollsTabOrder = (enableFilmMode: boolean): RollsTabId[] => {

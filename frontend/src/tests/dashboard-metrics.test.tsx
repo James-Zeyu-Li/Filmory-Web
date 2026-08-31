@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent } from '@testing-library/react';
 import { DashboardView } from '../views/Dashboard/DashboardView';
+import { DASHBOARD_WELCOME_DISMISSED_KEY } from '../services/workspacePreferences';
 
 const mockUseRolls = vi.fn();
 const mockUseCameras = vi.fn();
@@ -19,6 +20,17 @@ vi.mock('../hooks/useData', () => ({
 
 describe('Dashboard metrics', () => {
   const onNavigate = vi.fn();
+
+  // These tests exercise the normal (non-empty-or-already-dismissed) body,
+  // not the brand-new-account welcome screen — that has its own describe
+  // block below with its own explicit localStorage state per case.
+  beforeEach(() => {
+    vi.mocked(localStorage.getItem).mockImplementation((key: string) => {
+      if (key === 'grainfolio_user_id') return 'mock-user-id';
+      if (key === DASHBOARD_WELCOME_DISMISSED_KEY) return 'true';
+      return null;
+    });
+  });
 
   it('removes extra stock chips and lets the stock card jump to detail', () => {
     mockUseRolls.mockReturnValue([]);
@@ -232,5 +244,76 @@ describe('Dashboard metrics', () => {
     expect(screen.getByText(/Canon QL19/)).toBeInTheDocument();
     fireEvent.click(screen.getByText(/查看洞察/));
     expect(onNavigate).toHaveBeenCalledWith('insights');
+  });
+});
+
+describe('Dashboard first-run welcome', () => {
+  const onNavigate = vi.fn();
+
+  const mockZeroData = () => {
+    mockUseRolls.mockReturnValue([]);
+    mockUseCameras.mockReturnValue([]);
+    mockUseFilmBacks.mockReturnValue([]);
+    mockUseLenses.mockReturnValue([]);
+    mockUseFilmStocks.mockReturnValue([]);
+  };
+
+  const mockLocalStorage = (welcomeDismissed: boolean) => {
+    vi.mocked(localStorage.getItem).mockImplementation((key: string) => {
+      if (key === 'grainfolio_user_id') return 'mock-user-id';
+      if (key === DASHBOARD_WELCOME_DISMISSED_KEY) return welcomeDismissed ? 'true' : null;
+      return null;
+    });
+  };
+
+  it('shows the welcome screen (not the normal metrics/launchpad) for a brand-new, zero-data account', () => {
+    mockZeroData();
+    mockLocalStorage(false);
+
+    render(<DashboardView enableFilmMode={true} onNavigate={onNavigate} />);
+
+    expect(screen.getByText('欢迎来到 Grainfolio')).toBeInTheDocument();
+    expect(screen.getByText('从现在开始')).toBeInTheDocument();
+    expect(screen.getByText('导入已有拍摄历史')).toBeInTheDocument();
+    expect(screen.queryByText('快捷入口')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '开始拍摄记录' })).not.toBeInTheDocument();
+  });
+
+  it('does not show the welcome screen once any camera/film/roll data exists', () => {
+    mockUseRolls.mockReturnValue([]);
+    mockUseCameras.mockReturnValue([
+      { id: 'cam-1', userId: 'mock-user-id', name: 'Leica M6', type: 'film', format: '135', addedAt: 1 },
+    ]);
+    mockUseFilmBacks.mockReturnValue([]);
+    mockUseLenses.mockReturnValue([]);
+    mockUseFilmStocks.mockReturnValue([]);
+    mockLocalStorage(false);
+
+    render(<DashboardView enableFilmMode={true} onNavigate={onNavigate} />);
+
+    expect(screen.queryByText('欢迎来到 Grainfolio')).not.toBeInTheDocument();
+    expect(screen.getByText('快捷入口')).toBeInTheDocument();
+  });
+
+  it('dismisses permanently (persisted) when "从现在开始" is clicked, revealing the normal dashboard', () => {
+    mockZeroData();
+    mockLocalStorage(false);
+
+    render(<DashboardView enableFilmMode={true} onNavigate={onNavigate} />);
+    fireEvent.click(screen.getByText('从现在开始'));
+
+    expect(screen.queryByText('欢迎来到 Grainfolio')).not.toBeInTheDocument();
+    expect(screen.getByText('快捷入口')).toBeInTheDocument();
+    expect(localStorage.setItem).toHaveBeenCalledWith(DASHBOARD_WELCOME_DISMISSED_KEY, 'true');
+  });
+
+  it('opens the same ExcelImportModal used by Settings when "导入已有拍摄历史" is clicked', () => {
+    mockZeroData();
+    mockLocalStorage(false);
+
+    render(<DashboardView enableFilmMode={true} onNavigate={onNavigate} />);
+    fireEvent.click(screen.getByText('导入已有拍摄历史'));
+
+    expect(screen.getByText('批量导入器材与拍摄记录')).toBeInTheDocument();
   });
 });

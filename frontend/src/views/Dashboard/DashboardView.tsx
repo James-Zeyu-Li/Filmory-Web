@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Camera, LayoutDashboard,
@@ -9,8 +9,11 @@ import { useRolls, useCameras, useFilmStocks, useFilmBacks, useLenses } from '..
 import { useLanguage } from '../../contexts/useLanguage';
 import { resolveArchiveHighlight } from '../../services/archiveHighlightService';
 import { ShootingHighlightCard } from './ShootingHighlightCard';
+import { DashboardWelcome } from './DashboardWelcome';
 import { StatCard } from '../../components/ui/StatCard';
 import { EmptyState } from '../../components/EmptyState';
+import { ExcelImportModal } from '../../components/ExcelImportModal';
+import { readDashboardWelcomeDismissed, writeDashboardWelcomeDismissed } from '../../services/workspacePreferences';
 
 interface DashboardViewProps {
   enableFilmMode: boolean;
@@ -33,6 +36,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
   const filmBacks = useFilmBacks();
   const lenses = useLenses();
   const filmStocks = useFilmStocks();
+
+  const [hasDismissedWelcome, setHasDismissedWelcome] = useState(() => readDashboardWelcomeDismissed());
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const isBrandNewAccount = cameras.length === 0 && filmStocks.length === 0 && rolls.length === 0;
+  const showWelcome = isBrandNewAccount && !hasDismissedWelcome;
+
+  const handleStartFresh = () => {
+    writeDashboardWelcomeDismissed();
+    setHasDismissedWelcome(true);
+  };
 
   const highlight = useMemo(() => resolveArchiveHighlight(rolls, cameras), [rolls, cameras]);
 
@@ -113,6 +126,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
 
       <div className="view-body" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
+        {showWelcome ? (
+          <DashboardWelcome onStartFresh={handleStartFresh} onImportHistory={() => setIsImportModalOpen(true)} />
+        ) : (
+        <>
         {/* Row 1: Key Metrics */}
         <div className="dash-section">
           <h2 className="dash-section-title">{t('dashboard.workspace')}</h2>
@@ -248,8 +265,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ enableFilmMode, on
             </div>
           </div>
         )}
+        </>
+        )}
 
       </div>
+
+      {isImportModalOpen && <ExcelImportModal onClose={() => setIsImportModalOpen(false)} />}
     </div>
   );
 };

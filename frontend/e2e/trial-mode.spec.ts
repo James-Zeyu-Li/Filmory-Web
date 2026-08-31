@@ -26,4 +26,29 @@ test.describe('Trial mode conversion flow', () => {
     await expect(page.getByRole('heading', { name: '创建账号' })).toBeVisible();
     await expect(page.getByText('创建账号后，可以继续把这台设备上的试用记录保存到你的账号。')).toBeVisible();
   });
+
+  test('shows the first-run welcome screen for a brand-new trial account, and "从现在开始" dismisses it permanently', async ({ page }) => {
+    await startTrialFromLanding(page);
+
+    await expect(page.getByText('欢迎来到 Grainfolio')).toBeVisible();
+    await expect(page.getByRole('button', { name: '从现在开始' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '导入已有拍摄历史' })).toBeVisible();
+    await expect(page.getByText('快捷入口')).not.toBeVisible();
+
+    await page.getByRole('button', { name: '从现在开始' }).click();
+    await expect(page.getByText('欢迎来到 Grainfolio')).not.toBeVisible();
+    await expect(page.getByText('快捷入口')).toBeVisible();
+
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: '控制中心' })).toBeVisible();
+    await expect(page.getByText('欢迎来到 Grainfolio')).not.toBeVisible();
+    await expect(page.getByText('快捷入口')).toBeVisible();
+  });
+
+  test('"导入已有拍摄历史" on the welcome screen opens the same Excel import wizard as Settings', async ({ page }) => {
+    await startTrialFromLanding(page);
+
+    await page.getByRole('button', { name: '导入已有拍摄历史' }).click();
+    await expect(page.locator('.modal-content').filter({ hasText: '批量导入器材与拍摄记录' })).toBeVisible();
+  });
 });

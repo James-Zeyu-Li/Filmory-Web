@@ -104,6 +104,35 @@
   color: var(--accent);
 }
 
+/* First-run welcome (brand-new account, zero cameras/film/rolls) */
+.dashboard-welcome {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  text-align: center;
+}
+
+.dashboard-welcome h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.dashboard-welcome p {
+  margin: 0 0 20px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.dashboard-welcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
 /* Row 1: Metrics Grid */
 .dash-section-title {
   margin: 0 0 12px;
