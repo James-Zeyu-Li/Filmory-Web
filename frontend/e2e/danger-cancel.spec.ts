@@ -16,12 +16,12 @@ async function createManualCamera(page: Page, name: string) {
 
 async function createRoll(page: Page, name: string) {
   await page.goto('/rolls', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: /全部拍摄记录|所有拍摄卷/ }).click();
+  await page.getByRole('tab', { name: /全部拍摄记录|所有拍摄卷/ }).click();
   await page.getByRole('button', { name: /新建拍摄记录|新建独立拍摄卷/ }).click();
 
   const rollModal = page.locator('.modal-content').filter({ hasText: '新建拍摄记录' });
   await rollModal.getByPlaceholder('例如: 2026春日踏青').fill(name);
-  await rollModal.locator('div').filter({ hasText: /^Minolta X-700$/ }).first().click();
+  await rollModal.getByRole('button', { name: 'Minolta X-700', exact: true }).click();
   await rollModal.getByPlaceholder(/搜索胶卷库/).fill('Kodak Gold 200');
   await rollModal.getByRole('button', { name: '开始记录' }).click();
 
@@ -61,21 +61,29 @@ test.describe('Dangerous action cancel paths', () => {
     await expect(page.locator('.roll-card, .record-row-card').filter({ hasText: rollName })).toBeVisible();
   });
 
-  test('does not delete or logout when account deletion final confirmation is cancelled', async ({ page }) => {
+  test('keeps the account when deletion confirmation is cancelled', async ({ page }) => {
     await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
-    await page.getByRole('button', { name: /偏好设置/ }).click();
+    await page.getByRole('button', { name: /^设置$/ }).click();
 
     const settingsModal = page.locator('.modal-content').filter({ hasText: '设置与数据保护' });
-    await settingsModal.getByRole('button', { name: '注销我的账号' }).click();
-    await settingsModal.getByPlaceholder('DELETE').fill('DELETE');
-    await settingsModal.getByRole('button', { name: '确认永久销毁' }).click();
+    await expect(settingsModal.getByRole('heading', { name: 'Developer', exact: true })).toBeVisible();
+    await settingsModal.getByRole('tab', { name: '数据' }).click();
+    // resetAndLogin always signs in via dev bypass, so DataTab renders the
+    // dev-specific "clear local session" copy/button here, not the real
+    // "delete my account" one (see DataTab.tsx's isDevBypass branches).
+    await settingsModal.getByRole('button', { name: '清除开发会话' }).click();
 
-    const confirmModal = page.locator('.modal-content').filter({ hasText: '最终确认注销账号' });
-    await expect(confirmModal.getByRole('heading', { name: '最终确认注销账号' })).toBeVisible();
-    await confirmModal.getByRole('button', { name: '取消' }).click();
+    // Type-to-confirm (typing the literal word "DELETE") is this flow's one
+    // confirmation step, wrapped in the shared <Modal> — there is no separate
+    // third-level dialog after it (single-step confirm is the project's
+    // established pattern for destructive actions; see SETTINGS_TODO.md).
+    const confirmDialog = page.locator('.account-delete-dialog');
+    await expect(confirmDialog.getByRole('heading', { name: '清除本地开发会话' })).toBeVisible();
+    await confirmDialog.getByRole('button', { name: '取消' }).click();
 
-    await expect(settingsModal.getByText('测试管理员')).toBeVisible();
-    await expect(settingsModal.getByRole('button', { name: '注销我的账号' })).toBeVisible();
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(settingsModal.getByRole('button', { name: '清除开发会话' })).toBeVisible();
+    // Cancelling the nested delete-confirmation dialog only closes that dialog —
+    // Settings itself stays open on its URL-driven tab (?settings=data).
+    await expect(page).toHaveURL(/\/dashboard\?settings=data$/);
   });
 });

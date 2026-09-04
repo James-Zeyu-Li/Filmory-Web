@@ -38,10 +38,11 @@ test.describe('Excel import wizard', () => {
     await cameraModal.getByRole('button', { name: '添加', exact: true }).click();
     await expect(cameraModal).toBeHidden();
 
-    const preferencesButton = page.locator('button').filter({ hasText: /偏好设置|Preferences/ }).first();
-    await preferencesButton.click();
+    const settingsButton = page.locator('button').filter({ hasText: /^设置$|^Settings$/ }).first();
+    await settingsButton.click();
     const settingsModal = page.locator('.modal-content').filter({ hasText: /设置与数据保护|Settings & Data Protection/ });
     await expect(settingsModal).toBeVisible();
+    await settingsModal.getByRole('tab', { name: /数据|Data/ }).click();
 
     const downloadPromise = page.waitForEvent('download');
     await settingsModal.getByRole('button', { name: '批量导入' }).click();

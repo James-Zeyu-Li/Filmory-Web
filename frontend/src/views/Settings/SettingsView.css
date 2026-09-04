@@ -37,6 +37,61 @@
   flex-shrink: 0;
 }
 
+/* ─── Shared account/sync detail grid (Account + Data tabs) ──── */
+.account-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.account-detail-item {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+}
+
+.account-detail-item span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+
+.account-detail-item strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.account-detail-item .sync-enabled,
+.account-detail-item .sync-synced {
+  color: var(--success);
+}
+
+.account-detail-item .sync-syncing,
+.account-detail-item .sync-pending {
+  color: var(--accent);
+}
+
+.account-detail-item .sync-offline,
+.account-detail-item .sync-local,
+.account-detail-item .sync-needs_attention {
+  color: var(--text-secondary);
+}
+
+@media (max-width: 560px) {
+  .account-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .settings-modal-title {
   font-size: 16px;
   font-weight: 700;

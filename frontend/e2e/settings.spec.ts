@@ -12,10 +12,11 @@ test.describe('Settings flows', () => {
         await expandSidebar.click();
       }
 
-      const preferencesButton = page.locator('button').filter({ hasText: /偏好设置|Preferences/ }).first();
-      await expect(preferencesButton).toBeVisible();
-      await preferencesButton.click();
+      const settingsButton = page.locator('button').filter({ hasText: /^设置$|^Settings$/ }).first();
+      await expect(settingsButton).toBeVisible();
+      await settingsButton.click();
       const settingsModal = page.locator('.modal-content').filter({ hasText: /设置与数据保护|Settings & Data Protection/ });
+      await settingsModal.getByRole('tab', { name: /界面|Interface/ }).click();
       const languageRow = settingsModal.locator('.settings-language-item');
       const filmModeRow = settingsModal.locator('.settings-film-mode-item');
       const settingsGroup = settingsModal.locator('.settings-list-group').first();
@@ -89,13 +90,17 @@ test.describe('Settings flows', () => {
   test('keeps settings focused and removes unsafe local reset from normal UI', async ({ page }) => {
     await resetAndLogin(page);
 
-    await page.getByRole('button', { name: /偏好设置/ }).click();
+    await page.getByRole('button', { name: /^设置$/ }).click();
     const settingsModal = page.locator('.modal-content').filter({ hasText: '设置与数据保护' });
 
     await expect(settingsModal.getByRole('heading', { name: '设置与数据保护' })).toBeVisible();
-    await expect(settingsModal.getByText('测试管理员')).toBeVisible();
+    await expect(settingsModal.getByRole('heading', { name: 'Developer', exact: true })).toBeVisible();
+
+    await settingsModal.getByRole('tab', { name: '界面' }).click();
     await expect(settingsModal.getByText('外观')).toBeVisible();
     await expect(settingsModal.getByText('记账货币')).toBeVisible();
+
+    await settingsModal.getByRole('tab', { name: '数据' }).click();
     await expect(settingsModal.getByRole('button', { name: '立即导出记录' })).toBeVisible();
     await expect(settingsModal.getByRole('button', { name: '重置数据库' })).toHaveCount(0);
   });
@@ -103,7 +108,7 @@ test.describe('Settings flows', () => {
   test('logs out and blocks returning to private pages', async ({ page }) => {
     await resetAndLogin(page);
 
-    await page.getByRole('button', { name: /偏好设置/ }).click();
+    await page.getByRole('button', { name: /^设置$/ }).click();
     await page.locator('.modal-content').filter({ hasText: '设置与数据保护' }).getByRole('button', { name: '退出登录' }).click();
 
     await expect(page).toHaveURL(/\/auth\/login$/);
@@ -115,40 +120,72 @@ test.describe('Settings flows', () => {
     await resetAndLogin(page);
 
     await page.goto('/rolls', { waitUntil: 'domcontentloaded' });
-    await page.getByRole('button', { name: '独立记录' }).click();
+    await page.getByRole('tab', { name: '独立记录' }).click();
     await expect(page.getByRole('heading', { name: '独立记录' })).toBeVisible();
 
-    await page.getByRole('button', { name: /偏好设置/ }).click();
+    await page.getByRole('button', { name: /^设置$/ }).click();
     await page.locator('.modal-content').filter({ hasText: '设置与数据保护' }).getByRole('button', { name: '退出登录' }).click();
     await expect(page).toHaveURL(/\/auth\/login$/);
 
     await page.getByRole('button', { name: /本机测试登录/ }).click();
     await expect(page).toHaveURL(/\/dashboard$/);
 
+    // Default tab order is ['all', 'collections', 'loose'] (see
+    // workspacePreferences.ts DEFAULT_ROLLS_TAB_ORDER) — a fresh login lands
+    // on "All shooting records", not Collections; the point of this test is
+    // that it's no longer "Independent records" (the tab explicitly selected
+    // before logging out above).
     await page.getByRole('link', { name: '拍摄记录' }).click();
-    await expect(page.getByRole('heading', { name: '项目集' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '全部拍摄记录' })).toBeVisible();
   });
 
   test('applies rolls tab order and hidden collections preference from settings', async ({ page }) => {
     await resetAndLogin(page);
 
-    await page.getByRole('button', { name: /偏好设置/ }).click();
+    const settingsModal = page.locator('.modal-content').filter({ hasText: '设置与数据保护' });
+    await page.getByRole('button', { name: /^设置$/ }).click();
+    await settingsModal.getByRole('tab', { name: '界面' }).click();
+    await settingsModal.getByRole('button', { name: '展开' }).click();
     await page.getByRole('button', { name: '独立记录 上移' }).click();
     await page.getByRole('button', { name: '独立记录 上移' }).click();
+    await page.locator('.modal-content button.icon-btn').click();
+
+    await page.getByRole('link', { name: '拍摄记录' }).click();
+    // getDefaultLibraryView() always prefers 'all' when present regardless of
+    // its position in the order — reordering only changes the tab bar's
+    // visual sequence, not which tab is auto-selected on a fresh visit.
+    await expect(page.getByRole('heading', { name: '全部拍摄记录' })).toBeVisible();
+    const tabLabels = await page.getByRole('tab').allTextContents();
+    const looseIndex = tabLabels.findIndex(label => label.includes('独立记录'));
+    const allIndex = tabLabels.findIndex(label => label.includes('全部拍摄记录'));
+    expect(looseIndex).toBeGreaterThanOrEqual(0);
+    expect(looseIndex).toBeLessThan(allIndex);
+
+    // Turning off "Show Collections and Independent records views" simplifies
+    // the whole workspace down to a single All-shooting-records view — it
+    // doesn't just hide Collections, Independent records disappears too (see
+    // InterfaceTab.tsx's collectionsHidden check, which covers both tabs).
+    await page.getByRole('button', { name: /^设置$/ }).click();
+    await settingsModal.getByRole('tab', { name: '界面' }).click();
+    await settingsModal.getByRole('button', { name: '展开' }).click();
     await page.locator('label[for="rollsCollectionsToggle"]').click();
     await page.locator('.modal-content button.icon-btn').click();
 
     await page.getByRole('link', { name: '拍摄记录' }).click();
-    await expect(page.getByRole('heading', { name: '独立记录' })).toBeVisible();
-    await expect(page.getByRole('button', { name: '项目集' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: '全部拍摄记录' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: '项目集' })).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: '独立记录' })).toHaveCount(0);
   });
 
   test('forces collections tab on when film mode is disabled', async ({ page }) => {
     await resetAndLogin(page);
+    const settingsModal = page.locator('.modal-content').filter({ hasText: '设置与数据保护' });
 
-    await page.getByRole('button', { name: /偏好设置/ }).click();
+    await page.getByRole('button', { name: /^设置$/ }).click();
+    await settingsModal.getByRole('tab', { name: '界面' }).click();
+    await settingsModal.getByRole('button', { name: '展开' }).click();
     await page.locator('label[for="rollsCollectionsToggle"]').click();
-    await expect(page.getByText('当前已隐藏，重新开启后按此顺序显示')).toBeVisible();
+    await expect(page.getByText('已简化到全部拍摄记录视图').first()).toBeVisible();
     await page.locator('label[for="filmModeToggle"]').click();
 
     await expect(page.locator('#rollsCollectionsToggle')).toBeChecked();
@@ -156,14 +193,16 @@ test.describe('Settings flows', () => {
 
     await page.locator('.modal-content button.icon-btn').click();
     await page.getByRole('link', { name: '拍摄记录' }).click();
-    await expect(page.getByRole('button', { name: '项目集' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: '项目集' })).toBeVisible();
 
-    await page.getByRole('button', { name: /偏好设置/ }).click();
+    await page.getByRole('button', { name: /^设置$/ }).click();
+    await settingsModal.getByRole('tab', { name: '界面' }).click();
     await page.locator('label[for="filmModeToggle"]').click();
+    await settingsModal.getByRole('button', { name: '展开' }).click();
     await expect(page.locator('#rollsCollectionsToggle')).not.toBeChecked();
-    await expect(page.getByText('当前已隐藏，重新开启后按此顺序显示')).toBeVisible();
+    await expect(page.getByText('已简化到全部拍摄记录视图').first()).toBeVisible();
     await page.locator('.modal-content button.icon-btn').click();
 
-    await expect(page.getByRole('button', { name: '项目集' })).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: '项目集' })).toHaveCount(0);
   });
 });

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DataTab } from '../views/Settings/DataTab';
 import { repairPendingPhotoUploads } from '../services/photoUploadRecoveryService';
 import { requestImmediateSync } from '../services/syncEvents';
+import { deleteCurrentAccount } from '../services/accountService';
 
 const mockOnDeleted = vi.fn();
 const mockSetIsProcessing = vi.fn();
@@ -13,6 +14,7 @@ let currentLanguage: 'zh-CN' | 'en-US' = 'zh-CN';
 const mockAuthState = {
   user: { id: 'user-1', email: 'user@grainfolio.app' },
   isDevBypass: false,
+  isTrial: false,
   completeSignedOutTransition: vi.fn(),
 };
 
@@ -85,10 +87,12 @@ describe('DataTab', () => {
     mockSetIsProcessing.mockReset();
     mockSetProcessMessage.mockReset();
     mockAuthState.isDevBypass = false;
+    mockAuthState.isTrial = false;
     mockAuthState.completeSignedOutTransition.mockReset();
     vi.mocked(repairPendingPhotoUploads).mockReset();
     vi.mocked(repairPendingPhotoUploads).mockResolvedValue({ found: 0, uploaded: 0, cleaned: 0, failed: 0 });
     vi.mocked(requestImmediateSync).mockReset();
+    vi.mocked(deleteCurrentAccount).mockClear();
   });
 
   it('includes account deletion behind a two-step confirmation', () => {
@@ -100,6 +104,25 @@ describe('DataTab', () => {
     fireEvent.click(screen.getByRole('button', { name: '注销我的账号' }));
     expect(screen.getByRole('heading', { name: '确认永久注销' })).toBeInTheDocument();
     expect(screen.getByLabelText('输入 DELETE 确认注销')).toBeInTheDocument();
+  });
+
+  it('clears local trial data instead of calling the real delete API for a trial session', async () => {
+    mockAuthState.isTrial = true;
+
+    renderDataTab();
+
+    expect(screen.getByRole('button', { name: '清除试用数据' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '注销我的账号' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '清除试用数据' }));
+    expect(screen.getByRole('heading', { name: '清除本地试用数据', level: 3 })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('输入 DELETE 确认注销'), { target: { value: 'DELETE' } });
+    fireEvent.click(screen.getByRole('button', { name: '确认永久销毁' }));
+
+    await waitFor(() => expect(mockAuthState.completeSignedOutTransition).toHaveBeenCalledWith('deletingAccount'));
+    expect(deleteCurrentAccount).not.toHaveBeenCalled();
+    expect(mockOnDeleted).toHaveBeenCalled();
   });
 
   it('renders data ownership and account security copy in English', () => {

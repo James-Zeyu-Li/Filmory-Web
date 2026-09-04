@@ -128,7 +128,10 @@ describe('AccountTab', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '免费注册并开启云同步' }));
 
-    expect(mockOnCloseSettings).toHaveBeenCalled();
+    // Navigating to /auth/signup is itself what closes Settings (it's a
+    // ?settings= param on the current route) — must not also call
+    // onCloseSettings() here, that would race with this navigation.
+    expect(mockOnCloseSettings).not.toHaveBeenCalled();
     expect(screen.getByTestId('location')).toHaveTextContent('/auth/signup?trial=1');
   });
 
@@ -142,7 +145,8 @@ describe('AccountTab', () => {
     fireEvent.click(screen.getByRole('button', { name: '退出登录' }));
 
     await waitFor(() => expect(mockLogout).toHaveBeenCalled());
-    expect(mockOnCloseSettings).toHaveBeenCalled();
+    // Same race-avoidance reasoning as the signup case above.
+    expect(mockOnCloseSettings).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/auth/login'));
   });
 
